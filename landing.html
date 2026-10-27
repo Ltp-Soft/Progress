@@ -501,22 +501,46 @@
                     <button type="button" onclick="selectModalPlan('ENTERPRISE')" id="pill-plan-ENTERPRISE" class="py-2 rounded-xl transition">Tập đoàn</button>
                 </div>
 
-                <!-- Fast Google Verification (Centralized Relay via ltp-soft.com) -->
-                <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div class="text-xs text-slate-300">
-                        <div class="font-bold text-white">Xác thực nhanh bằng Google (Khuyên dùng)</div>
-                        <div class="text-slate-400">Không cần chờ mã OTP Email, tự động điền thông tin Admin</div>
+                <!-- 2-Method Authentication Selector (Google vs Email OTP) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Phương thức xác thực tài khoản Quản trị viên (Chọn 1 trong 2):</label>
+                    <div class="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-900 border border-slate-800">
+                        <button type="button" id="tab-auth-google" onclick="switchRegAuthMethod('GOOGLE')"
+                                class="py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 bg-sky-500 text-white shadow transition">
+                            <svg class="w-4 h-4 shrink-0 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.54-5.17 3.54-8.97z"/>
+                                <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96h-4.01v3.14C3.515 21.3 7.615 24 12.255 24z"/>
+                                <path fill="#FBBC05" d="M5.535 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62h-4.01C.555 8.56 0 10.72 0 12s.555 3.44 1.525 5.38l4.01-3.14z"/>
+                                <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0 7.615 0 3.515 2.7 1.525 6.62l4.01 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                            </svg>
+                            <span>1. Tài khoản Google (Nhanh)</span>
+                        </button>
+                        <button type="button" id="tab-auth-email" onclick="switchRegAuthMethod('EMAIL')"
+                                class="py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 text-slate-400 hover:text-white transition">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            <span>2. Đăng ký qua Email (OTP)</span>
+                        </button>
                     </div>
-                    <button type="button" onclick="openRegGoogleRelay()"
-                            class="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs flex items-center gap-2 shadow transition shrink-0">
-                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.54-5.17 3.54-8.97z"/>
-                            <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96h-4.01v3.14C3.515 21.3 7.615 24 12.255 24z"/>
-                            <path fill="#FBBC05" d="M5.535 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62h-4.01C.555 8.56 0 10.72 0 12s.555 3.44 1.525 5.38l4.01-3.14z"/>
-                            <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0 7.615 0 3.515 2.7 1.525 6.62l4.01 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
-                        </svg>
-                        <span>Xác thực với Google</span>
-                    </button>
+                </div>
+
+                <!-- Fast Google Verification Box (Shown when Method = GOOGLE) -->
+                <div id="reg-google-box" class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="text-xs text-slate-300">
+                        <div id="reg-google-status-title" class="font-bold text-white">Xác thực 1 chạm bằng tài khoản Google</div>
+                        <div id="reg-google-status-desc" class="text-slate-400">Không cần chờ mã OTP Email, tự động điền Họ tên & Email Admin</div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" id="btn-trigger-google-reg" onclick="openRegGoogleRelay()"
+                                class="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs flex items-center gap-2 shadow transition">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.54-5.17 3.54-8.97z"/>
+                                <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96h-4.01v3.14C3.515 21.3 7.615 24 12.255 24z"/>
+                                <path fill="#FBBC05" d="M5.535 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62h-4.01C.555 8.56 0 10.72 0 12s.555 3.44 1.525 5.38l4.01-3.14z"/>
+                                <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0 7.615 0 3.515 2.7 1.525 6.62l4.01 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                            </svg>
+                            <span id="btn-trigger-google-reg-text">Chọn tài khoản Google</span>
+                        </button>
+                    </div>
                 </div>
 
                 <form id="saas-register-form" onsubmit="submitRegistration(event)" class="space-y-3.5">
@@ -564,32 +588,35 @@
                         </div>
                     </div>
 
-                    <!-- Email + OTP -->
+                    <!-- Email + OTP (Dynamic based on selected Auth Method) -->
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">Email nhận thông tin quản trị <span class="text-rose-400">*</span></label>
                         <div class="flex gap-2">
                             <input id="reg-email" type="email" required placeholder="admin@tencongty.com"
                                    class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
                             <button type="button" id="btn-send-otp" onclick="sendEmailOtp()"
-                                    class="px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-extrabold shrink-0 transition">
+                                    class="hidden px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-extrabold shrink-0 transition">
                                 Gửi mã OTP
                             </button>
                         </div>
-                        <div id="google-verified-badge" class="hidden mt-1.5 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
-                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                            <span>Đã xác thực chính chủ qua Google (Không cần nhập OTP)</span>
+                        <div id="google-verified-badge" class="hidden mt-1.5 text-xs text-emerald-400 font-bold flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                <span>Đã xác thực chính chủ qua Google (Không cần mã OTP)</span>
+                            </span>
+                            <button type="button" onclick="openRegGoogleRelay()" class="text-[11px] text-sky-400 hover:underline font-semibold">Đổi tài khoản</button>
                         </div>
                     </div>
 
-                    <div id="otp-input-row" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1">Mã xác thực OTP (6 số trong Email)</label>
-                            <input id="reg-otp" type="text" maxlength="6" placeholder="Nhập 6 chữ số OTP"
+                    <div id="otp-input-row" class="grid grid-cols-1 gap-3">
+                        <div id="otp-field-col" class="hidden">
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Mã xác thực OTP (6 số gửi qua Email) <span class="text-rose-400">*</span></label>
+                            <input id="reg-otp" type="text" maxlength="6" placeholder="Nhập 6 chữ số OTP trong Email"
                                    class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm font-mono text-amber-300 focus:outline-none focus:border-sky-400">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-300 mb-1">Mật khẩu Admin <span class="text-rose-400">*</span></label>
-                            <input id="reg-password" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự"
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Mật khẩu khởi tạo cho Admin <span class="text-rose-400">*</span></label>
+                            <input id="reg-password" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự (dùng để đăng nhập quản trị)"
                                    class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
                         </div>
                     </div>
@@ -675,7 +702,7 @@
     </div>
 
     <!-- ============================================================================
-         MODAL 2: WORKSPACE FINDER / DIRECT LOGIN
+         MODAL 2: WORKSPACE FINDER / DIRECT LOGIN (2 METHODS: GOOGLE OR EMAIL/PASSWORD)
          ============================================================================ -->
     <div id="login-finder-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
         <div class="glass-panel w-full max-w-md rounded-3xl border border-slate-700/80 p-6 shadow-2xl">
@@ -687,15 +714,51 @@
                 <button onclick="closeWorkspaceLoginModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold">✕</button>
             </div>
 
+            <!-- Method 1: 1-Click Google Login -->
+            <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5 mb-4">
+                <div class="text-xs font-bold text-slate-200 flex items-center justify-between">
+                    <span>Cách 1: Đăng nhập nhanh bằng Google</span>
+                    <span class="text-[10px] text-sky-400 font-semibold">Tự nhận diện công ty</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="openLoginGoogleRelay('workspace')"
+                            class="py-2.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow transition">
+                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.54-5.17 3.54-8.97z"/>
+                            <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96h-4.01v3.14C3.515 21.3 7.615 24 12.255 24z"/>
+                            <path fill="#FBBC05" d="M5.535 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62h-4.01C.555 8.56 0 10.72 0 12s.555 3.44 1.525 5.38l4.01-3.14z"/>
+                            <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0 7.615 0 3.515 2.7 1.525 6.62l4.01 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                        </svg>
+                        <span>Vào Bảng Tiến Độ</span>
+                    </button>
+                    <button type="button" onclick="openLoginGoogleRelay('admin')"
+                            class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-extrabold text-xs flex items-center justify-center gap-1.5 transition">
+                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.54-5.17 3.54-8.97z"/>
+                            <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96h-4.01v3.14C3.515 21.3 7.615 24 12.255 24z"/>
+                            <path fill="#FBBC05" d="M5.535 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62h-4.01C.555 8.56 0 10.72 0 12s.555 3.44 1.525 5.38l4.01-3.14z"/>
+                            <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0 7.615 0 3.515 2.7 1.525 6.62l4.01 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                        </svg>
+                        <span>Vào Quản Trị Admin</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative flex py-1 items-center mb-3">
+                <div class="flex-grow border-t border-slate-800"></div>
+                <span class="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Cách 2: Đăng nhập bằng Tài khoản / Email</span>
+                <div class="flex-grow border-t border-slate-800"></div>
+            </div>
+
             <form onsubmit="submitDirectWorkspaceLogin(event)" class="space-y-3.5">
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Mã công ty (Subdomain) <span class="text-slate-500 font-normal">(VD: anphat hoặc anphat-pm)</span></label>
-                    <input id="login-subdomain" type="text" placeholder="VD: anphat (hoặc để trống)"
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Mã công ty (Subdomain) <span class="text-slate-500 font-normal">(Bỏ trống nếu đăng nhập bằng Email)</span></label>
+                    <input id="login-subdomain" type="text" placeholder="VD: taiphat (hoặc để trống)"
                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-sky-400 font-mono focus:outline-none focus:border-sky-400">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Tài khoản / Email / Mã nhân viên <span class="text-rose-400">*</span></label>
-                    <input id="login-username" type="text" required placeholder="VD: admin hoặc NV001"
+                    <input id="login-username" type="text" required placeholder="VD: admin, email@congty.com hoặc NV001"
                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
                 </div>
                 <div>
@@ -954,12 +1017,51 @@
             }, 350);
         }
 
+        let currentRegAuthMethod = "GOOGLE"; // "GOOGLE" | "EMAIL"
+        let currentGoogleRelayContext = "REGISTER"; // "REGISTER" | "LOGIN_WORKSPACE" | "LOGIN_ADMIN"
+
+        function switchRegAuthMethod(method) {
+            currentRegAuthMethod = method;
+            const tabG = document.getElementById("tab-auth-google");
+            const tabE = document.getElementById("tab-auth-email");
+            const googleBox = document.getElementById("reg-google-box");
+            const btnOtp = document.getElementById("btn-send-otp");
+            const otpCol = document.getElementById("otp-field-col");
+            const otpRow = document.getElementById("otp-input-row");
+            const emailInput = document.getElementById("reg-email");
+            const badge = document.getElementById("google-verified-badge");
+
+            if (method === "GOOGLE") {
+                tabG.className = "py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 bg-sky-500 text-white shadow transition";
+                tabE.className = "py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 text-slate-400 hover:text-white transition";
+                if (googleBox) googleBox.classList.remove("hidden");
+                if (btnOtp) btnOtp.classList.add("hidden");
+                if (otpCol) otpCol.classList.add("hidden");
+                if (otpRow) otpRow.className = "grid grid-cols-1 gap-3";
+                if (googleIdToken) {
+                    if (badge) badge.classList.remove("hidden");
+                    if (emailInput) emailInput.readOnly = true;
+                }
+            } else {
+                tabE.className = "py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 bg-sky-500 text-white shadow transition";
+                tabG.className = "py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 text-slate-400 hover:text-white transition";
+                googleIdToken = "";
+                if (googleBox) googleBox.classList.add("hidden");
+                if (badge) badge.classList.add("hidden");
+                if (btnOtp) btnOtp.classList.remove("hidden");
+                if (otpCol) otpCol.classList.remove("hidden");
+                if (otpRow) otpRow.className = "grid grid-cols-1 sm:grid-cols-2 gap-3";
+                if (emailInput) emailInput.readOnly = false;
+            }
+        }
+
         function openRegisterModal(plan = "TRIAL") {
             document.getElementById("register-modal").classList.remove("hidden");
             document.getElementById("reg-step-form").classList.remove("hidden");
             document.getElementById("reg-step-qr").classList.add("hidden");
             generateMathChallenge();
             selectModalPlan(plan);
+            switchRegAuthMethod(currentRegAuthMethod);
         }
 
         function closeRegisterModal() {
@@ -969,6 +1071,8 @@
 
         // Centralized Google OAuth Relay via https://ltp-soft.com/auth/google-verify
         function openRegGoogleRelay() {
+            currentGoogleRelayContext = "REGISTER";
+            switchRegAuthMethod("GOOGLE");
             const width = 500;
             const height = 600;
             const left = window.screenX + (window.outerWidth - width) / 2;
@@ -980,18 +1084,89 @@
             );
         }
 
-        window.addEventListener("message", (event) => {
+        function openLoginGoogleRelay(dest = "workspace") {
+            currentGoogleRelayContext = dest === "admin" ? "LOGIN_ADMIN" : "LOGIN_WORKSPACE";
+            const width = 500;
+            const height = 600;
+            const left = window.screenX + (window.outerWidth - width) / 2;
+            const top = window.screenY + (window.outerHeight - height) / 2;
+            window.open(
+                "https://ltp-soft.com/auth/google-verify",
+                "LTPGoogleAuthRelay",
+                `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+            );
+        }
+
+        window.addEventListener("message", async (event) => {
             if (!event.origin.endsWith("ltp-soft.com")) return;
             if (event.data && event.data.type === "LTP_GOOGLE_AUTH_SUCCESS" && event.data.token) {
-                googleIdToken = event.data.token;
+                const token = event.data.token;
+                if (currentGoogleRelayContext === "LOGIN_WORKSPACE" || currentGoogleRelayContext === "LOGIN_ADMIN") {
+                    const errBox = document.getElementById("login-finder-error");
+                    const subdomain = normalizeBaseSubdomain(document.getElementById("login-subdomain")?.value || "");
+                    if (errBox) errBox.classList.add("hidden");
+                    try {
+                        const res = await fetch("/api/auth/google-login", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ google_token: token, subdomain })
+                        });
+                        const data = await res.json();
+                        if (!res.ok || (data.status !== "success" && !data.success)) {
+                            if (errBox) {
+                                errBox.textContent = data.error || "Không thể đăng nhập bằng Google.";
+                                errBox.classList.remove("hidden");
+                            }
+                            return;
+                        }
+                        localStorage.setItem("ltp_jwt_token", data.token);
+                        localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                            id: data.user.id || data.user.username,
+                            username: data.user.username,
+                            name: data.user.fullName,
+                            role: data.user.role,
+                            dept: data.user.dept || data.user.department || "ALL",
+                            department: data.user.dept || data.user.department || "ALL",
+                            deptTags: data.user.deptTags || [data.user.dept || "ALL"],
+                            prefix: data.user.prefix || "C",
+                            taskPermissionMode: data.user.taskPermissionMode || "REPORT_ONLY",
+                            avatarUrl: data.user.avatarUrl || "",
+                            tenant: data.tenant || null,
+                            token: data.token,
+                            loginTime: new Date().toISOString()
+                        }));
+                        const subParam = data.user.subdomain || subdomain || "";
+                        if (currentGoogleRelayContext === "LOGIN_ADMIN" && ["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(data.user.role)) {
+                            window.location.href = `admin.html${subParam ? `?tenant=${encodeURIComponent(subParam)}` : ""}`;
+                        } else {
+                            window.location.href = `index.html?workspace=1${subParam ? `&tenant=${encodeURIComponent(subParam)}` : ""}`;
+                        }
+                    } catch (err) {
+                        if (errBox) {
+                            errBox.textContent = "Lỗi kết nối máy chủ khi đăng nhập Google.";
+                            errBox.classList.remove("hidden");
+                        }
+                    }
+                    return;
+                }
+
+                // Default: Registration verification
+                googleIdToken = token;
+                switchRegAuthMethod("GOOGLE");
                 try {
                     const payload = JSON.parse(atob(googleIdToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-                    if (payload.email) document.getElementById("reg-email").value = payload.email;
+                    const emailEl = document.getElementById("reg-email");
+                    if (payload.email && emailEl) {
+                        emailEl.value = payload.email;
+                        emailEl.readOnly = true;
+                    }
                     if (payload.name && !document.getElementById("reg-fullname").value) {
                         document.getElementById("reg-fullname").value = payload.name;
                     }
                     document.getElementById("google-verified-badge").classList.remove("hidden");
                     document.getElementById("btn-send-otp").classList.add("hidden");
+                    const otpCol = document.getElementById("otp-field-col");
+                    if (otpCol) otpCol.classList.add("hidden");
                 } catch (e) {}
             }
         });

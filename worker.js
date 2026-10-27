@@ -291,6 +291,75 @@ async function ensureMultiTenantSchema(env) {
       user_agent TEXT,
       scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT DEFAULT 'tenant-demo',
+      name TEXT NOT NULL,
+      pin TEXT NOT NULL,
+      creator_dept TEXT NOT NULL,
+      creator_pic TEXT,
+      project_manager TEXT,
+      project_admin_id TEXT DEFAULT '',
+      is_shared INTEGER DEFAULT 1,
+      invited_depts TEXT DEFAULT '[]',
+      allowed_user_ids TEXT DEFAULT '[]',
+      project_tags TEXT DEFAULT '[]',
+      category TEXT DEFAULT 'SHARED',
+      status TEXT DEFAULT 'Active',
+      closed_at TEXT,
+      start_range TEXT,
+      end_range TEXT,
+      staffs TEXT DEFAULT '[]',
+      storage_quota_mb INTEGER DEFAULT 0,
+      storage_used_bytes INTEGER DEFAULT 0,
+      max_project_users INTEGER DEFAULT 0,
+      updated_at INTEGER DEFAULT (unixepoch())
+    )`,
+    `CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT DEFAULT 'tenant-demo',
+      project_id TEXT NOT NULL,
+      code_in TEXT NOT NULL,
+      code_out TEXT,
+      name TEXT NOT NULL,
+      staff TEXT,
+      staff_user_id TEXT DEFAULT '',
+      created_by_user_id TEXT DEFAULT '',
+      dept TEXT NOT NULL,
+      project_tag TEXT,
+      start_date TEXT,
+      end_date TEXT,
+      start_time TEXT DEFAULT '',
+      end_time TEXT DEFAULT '',
+      is_started INTEGER DEFAULT 0,
+      is_completed INTEGER DEFAULT 0,
+      completed_at TEXT DEFAULT '',
+      progress_percent INTEGER DEFAULT 0,
+      last_progress_date TEXT,
+      has_files INTEGER DEFAULT 0,
+      is_public INTEGER DEFAULT 0,
+      is_mirror INTEGER DEFAULT 0,
+      source_task_id TEXT,
+      source_project_id TEXT,
+      source_dept TEXT,
+      order_index INTEGER DEFAULT 0,
+      notes TEXT,
+      is_deleted INTEGER DEFAULT 0,
+      updated_at INTEGER DEFAULT (unixepoch())
+    )`,
+    `CREATE TABLE IF NOT EXISTS task_files (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT DEFAULT 'tenant-demo',
+      task_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_key TEXT NOT NULL,
+      file_size INTEGER DEFAULT 0,
+      mime_type TEXT,
+      uploaded_by TEXT,
+      uploaded_by_user_id TEXT DEFAULT '',
+      uploaded_at TEXT
+    )`,
     `CREATE TABLE IF NOT EXISTS payment_orders (
       id TEXT PRIMARY KEY,
       tenant_id TEXT,
@@ -621,22 +690,6 @@ export default {
       });
     }
 
-    if (url.pathname === "/api/public/check-subdomain" && request.method === "GET") {
-      const raw = (url.searchParams.get("subdomain") || "").trim().toLowerCase();
-      if (!/^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/.test(raw)) {
-        return jsonResp({ available: false, message: "Mã công ty chỉ gồm chữ thường a-z, số 0-9, dài 3-30 ký tự." });
-      }
-      const reserved = new Set(["www", "api", "admin", "progress", "root", "mail", "ltp", "ltpsoft"]);
-      if (reserved.has(raw)) {
-        return jsonResp({ available: false, message: "Mã này đã được hệ thống giữ lại." });
-      }
-      const existing = await env.DB.prepare("SELECT id FROM tenants WHERE subdomain = ?").bind(raw).first();
-      if (existing) {
-        return jsonResp({ available: false, message: `Mã công ty "${raw}" đã có đơn vị sử dụng.` });
-      }
-      return jsonResp({ available: true, subdomain: raw, message: `✓ Mã công ty "${raw}" hợp lệ và có thể đăng ký!` });
-    }
-
     if (url.pathname === "/api/public/check-coupon" && request.method === "POST") {
       const { code } = await request.json();
       const clean = String(code || "").trim().toUpperCase();
@@ -737,7 +790,18 @@ export default {
         }
 
         // 1. Check local Progress Hub DB
-        const takenLocal = await env.DB.prepare("SELECT id, company_name FROM tenants WHERE subdomain = ?").bind(cleanSub).first();
+        let takenLocal = await env.DB.prepare("SELECT id, company_name FROM tenants WHERE subdomain = ?").bind(cleanSub).first();
+        if (takenLocal && takenLocal.id !== "tenant-demo") {
+          const pCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM projects WHERE tenant_id = ?").bind(takenLocal.id).first().catch(() => ({ cnt: 0 }));
+          if (!pCnt || Number(pCnt.cnt) === 0) {
+            await env.DB.batch([
+              env.DB.prepare("DELETE FROM users WHERE tenant_id = ?").bind(takenLocal.id),
+              env.DB.prepare("DELETE FROM departments WHERE tenant_id = ?").bind(takenLocal.id),
+              env.DB.prepare("DELETE FROM tenants WHERE id = ?").bind(takenLocal.id)
+            ]).catch(() => {});
+            takenLocal = null;
+          }
+        }
         if (takenLocal) {
           return jsonResp({
             available: false,
@@ -811,11 +875,22 @@ export default {
         if (!company_name || !company_name.trim()) {
           return jsonResp({ error: "Vui lòng nhập Tên công ty / Doanh nghiệp!" }, 400);
         }
-        const cleanSub = String(subdomain || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+        const cleanSub = String(subdomain || "").trim().toLowerCase().replace(/-(pm|progress)$/i, "").replace(/[^a-z0-9-]/g, "");
         if (cleanSub.length < 3) {
           return jsonResp({ error: "Mã công ty (Subdomain) phải có ít nhất 3 ký tự!" }, 400);
         }
-        const taken = await env.DB.prepare("SELECT id FROM tenants WHERE subdomain = ?").bind(cleanSub).first();
+        let taken = await env.DB.prepare("SELECT id FROM tenants WHERE subdomain = ?").bind(cleanSub).first();
+        if (taken && taken.id !== "tenant-demo") {
+          const pCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM projects WHERE tenant_id = ?").bind(taken.id).first().catch(() => ({ cnt: 0 }));
+          if (!pCnt || Number(pCnt.cnt) === 0) {
+            await env.DB.batch([
+              env.DB.prepare("DELETE FROM users WHERE tenant_id = ?").bind(taken.id),
+              env.DB.prepare("DELETE FROM departments WHERE tenant_id = ?").bind(taken.id),
+              env.DB.prepare("DELETE FROM tenants WHERE id = ?").bind(taken.id)
+            ]).catch(() => {});
+            taken = null;
+          }
+        }
         if (taken) {
           return jsonResp({ error: `Mã công ty "${cleanSub}" đã được đăng ký trên Hệ thống Quản Lý Dự Án. Vui lòng chọn mã khác!` }, 400);
         }
@@ -1856,6 +1931,82 @@ export default {
           username: userRow.username || userRow.id,
           fullName: userRow.full_name || userRow.username || userRow.id,
           avatarUrl: userRow.avatar_url || "",
+          role: userRow.role,
+          dept: userRow.dept,
+          deptTags: JSON.parse(userRow.dept_tags || "[]"),
+          prefix: userRow.prefix || "C",
+          taskPermissionMode: userRow.task_permission_mode || "REPORT_ONLY",
+          managedProjectIds: JSON.parse(userRow.managed_project_ids || "[]"),
+          isWaiting: Number(userRow.is_active) === 2 || userRow.role === "WAITING",
+          tenantId: targetTenant.id,
+          subdomain: targetTenant.subdomain,
+          companyName: targetTenant.company_name,
+          logoUrl: targetTenant.logo_url || "./asset/Logo_white.png"
+        };
+
+        const token = await signJwt(env, sessionPayload);
+        return jsonResp({ status: "success", token, user: sessionPayload, tenant: targetTenant });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    // 1-CLICK GOOGLE LOGIN FOR TENANT ADMIN & STAFF
+    if (url.pathname === "/api/auth/google-login" && request.method === "POST") {
+      try {
+        const { google_token, subdomain } = await request.json();
+        if (!google_token) {
+          return jsonResp({ error: "Thiếu mã xác thực Google (google_token)!" }, 400);
+        }
+        const gRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(google_token)}`);
+        if (!gRes.ok) {
+          return jsonResp({ error: "Xác thực Google không hợp lệ hoặc đã hết hạn!" }, 401);
+        }
+        const gData = await gRes.json();
+        const gEmail = String(gData.email || "").trim().toLowerCase();
+        if (!gEmail) {
+          return jsonResp({ error: "Tài khoản Google không có địa chỉ Email hợp lệ!" }, 400);
+        }
+
+        let targetTenant = tenant;
+        const cleanSub = String(subdomain || "").trim().toLowerCase().replace(/-(pm|progress)$/i, "");
+        if (cleanSub) {
+          const t = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR id = ?").bind(cleanSub, cleanSub).first();
+          if (t) targetTenant = t;
+        }
+
+        let userRow = null;
+        if (cleanSub && targetTenant) {
+          userRow = await env.DB.prepare("SELECT * FROM users WHERE tenant_id = ? AND LOWER(email) = ? LIMIT 1").bind(targetTenant.id, gEmail).first();
+        }
+        if (!userRow) {
+          userRow = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = ? ORDER BY created_at DESC LIMIT 1").bind(gEmail).first();
+          if (userRow) {
+            const foundT = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(userRow.tenant_id).first();
+            if (foundT) targetTenant = foundT;
+          }
+        }
+        if (!userRow) {
+          const ownedT = await env.DB.prepare("SELECT * FROM tenants WHERE LOWER(owner_email) = ? ORDER BY created_at DESC LIMIT 1").bind(gEmail).first();
+          if (ownedT) {
+            targetTenant = ownedT;
+            userRow = await env.DB.prepare("SELECT * FROM users WHERE tenant_id = ? AND role = 'ADMIN' LIMIT 1").bind(ownedT.id).first();
+          }
+        }
+
+        if (!userRow) {
+          return jsonResp({ error: `Chưa tìm thấy không gian làm việc nào gắn với email Google (${gEmail}). Vui lòng bấm "Đăng Ký Dùng Thử" trước!` }, 404);
+        }
+
+        if (Number(userRow.is_active) === 0) {
+          return jsonResp({ error: "Tài khoản này đã bị Admin tạm khóa hoặc thu hồi!" }, 403);
+        }
+
+        const sessionPayload = {
+          id: userRow.id,
+          username: userRow.username || userRow.id,
+          fullName: userRow.full_name || gData.name || userRow.username || userRow.id,
+          avatarUrl: userRow.avatar_url || gData.picture || "",
           role: userRow.role,
           dept: userRow.dept,
           deptTags: JSON.parse(userRow.dept_tags || "[]"),

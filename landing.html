@@ -506,10 +506,20 @@
                             <label class="block text-xs font-bold text-slate-300 mb-1">Mã định danh Công ty (Subdomain) <span class="text-rose-400">*</span></label>
                             <div class="flex items-center rounded-xl bg-slate-900 border border-slate-700 overflow-hidden focus-within:border-sky-400">
                                 <input id="reg-subdomain" type="text" required placeholder="anphat"
+                                       oninput="this.dataset.manual='1'; scheduleSubdomainCheck(this.value)"
                                        class="w-full px-3 py-2.5 bg-transparent text-sm text-sky-400 font-mono font-bold focus:outline-none">
                                 <span class="px-2.5 text-[11px] text-slate-500 font-mono shrink-0">.ltp-soft.com</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Live Subdomain & Cross-System Attendance Check Banner -->
+                    <div id="subdomain-status-box" class="hidden p-3 rounded-xl border text-xs space-y-2">
+                        <div id="subdomain-status-msg" class="font-semibold leading-relaxed"></div>
+                        <label id="attendance-confirm-wrap" class="hidden flex items-start gap-2 pt-1.5 border-t border-amber-500/20 cursor-pointer text-amber-200 font-bold">
+                            <input id="reg-confirm-attendance" type="checkbox" class="mt-0.5 rounded border-amber-400">
+                            <span>Tôi xác nhận công ty tôi đang sử dụng Hệ Thống Chấm Công LTP với mã định danh này và đồng ý tự động tích hợp đồng bộ (Nếu chưa dùng Chấm Công, vui lòng đổi tên định danh khác ở ô trên).</span>
+                        </label>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -816,6 +826,9 @@
             } catch (e) {}
         })();
 
+        let subdomainTimer = null;
+        let currentSubExistsInAttendance = false;
+
         function autoSuggestSubdomain(val) {
             const subInput = document.getElementById("reg-subdomain");
             if (subInput.dataset.manual === "1") return;
@@ -826,6 +839,47 @@
                 .replace(/[^a-z0-9]/g, "")
                 .slice(0, 20);
             subInput.value = slug;
+            scheduleSubdomainCheck(slug);
+        }
+
+        function scheduleSubdomainCheck(rawVal) {
+            if (subdomainTimer) clearTimeout(subdomainTimer);
+            const clean = String(rawVal || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+            const box = document.getElementById("subdomain-status-box");
+            const msg = document.getElementById("subdomain-status-msg");
+            const confirmWrap = document.getElementById("attendance-confirm-wrap");
+            const confirmChk = document.getElementById("reg-confirm-attendance");
+
+            currentSubExistsInAttendance = false;
+            if (confirmChk) confirmChk.checked = false;
+            if (confirmWrap) confirmWrap.classList.add("hidden");
+
+            if (!clean || clean.length < 3) {
+                if (box) box.classList.add("hidden");
+                return;
+            }
+
+            subdomainTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/public/check-subdomain?subdomain=${encodeURIComponent(clean)}`);
+                    const data = await res.json();
+                    if (!box || !msg) return;
+                    box.classList.remove("hidden");
+
+                    if (!data.available) {
+                        box.className = "p-3 rounded-xl border border-rose-500/40 bg-rose-500/15 text-xs space-y-2 text-rose-300";
+                        msg.innerHTML = `❌ ${data.message || "Mã định danh này đã có người sử dụng. Vui lòng đổi tên khác!"}`;
+                    } else if (data.existsInAttendance) {
+                        currentSubExistsInAttendance = true;
+                        box.className = "p-3 rounded-xl border border-amber-500/40 bg-amber-500/15 text-xs space-y-2 text-amber-200";
+                        msg.innerHTML = `🔗 <b>Phát hiện tên miền <code class="text-sky-300">${clean}.ltp-soft.com</code> đã được đăng ký bên Hệ Thống Chấm Công LTP!</b><br>• Nếu Quý khách <b>đang dùng Hệ Thống Chấm Công</b>: Hệ thống sẽ tự động tích hợp đồng bộ mã công ty <code>${clean}</code>.<br>• Nếu Quý khách <b>chưa dùng Chấm Công</b>: Vui lòng đổi một tên định danh khác ở ô trên!`;
+                        if (confirmWrap) confirmWrap.classList.remove("hidden");
+                    } else {
+                        box.className = "p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs space-y-1 text-emerald-300";
+                        msg.innerHTML = `✅ Mã định danh <b>${clean}</b> hợp lệ & chưa trùng lặp trên toàn hệ sinh thái LTP Soft!`;
+                    }
+                } catch (e) {}
+            }, 350);
         }
 
         function openRegisterModal(plan = "TRIAL") {
@@ -929,6 +983,13 @@
             const otpCode = document.getElementById("reg-otp").value.trim();
             const password = document.getElementById("reg-password").value;
 
+            const confirmAttendance = Boolean(document.getElementById("reg-confirm-attendance")?.checked);
+            if (currentSubExistsInAttendance && !confirmAttendance) {
+                errBox.textContent = `Phát hiện tên miền "${subdomain}.ltp-soft.com" đã tồn tại bên Hệ Thống Chấm Công! Nếu Quý khách đang dùng hệ thống Chấm Công, vui lòng tích xác nhận tích hợp; nếu chưa dùng, vui lòng đổi sang một tên định danh khác!`;
+                errBox.classList.remove("hidden");
+                return;
+            }
+
             const payload = {
                 company_name: companyName,
                 subdomain,
@@ -941,7 +1002,8 @@
                 billing_cycle: billingCycle,
                 is_trial: selectedPlanCode === "TRIAL",
                 coupon_code: couponCode,
-                google_token: googleIdToken
+                google_token: googleIdToken,
+                confirm_attendance_integration: confirmAttendance
             };
 
             btn.disabled = true;

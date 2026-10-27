@@ -705,6 +705,87 @@ export default {
       }
     }
 
+    // CROSS-SYSTEM SUBDOMAIN AVAILABILITY CHECK (PROGRESS HUB + ATTENDANCE SAAS LTP-SOFT.COM)
+    if (url.pathname === "/api/public/check-subdomain" && request.method === "GET") {
+      try {
+        const rawSub = url.searchParams.get("subdomain") || "";
+        const cleanSub = String(rawSub).trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+        const reserved = new Set([
+          "www", "api", "app", "admin", "root", "mail", "smtp", "ftp", "cdn", "static", "assets",
+          "dev", "test", "staging", "demo", "blog", "help", "support", "docs", "status", "billing",
+          "pay", "payment", "auth", "login", "signup", "dashboard", "portal", "ltp", "ltpsoft",
+          "ltp-soft", "progress", "super-admin", "master-root", "affiliate"
+        ]);
+        if (cleanSub.length < 3 || cleanSub.length > 30) {
+          return jsonResp({
+            available: false,
+            takenInProgress: false,
+            existsInAttendance: false,
+            subdomain: cleanSub,
+            message: "Mã định danh công ty phải từ 3 đến 30 ký tự (chữ thường a-z, số 0-9)."
+          });
+        }
+        if (reserved.has(cleanSub)) {
+          return jsonResp({
+            available: false,
+            takenInProgress: true,
+            existsInAttendance: false,
+            subdomain: cleanSub,
+            message: `Mã "${cleanSub}" là tên hệ thống bảo lưu. Vui lòng chọn tên khác!`
+          });
+        }
+
+        // 1. Check local Progress Hub DB
+        const takenLocal = await env.DB.prepare("SELECT id, company_name FROM tenants WHERE subdomain = ?").bind(cleanSub).first();
+        if (takenLocal) {
+          return jsonResp({
+            available: false,
+            takenInProgress: true,
+            existsInAttendance: false,
+            subdomain: cleanSub,
+            message: `Mã "${cleanSub}" đã được đăng ký trên Hệ thống Quản Lý Dự Án. Vui lòng đổi tên khác!`
+          });
+        }
+
+        // 2. Cross-check with LTP Attendance SaaS (https://ltp-soft.com/api/public/check-subdomain)
+        let existsInAttendance = false;
+        try {
+          const attRes = await fetch(`https://ltp-soft.com/api/public/check-subdomain?subdomain=${encodeURIComponent(cleanSub)}`, {
+            headers: { "Accept": "application/json" }
+          });
+          if (attRes.ok) {
+            const attData = await attRes.json();
+            if (attData && attData.available === false) {
+              existsInAttendance = true;
+            }
+          }
+        } catch (e) {}
+
+        if (existsInAttendance) {
+          return jsonResp({
+            available: true,
+            takenInProgress: false,
+            existsInAttendance: true,
+            subdomain: cleanSub,
+            attendanceUrl: `https://${cleanSub}.ltp-soft.com`,
+            progressUrl: `https://progress.ltp-soft.com/?tenant=${cleanSub}`,
+            message: `Phát hiện tên miền "${cleanSub}.ltp-soft.com" đã tồn tại trên Hệ Thống Chấm Công LTP! Nếu Quý khách đang dùng hệ thống Chấm Công thì hệ thống sẽ tự động tích hợp đồng bộ; nếu chưa dùng, vui lòng đổi một tên định danh khác.`
+          });
+        }
+
+        return jsonResp({
+          available: true,
+          takenInProgress: false,
+          existsInAttendance: false,
+          subdomain: cleanSub,
+          progressUrl: `https://progress.ltp-soft.com/?tenant=${cleanSub}`,
+          message: `Tên định danh "${cleanSub}" hợp lệ và chưa trùng trên toàn hệ sinh thái LTP Soft!`
+        });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
     // REGISTER NEW TENANT (14-DAY FREE TRIAL OR PAID VIETQR ORDER)
     if (url.pathname === "/api/public/register" && request.method === "POST") {
       try {
@@ -722,7 +803,8 @@ export default {
           otp_code,
           google_token,
           device_fingerprint,
-          coupon_code
+          coupon_code,
+          confirm_attendance_integration = false
         } = body;
 
         if (!company_name || !company_name.trim()) {
@@ -734,8 +816,24 @@ export default {
         }
         const taken = await env.DB.prepare("SELECT id FROM tenants WHERE subdomain = ?").bind(cleanSub).first();
         if (taken) {
-          return jsonResp({ error: `Mã công ty "${cleanSub}" đã được đăng ký. Vui lòng chọn mã khác!` }, 400);
+          return jsonResp({ error: `Mã công ty "${cleanSub}" đã được đăng ký trên Hệ thống Quản Lý Dự Án. Vui lòng chọn mã khác!` }, 400);
         }
+
+        // Cross-check with LTP Attendance SaaS (ltp-soft.com)
+        try {
+          const attRes = await fetch(`https://ltp-soft.com/api/public/check-subdomain?subdomain=${encodeURIComponent(cleanSub)}`, {
+            headers: { "Accept": "application/json" }
+          });
+          if (attRes.ok) {
+            const attData = await attRes.json();
+            if (attData && attData.available === false && !confirm_attendance_integration) {
+              return jsonResp({
+                error: `Phát hiện tên miền "${cleanSub}.ltp-soft.com" đã tồn tại bên Hệ Thống Chấm Công LTP! Nếu Quý khách đang dùng hệ thống Chấm Công, vui lòng tích chọn ô "Đồng bộ tích hợp với Hệ Thống Chấm Công"; nếu chưa dùng, vui lòng đổi sang một tên miền con khác!`,
+                existsInAttendance: true
+              }, 400);
+            }
+          }
+        } catch (e) {}
 
         let verifiedEmail = String(owner_email || "").trim().toLowerCase();
         let verifiedGoogleId = null;

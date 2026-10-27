@@ -12,11 +12,11 @@
 
                 const pathname = window.location.pathname.toLowerCase();
                 if (pathname.startsWith("/super-admin") || pathname.startsWith("/master-root")) {
-                    window.location.replace("/super-admin.html" + window.location.search);
+                    window.location.replace("/super-admin" + window.location.search);
                     return;
                 }
                 if (pathname.startsWith("/affiliate")) {
-                    window.location.replace("/affiliate.html" + window.location.search);
+                    window.location.replace("/affiliate" + window.location.search);
                     return;
                 }
 
@@ -32,7 +32,7 @@
                     host.endsWith(".pages.dev");
 
                 if (isRootDomain && !hasTenantParam && !hasActiveSession && (pathname === "/" || pathname === "/index.html")) {
-                    window.location.replace("/landing.html" + window.location.search);
+                    window.location.replace("/landing" + window.location.search);
                 }
             } catch (e) {}
         })();

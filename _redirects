@@ -1,5 +1,1 @@
-/super-admin /super-admin.html 200
-/master-root /super-admin.html 200
-/affiliate /affiliate.html 200
-/landing /landing.html 200
-/join /join.html 200
+/master-root /super-admin 302

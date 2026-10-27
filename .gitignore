@@ -8,6 +8,7 @@ test_multilang.pdf
 server.py
 app.js
 package.json
+wrangler.toml
 schedule_d1.sqlite
 workspace_store.json
 uploads/

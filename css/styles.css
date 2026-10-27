@@ -3253,3 +3253,10 @@ span.mirror-dept-badge {
     }
 }
 
+/* Fix Capsule Theme Selector Dropdown Visibility */
+#ui-theme-mode-select,
+#ui-theme-mode-select option {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+

@@ -277,12 +277,12 @@
                 <div style="display: flex; align-items: center; justify-content: space-around; font-size: 10px; color: #94a3b8; background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 5px 6px;">
                     <div style="display: flex; align-items: center; gap: 4px;" title="Chuyển Chế Độ Giao Diện 2D/3D">
                         <img src="./asset/icons/filter-all.svg" alt="" style="width:12px; height:12px; filter:invert(0.75);">
-                        <select id="ui-theme-mode-select" onchange="changeUiThemeMode(this.value)" style="background: transparent; color: #e2e8f0; border: none; font-size: 10px; font-weight: 600; cursor: pointer; outline: none; padding: 0;">
-                            <option value="pill-capsule">Capsule</option>
-                            <option value="2d-flat">2D Flat</option>
-                            <option value="2d-classic">Classic</option>
-                            <option value="3d-glass">Glass 3D</option>
-                            <option value="3d-liquid">Liquid 3D</option>
+                        <select id="ui-theme-mode-select" onchange="changeUiThemeMode(this.value)" style="background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 4px; font-size: 10px; font-weight: 600; cursor: pointer; outline: none; padding: 1px 3px;">
+                            <option value="pill-capsule" style="background:#0f172a; color:#f8fafc;">Capsule</option>
+                            <option value="2d-flat" style="background:#0f172a; color:#f8fafc;">2D Flat</option>
+                            <option value="2d-classic" style="background:#0f172a; color:#f8fafc;">Classic</option>
+                            <option value="3d-glass" style="background:#0f172a; color:#f8fafc;">Glass 3D</option>
+                            <option value="3d-liquid" style="background:#0f172a; color:#f8fafc;">Liquid 3D</option>
                         </select>
                     </div>
                     <span style="color: #334155;">|</span>
@@ -369,11 +369,7 @@
                                 <div class="settings-dropdown-menu" id="settings-dropdown-menu">
                                 <div class="settings-dropdown-item" style="background:#f8fafc; font-size:11px; color:#0f172a; font-weight:700; cursor:default; border-bottom:1px solid #cbd5e1;" id="settings-proj-info">
                                     <i data-lucide="hash" size="13" style="color:#64748b;"></i>
-                                    <span id="settings-proj-id-pin-label">ID: PRJ_01 | PIN: 12345678</span>
-                                </div>
-                                <div class="settings-dropdown-item" id="menu-staff-unlock" style="display:none;" onclick="unlockStaffPinPrompt(); hideSettingsDropdown();">
-                                    <i data-lucide="key-round" size="13" style="color:#475569;"></i>
-                                    <span>Nhập PIN Giải Khóa Edit</span>
+                                    <span id="settings-proj-id-pin-label">Mã Dự Án: PRJ_01</span>
                                 </div>
                                 <div class="settings-dropdown-item" id="menu-manage-dept" style="display:none;" onclick="openManageDepartmentsModal(); hideSettingsDropdown();">
                                     <i data-lucide="building-2" size="13" style="color:#475569;"></i>
@@ -399,7 +395,7 @@
                                     <img src="./asset/icons/storage-clean.svg" alt="" style="width:13px; height:13px; opacity:0.8;">
                                     <span>Xuất Dữ Liệu Dự Án</span>
                                 </div>
-                                <div class="settings-dropdown-item danger" id="menu-close-project" style="display:none;" onclick="openCloseProjectPinModal(); hideSettingsDropdown();">
+                                <div class="settings-dropdown-item danger" id="menu-close-project" style="display:none;" onclick="openCloseProjectModal(); hideSettingsDropdown();">
                                     <img src="./asset/icons/vault-lock.svg" alt="" style="width:13px; height:13px; opacity:0.8;">
                                     <span>Đóng Dự Án (Chuyển Vault)</span>
                                 </div>
@@ -444,15 +440,9 @@
                 <input class="form-control" id="new-proj-name" placeholder="Ví dụ: Thi Thiết Kế MEP Tòa Nhà B">
             </div>
 
-            <div style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:1;">
-                    <label>Mã PIN Bảo Mật (8-12 ký tự):</label>
-                    <input class="form-control" id="new-proj-pin" placeholder="Tự tạo nếu để trống">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label>Người Phụ Trách Chính (Lead PIC):</label>
-                    <input class="form-control" id="new-proj-pic" placeholder="Ví dụ: Kỹ sư Trưởng A">
-                </div>
+            <div class="form-group">
+                <label>Người Phụ Trách Chính (Lead PIC):</label>
+                <input class="form-control" id="new-proj-pic" placeholder="Ví dụ: Kỹ sư Trưởng A">
             </div>
 
             <div class="form-group">
@@ -793,38 +783,16 @@
         </div>
     </div>
 
-    <!-- MODAL PIN LOCKING FOR PROJECT CLOSURE -->
+    <!-- MODAL CONFIRMATION FOR PROJECT CLOSURE -->
     <div class="modal" id="pin-lock-modal">
-        <div class="modal-card" style="width:380px;">
-            <h3 style="color:#ef4444; margin-bottom:10px;">🔒 Đóng Dự Án & Chuyển Vùng Vault</h3>
-            <p style="font-size:12px; color:#475569; margin-bottom:12px;">
-                Nhập mã PIN bảo mật dự án (8-12 ký tự) được cấp lúc khởi tạo để xác nhận đóng và lưu trữ vĩnh viễn:
+        <div class="modal-card" style="width:400px;">
+            <h3 style="color:#ef4444; margin-bottom:10px;">🔒 Đóng Dự Án & Chuyển Sang Vault</h3>
+            <p style="font-size:12.5px; color:#475569; margin-bottom:14px; line-height:1.5;">
+                Xác nhận chuyển dự án <b id="close-proj-target-name" style="color:#0f172a;">này</b> sang Kho Lưu Trữ (Project Closed) ở chế độ Chỉ Xem để bảo toàn dữ liệu. Bạn có chắc chắn muốn đóng không?
             </p>
-            <div class="form-group">
-                <input type="password" class="form-control" id="project-pin-input" placeholder="Nhập mã PIN dự án...">
-            </div>
-            <div id="pin-error-msg" style="display:none; color:#ef4444; font-size:11px; font-weight:bold; margin-bottom:8px;"></div>
             <div style="text-align:right; gap:8px; display:flex; justify-content:flex-end;">
                 <button class="btn btn-secondary" onclick="closeModal('pin-lock-modal')">Hủy</button>
-                <button class="btn btn-danger" onclick="confirmCloseProjectWithPin()">Xác Nhận Đóng</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL PIN UNLOCKING FOR STAFF -->
-    <div class="modal" id="staff-pin-modal">
-        <div class="modal-card" style="width:380px;">
-            <h3 style="color:#2563eb; margin-bottom:10px;">🔑 Giải Khóa Edit Cho Nhân Viên (STAFF)</h3>
-            <p style="font-size:12px; color:#475569; margin-bottom:12px;">
-                Nhập mã PIN bảo mật của dự án để giải khóa quyền Thêm Task & Kéo Dây Nối cho phiên làm việc hiện tại:
-            </p>
-            <div class="form-group">
-                <input type="password" class="form-control" id="staff-pin-input" placeholder="Nhập mã PIN dự án...">
-            </div>
-            <div id="staff-pin-error-msg" style="display:none; color:#ef4444; font-size:11px; font-weight:bold; margin-bottom:8px;"></div>
-            <div style="text-align:right; gap:8px; display:flex; justify-content:flex-end;">
-                <button class="btn btn-secondary" onclick="closeModal('staff-pin-modal')">Hủy</button>
-                <button class="btn btn-primary" onclick="confirmUnlockStaffPin()">Xác Nhận Giải Khóa</button>
+                <button class="btn btn-danger" onclick="confirmCloseProject()">Xác Nhận Đóng</button>
             </div>
         </div>
     </div>
@@ -2096,38 +2064,6 @@
             ganttCore.renderGantt();
         }
 
-        function unlockStaffPinPrompt() {
-            const prj = ganttCore.getCurrentProject();
-            if (!prj) return;
-            const user = window.authMgr.getCurrentUser();
-            if (user.role !== "STAFF") return;
-
-            if (window.authMgr.isStaffPinUnlocked(prj.id)) {
-                alert(`✅ Bạn đã giải khóa PIN cho phiên làm việc này rồi! Bạn có thể thêm task và nối dây cho bộ phận ${user.dept}.`);
-                return;
-            }
-
-            document.getElementById("staff-pin-input").value = "";
-            document.getElementById("staff-pin-error-msg").style.display = "none";
-            document.getElementById("staff-pin-modal").style.display = "flex";
-        }
-
-        function confirmUnlockStaffPin() {
-            const prj = ganttCore.getCurrentProject();
-            if (!prj) return;
-            const pin = document.getElementById("staff-pin-input").value.trim();
-
-            if (window.authMgr.unlockStaffPin(prj.id, pin, prj.pin)) {
-                closeModal("staff-pin-modal");
-                alert("🔓 Giải khóa PIN thành công! Bạn hiện có quyền chỉnh sửa, thêm task và nối dây cho bộ phận của mình.");
-                ganttCore.renderGantt();
-            } else {
-                const err = document.getElementById("staff-pin-error-msg");
-                err.innerText = "❌ Sai mã PIN bảo mật dự án! Vui lòng hỏi DEPT_ADMIN hoặc Admin.";
-                err.style.display = "block";
-            }
-        }
-
         function onNewProjTypeChange() {
             const typeSelect = document.getElementById("new-proj-type");
             const typeVal = typeSelect ? typeSelect.value : "shared";
@@ -2160,7 +2096,8 @@
             }
 
             document.getElementById("new-proj-name").value = "";
-            document.getElementById("new-proj-pin").value = window.lifecycleMgr.generateDefaultPin();
+            const pinEl = document.getElementById("new-proj-pin");
+            if (pinEl) pinEl.value = "";
             document.getElementById("new-proj-pic").value = window.authMgr.getCurrentUser().id || "";
             document.getElementById("new-proj-manager").value = "";
             const typeSelect = document.getElementById("new-proj-type");
@@ -2199,7 +2136,8 @@
             const name = document.getElementById("new-proj-name").value.trim();
             if (!name) { alert("Vui lòng nhập Tên Dự Án!"); return; }
 
-            const pin = document.getElementById("new-proj-pin").value.trim() || window.lifecycleMgr.generateDefaultPin();
+            const pinEl = document.getElementById("new-proj-pin");
+            const pin = pinEl ? pinEl.value.trim() : "";
             const pic = document.getElementById("new-proj-pic").value.trim() || "Chưa gán";
             const projectManager = document.getElementById("new-proj-manager").value.trim() || "Chưa gán";
             const typeSelect = document.getElementById("new-proj-type");
@@ -2245,7 +2183,7 @@
 
             ganttCore.saveToLocalStorage();
             closeModal('new-project-modal');
-            alert(`🎉 Đã tạo dự án mới thành công!\nMã PIN bảo mật dự án: ${pin}`);
+            alert(`🎉 Đã tạo dự án [${name}] thành công!`);
             ganttCore.switchProject(newId);
         }
 
@@ -3218,34 +3156,29 @@
             ganttCore.renderGantt();
         }
 
-        function openCloseProjectPinModal() {
+        function openCloseProjectModal() {
             const prj = ganttCore.getCurrentProject();
+            if (!prj) return;
             if (!ganttCore.isProjectOwner(prj) && !window.authMgr.isAdmin()) {
                 alert("Chỉ Admin tối cao hoặc Người tạo dự án mới có quyền đóng dự án!");
                 return;
             }
-            document.getElementById("project-pin-input").value = "";
-            document.getElementById("pin-error-msg").style.display = "none";
+            const nameEl = document.getElementById("close-proj-target-name");
+            if (nameEl) nameEl.textContent = `[${prj.name}]`;
             document.getElementById("pin-lock-modal").style.display = "flex";
         }
 
-        function confirmCloseProjectWithPin() {
+        function confirmCloseProject() {
             const prj = ganttCore.getCurrentProject();
-            const pin = document.getElementById("project-pin-input").value.trim();
+            if (!prj) return;
 
-            if (window.lifecycleMgr.validatePin(prj, pin)) {
-                prj.status = "ARCHIVED";
-                prj.closedAt = new Date().toISOString();
-                ganttCore.saveToLocalStorage();
-                closeModal("pin-lock-modal");
-                alert("🎉 Đã đóng dự án và đóng băng dữ liệu thành công! Dự án đã được chuyển vào Kho Lưu Trữ (archive.html).");
-                ganttCore.renderProjectsSidebar();
-                ganttCore.renderGantt();
-            } else {
-                const err = document.getElementById("pin-error-msg");
-                err.innerText = "❌ Sai mã PIN bảo mật! Vui lòng kiểm tra lại.";
-                err.style.display = "block";
-            }
+            prj.status = "ARCHIVED";
+            prj.closedAt = new Date().toISOString();
+            ganttCore.saveToLocalStorage();
+            closeModal("pin-lock-modal");
+            alert(`🎉 Đã đóng dự án [${prj.name}] thành công! Dự án đã được chuyển vào Kho Lưu Trữ (Project Closed).`);
+            ganttCore.renderProjectsSidebar();
+            ganttCore.renderGantt();
         }
 
         function parseExcelDate(val) {

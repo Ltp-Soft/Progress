@@ -58,112 +58,16 @@ class GanttCore {
             if (storedShow !== null) localShowMirrors = JSON.parse(storedShow);
         } catch(e) {}
         return {
-            currentProjectId: "PRJ_01",
+            currentProjectId: "",
             d2dLinks: localD2D,
             showMirrorTasks: localShowMirrors,
-            projects: [
-                {
-                    id: "PRJ_01",
-                    name: "Thiết Kế MEP Tòa Nhà A",
-                    pin: "12345678",
-                    creatorDept: "CONSTRUCTION",
-                    creatorPic: "Kỹ Sư Trưởng C",
-                    projectManager: "Nguyễn Văn Chỉ Huy",
-                    isShared: true,
-                    invitedDepts: ["CONSTRUCTION", "MEP", "DESIGNER", "FACTORY", "ACCOUNTANT"],
-                    status: "Active",
-                    startRange: "2026-09-01",
-                    endRange: "2026-09-30",
-                    staffs: ["Nguyễn Văn A (Điện)", "Trần Thị B (PCCC)", "Lê Văn C (HVAC)", "Thợ điện Tpl", "Thầu phụ Galasy", "xưởng TPL", "Việt Á", "Mua hàng", "kho"],
-                    tasks: [
-                        { id: "T1", codeIn: "E0001", codeOut: "", staff: "Thợ điện Tpl", dept: "MEP", name: "Cắt sàn đi ống điện", start: "2026-09-02", end: "2026-09-06", isStarted: true, isCompleted: true, progressPercent: 100, lastProgressDate: "2026-09-06", notes: "", attachments: [] },
-                        { id: "T2", codeIn: "E0002", codeOut: "E0001", staff: "Thợ điện Tpl", dept: "MEP", name: "Kéo dây điện chính", start: "2026-09-07", end: "2026-09-30", isStarted: true, isCompleted: false, progressPercent: 65, lastProgressDate: new Date().toISOString().split('T')[0], notes: "Bị chậm tiến độ do chưa bàn giao hộp kỹ thuật", attachments: [] },
-                        { id: "T3", codeIn: "E0003", codeOut: "E0002", staff: "Lê Văn C", dept: "CONSTRUCTION", name: "Lắp thiết bị & Kiểm tra", start: "2026-09-13", end: "2026-09-20", isStarted: false, isCompleted: false, progressPercent: 0, lastProgressDate: "", notes: "", attachments: [] },
-                        { id: "T4", codeIn: "G0001", codeOut: "", staff: "Thầu phụ Galasy", dept: "DESIGNER", name: "Lót sàn thảm, rèm", start: "2026-09-05", end: "2026-09-10", isStarted: false, isCompleted: false, progressPercent: 0, lastProgressDate: "", notes: "", attachments: [] },
-                        { id: "T5", codeIn: "X0001", codeOut: "G0001", staff: "xưởng TPL", dept: "FACTORY", name: "Sản xuất bàn nhân viên", start: "2026-09-03", end: "2026-09-11", isStarted: true, isCompleted: false, progressPercent: 40, lastProgressDate: "2026-09-11", notes: "", attachments: [] },
-                        { id: "T6", codeIn: "H0001", codeOut: "E0002", staff: "Mua hàng", dept: "ACCOUNTANT", name: "Mua đèn chiếu sáng", start: "2026-09-10", end: "2026-09-14", isStarted: false, isCompleted: false, progressPercent: 0, lastProgressDate: "", notes: "", attachments: [] }
-                    ]
-                },
-                {
-                    id: "PRJ_INT_01",
-                    name: "Quản Lý Công Thợ & Chi Phí Nội Bộ Construction",
-                    pin: "88888888",
-                    creatorDept: "CONSTRUCTION",
-                    creatorPic: "Trưởng Phòng Construction",
-                    projectManager: "Trần Văn Giám Sát C",
-                    isShared: false,
-                    isDeptJob: true,
-                    category: "DEPT_JOB",
-                    invitedDepts: ["CONSTRUCTION"],
-                    projectTags: [{ name: "Hạng mục chung", start: "2026-09-02", end: "2026-09-10" }],
-                    status: "Active",
-                    startRange: "2026-09-01",
-                    endRange: "2026-09-30",
-                    staffs: ["Thợ Căn Bản", "Kế toán Nội Bộ"],
-                    tasks: [
-                        { id: "IT1", codeIn: "C0001", codeOut: "", staff: "Thợ Căn Bản", dept: "CONSTRUCTION", projectTag: "Hạng mục chung", name: "Kiểm đếm vật tư thi công", start: "2026-09-02", end: "2026-09-10", isStarted: true, isCompleted: false, progressPercent: 50, lastProgressDate: "2026-09-10", notes: "Nội bộ phòng Construction", attachments: [] }
-                    ]
-                },
-                {
-                    id: "PRJ_INT_02",
-                    name: "Hồ Sơ Bản Vẽ & Phối Cảnh Nội Thất Designer",
-                    pin: "88888888",
-                    creatorDept: "DESIGNER",
-                    creatorPic: "Trưởng Phòng Designer",
-                    projectManager: "Nguyễn Thiết Kế",
-                    isShared: false,
-                    isDeptJob: true,
-                    category: "DEPT_JOB",
-                    invitedDepts: ["DESIGNER"],
-                    projectTags: [
-                        { name: "Thiết kế ý tưởng", start: "2026-09-02", end: "2026-09-22" },
-                        { name: "Hồ sơ kỹ thuật", start: "2026-09-23", end: "2026-09-30" }
-                    ],
-                    status: "Active",
-                    startRange: "2026-09-01",
-                    endRange: "2026-09-30",
-                    staffs: ["Nguyễn Thiết Kế", "Văn Họa Viên"],
-                    tasks: [
-                        { id: "IT_DES_1", codeIn: "D0001", codeOut: "", staff: "Nguyễn Thiết Kế", dept: "DESIGNER", projectTag: "Thiết kế ý tưởng", name: "Lên Concept Mặt Bằng 2D", start: "2026-09-02", end: "2026-09-12", isStarted: true, isCompleted: true, progressPercent: 100, lastProgressDate: "2026-09-12", notes: "Đã duyệt concept", attachments: [] },
-                        { id: "IT_DES_2", codeIn: "D0002", codeOut: "D0001", staff: "Nguyễn Thiết Kế", dept: "DESIGNER", projectTag: "Thiết kế ý tưởng", name: "Dựng Phối Cảnh 3D Nội Thất", start: "2026-09-13", end: "2026-09-22", isStarted: true, isCompleted: false, progressPercent: 40, lastProgressDate: "2026-09-20", notes: "Render phối cảnh phòng khách", attachments: [] },
-                        { id: "IT_DES_3", codeIn: "D0003", codeOut: "D0002", staff: "Văn Họa Viên", dept: "DESIGNER", projectTag: "Hồ sơ kỹ thuật", name: "Triển Khai Hồ Sơ Bản Vẽ Kỹ Thuật", start: "2026-09-23", end: "2026-09-30", isStarted: false, isCompleted: false, progressPercent: 0, lastProgressDate: "", notes: "Chờ duyệt render 3D", attachments: [] }
-                    ]
-                },
-                {
-                    id: "PRJ_INT_03",
-                    name: "Lập Tiến Độ Tổng Thể & Kế Hoạch Dự Án Planning",
-                    pin: "88888888",
-                    creatorDept: "PLANNING",
-                    creatorPic: "Trưởng Phòng Planning",
-                    projectManager: "Lê Kế Hoạch",
-                    isShared: false,
-                    isDeptJob: true,
-                    category: "DEPT_JOB",
-                    invitedDepts: ["PLANNING"],
-                    projectTags: [
-                        { name: "Kế hoạch tổng thể", start: "2026-09-01", end: "2026-09-20" }
-                    ],
-                    status: "Active",
-                    startRange: "2026-09-01",
-                    endRange: "2026-09-30",
-                    staffs: ["Lê Kế Hoạch", "Trần Kế Toán"],
-                    tasks: [
-                        { id: "IT_PLN_1", codeIn: "P0001", codeOut: "", staff: "Lê Kế Hoạch", dept: "PLANNING", projectTag: "Kế hoạch tổng thể", name: "Phân Tích Khối Lượng Dự Án", start: "2026-09-01", end: "2026-09-08", isStarted: true, isCompleted: true, progressPercent: 100, lastProgressDate: "2026-09-08", notes: "Hoàn tất bóc tách", attachments: [] },
-                        { id: "IT_PLN_2", codeIn: "P0002", codeOut: "P0001", staff: "Lê Kế Hoạch", dept: "PLANNING", projectTag: "Kế hoạch tổng thể", name: "Lập Bảng Tiến Độ Thi Công Chi Tiết", start: "2026-09-09", end: "2026-09-20", isStarted: true, isCompleted: false, progressPercent: 70, lastProgressDate: "2026-09-18", notes: "Phối hợp với chỉ huy trưởng", attachments: [] }
-                    ]
-                }
-            ]
+            projects: []
         };
     }
 
     ensureDefaultProjects(projectsList) {
-        if (!projectsList || !Array.isArray(projectsList)) return;
-        const defaults = this.getDefaultWorkspaceData().projects;
-        defaults.forEach(dp => {
-            if (!projectsList.some(p => p.id === dp.id)) {
-                projectsList.push(dp);
-            }
-        });
+        // Workspace starts clean without auto-injecting demo/sample projects
+        return;
     }
 
     initDefaultWorkspace() {
@@ -854,21 +758,16 @@ class GanttCore {
         if (!isInvited) return false;
 
         if (user.role === "DEPT_ADMIN") return true;
-
-        if (user.role === "STAFF") {
-            return (window.authMgr && window.authMgr.isStaffAutonomous()) || window.authMgr.isStaffPinUnlocked(project.id);
-        }
-
+        if (user.role === "STAFF") return false;
         return false;
     }
 
-    // CAN USER FULL-EDIT / ADD TASK IN THIS PROJECT & DEPT? (Dates, Task Name, Code Out, Add Task)
+    // CAN USER FULL-EDIT / ADD TASK IN THIS PROJECT & DEPT?
+    // Trưởng phòng (DEPT_ADMIN) phân công và quản trị toàn bộ task phòng mình. Nhân viên chỉ nhận việc và báo cáo.
     canUserEditTaskInDept(deptId, project) {
         const user = window.authMgr.getCurrentUser();
         if (user.role === "BOSS" || user.role === "GUEST") return false;
         if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") return true;
-
-        const isStaffAuto = (user.role === "STAFF") && window.authMgr && window.authMgr.isStaffAutonomous();
 
         const isBidding = Boolean(project.isDeptReport || project.category === "REPORT" || project.category === "BIDDING" || (project.id && project.id.startsWith("PRJ_RPT_")));
         if (isBidding) {
@@ -877,10 +776,6 @@ class GanttCore {
             }
             if (user.role === "DEPT_ADMIN") {
                 return user.dept === deptId;
-            }
-            if (user.role === "STAFF") {
-                if (user.dept !== deptId) return false;
-                return isStaffAuto || window.authMgr.isStaffPinUnlocked(project.id);
             }
             return false;
         }
@@ -893,78 +788,52 @@ class GanttCore {
             return user.dept === deptId || user.dept === project.creatorDept;
         }
 
+        // Staff does not add or reschedule department tasks; they only report progress on tasks assigned to them
         if (user.role === "STAFF") {
-            if (user.dept !== deptId) return false;
-            return isStaffAuto || window.authMgr.isStaffPinUnlocked(project.id);
+            return false;
         }
 
         return false;
     }
 
-    // CAN STAFF REPORT PROGRESS, UPLOAD FILES, AND WRITE/CLEAR NOTES ON THIS TASK OR LINKED TASKS?
+    // CAN STAFF REPORT PROGRESS, UPLOAD FILES, AND WRITE NOTES ON THIS TASK?
+    // Nhân viên nào thì xử lý và báo cáo công việc của chính họ
     canUserReportOnTask(task, project) {
         if (!task || !project) return false;
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
         if (user.role === "BOSS" || user.role === "GUEST") return false;
-        if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN" || user.role === "DEPT_ADMIN") {
+        if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") return true;
+        if (user.role === "DEPT_ADMIN") {
             const taskDept = task.dept || getDeptFromCodeIn(task.codeIn);
             return this.canUserEditTaskInDept(taskDept, project);
         }
 
         if (user.role === "STAFF") {
+            const userNameLower = String(user.name || user.id || user.username || "").trim().toLowerCase();
+            const staffLower = String(task.staff || "").trim().toLowerCase();
             const taskDept = (task.dept || getDeptFromCodeIn(task.codeIn) || "").toUpperCase();
             const userDept = (user.dept || "").toUpperCase();
-            const userNameLower = String(user.name || user.id || "").trim().toLowerCase();
-            const staffLower = String(task.staff || "").trim().toLowerCase();
 
-            // 1. Direct match by department or assigned staff name
-            if (taskDept === userDept) return true;
+            // Match assigned staff directly
             if (userNameLower && staffLower && (staffLower.includes(userNameLower) || userNameLower.includes(staffLower))) return true;
-
-            // 2. Linked task match (codeIn / codeOut connected to a task of user's department or user's name)
-            const allTasks = project.tasks || [];
-            const myTasks = allTasks.filter(t => {
-                const td = (t.dept || getDeptFromCodeIn(t.codeIn) || "").toUpperCase();
-                const ts = String(t.staff || "").trim().toLowerCase();
-                return td === userDept || (userNameLower && ts && ts.includes(userNameLower));
-            });
-
-            const myCodesIn = new Set(myTasks.map(t => String(t.codeIn || "").trim()).filter(Boolean));
-            const myCodesOut = new Set();
-            myTasks.forEach(t => {
-                String(t.codeOut || "").split(",").map(s => s.trim()).filter(Boolean).forEach(c => myCodesOut.add(c));
-            });
-
-            const targetCodeIn = String(task.codeIn || "").trim();
-            const targetCodesOut = String(task.codeOut || "").split(",").map(s => s.trim()).filter(Boolean);
-
-            if (targetCodeIn && myCodesOut.has(targetCodeIn)) return true;
-            if (targetCodesOut.some(c => myCodesIn.has(c))) return true;
+            // Or unassigned task within their department
+            if ((!task.staff || task.staff === "Chưa giao" || task.staff === "Chưa gán") && taskDept === userDept) return true;
         }
 
         return false;
     }
 
+    // ONLY ADMIN & DEPARTMENT HEAD (DEPT_ADMIN) CAN DELETE TASKS
     canUserDeleteTask(task, project) {
         const user = window.authMgr.getCurrentUser();
-        if (user.role === "BOSS" || user.role === "GUEST") return false;
+        if (user.role === "BOSS" || user.role === "GUEST" || user.role === "STAFF") return false;
         if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") return true;
 
         const isBidding = Boolean(project.isDeptReport || project.category === "REPORT" || project.category === "BIDDING" || (project.id && project.id.startsWith("PRJ_RPT_")));
         const taskDept = task.dept || getDeptFromCodeIn(task.codeIn);
 
-        // Staff in REPORT_ONLY mode CANNOT delete tasks! Only AUTONOMOUS (or unlocked PIN) Staff can delete their own tasks.
-        if (user.role === "STAFF") {
-            const canFullEdit = (window.authMgr && window.authMgr.isStaffAutonomous()) || window.authMgr.isStaffPinUnlocked(project.id);
-            if (!canFullEdit) return false;
-            return user.dept === taskDept;
-        }
-
         if (isBidding) {
-            if (user.role === "DEPT_ADMIN") {
-                return user.dept === taskDept;
-            }
-            return false;
+            return user.role === "DEPT_ADMIN" && user.dept === taskDept;
         }
 
         if (this.isProjectOwner(project)) return true;

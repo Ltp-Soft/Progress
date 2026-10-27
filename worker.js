@@ -14,11 +14,12 @@ export const PLANS = {
     priceMonthly: 0,
     priceYearly: 0,
     maxUsers: 10,
-    maxProjects: 2,
+    maxProjects: 999999, // Không giới hạn dự án
     storageLimitMb: 500,
     maxFileSizeMb: 50,
     aiDailyLimit: 999999,
     addonPricePer10Gb: 49000,
+    addonPricePer10Users: 149000,
     isCorporate: false
   },
   STARTER: {
@@ -27,11 +28,12 @@ export const PLANS = {
     priceMonthly: 299000,
     priceYearly: 2990000,
     maxUsers: 15,
-    maxProjects: 10,
+    maxProjects: 999999, // Không giới hạn dự án
     storageLimitMb: 10240, // 10 GB
     maxFileSizeMb: 200,
     aiDailyLimit: 999999,
     addonPricePer10Gb: 49000,
+    addonPricePer10Users: 149000,
     isCorporate: false
   },
   BUSINESS: {
@@ -40,11 +42,12 @@ export const PLANS = {
     priceMonthly: 599000,
     priceYearly: 5990000,
     maxUsers: 40,
-    maxProjects: 999999,
+    maxProjects: 999999, // Không giới hạn dự án
     storageLimitMb: 35840, // 35 GB
     maxFileSizeMb: 350,
     aiDailyLimit: 999999,
     addonPricePer10Gb: 35000,
+    addonPricePer10Users: 149000,
     isCorporate: false
   },
   PRO: {
@@ -53,11 +56,12 @@ export const PLANS = {
     priceMonthly: 990000,
     priceYearly: 9900000,
     maxUsers: 100,
-    maxProjects: 999999,
+    maxProjects: 999999, // Không giới hạn dự án
     storageLimitMb: 81920, // 80 GB
     maxFileSizeMb: 500,
     aiDailyLimit: 999999,
     addonPricePer10Gb: 25000,
+    addonPricePer10Users: 149000,
     isCorporate: false
   },
   ENTERPRISE: {
@@ -66,11 +70,12 @@ export const PLANS = {
     priceMonthly: 4500000,
     priceYearly: 45000000,
     maxUsers: 999999,
-    maxProjects: 999999,
+    maxProjects: 999999, // Không giới hạn dự án
     storageLimitMb: 307200, // 300 GB
     maxFileSizeMb: 500,
     aiDailyLimit: 999999,
     addonPricePer10Gb: 19000,
+    addonPricePer10Users: 149000,
     isCorporate: true
   }
 };
@@ -514,7 +519,9 @@ async function ensureMultiTenantSchema(env) {
     ["users", "is_active", "INTEGER DEFAULT 1"],
     ["users", "device_fingerprint", "TEXT"],
     ["users", "google_id", "TEXT"],
-    ["users", "external_sync_id", "TEXT"]
+    ["users", "external_sync_id", "TEXT"],
+    ["tenants", "addon_users", "INTEGER DEFAULT 0"],
+    ["payment_orders", "addon_users", "INTEGER DEFAULT 0"]
   ];
 
   for (const [tbl, col, typeDef] of alterColumns) {
@@ -1058,18 +1065,7 @@ export default {
             owner_name || "Quản Trị Viên", admin_password, pwHash, admin_password
           ).run();
 
-          // Create 1 Sample Starter Project for the new Tenant
-          const sampleProjId = `PRJ_${cleanSub.toUpperCase()}_01`;
-          const todayStr = new Date().toISOString().split("T")[0];
-          await env.DB.prepare(`
-            INSERT INTO projects (
-              id, tenant_id, name, pin, creator_dept, creator_pic, project_manager,
-              is_shared, invited_depts, status, start_range, end_range, staffs, category
-            ) VALUES (?, ?, ?, '12345678', 'CONSTRUCTION', ?, ?, 1, '["CONSTRUCTION","DESIGNER","MEP","FACTORY"]', 'Active', ?, ?, '[]', 'SHARED')
-          `).bind(
-            sampleProjId, newTenantId, `Dự Án Mẫu — ${company_name.trim()}`,
-            owner_name || "Admin", owner_name || "Admin", todayStr, todayStr
-          ).run();
+          // Workspace starts clean without hardcoded demo projects
 
           const sessionPayload = {
             id: adminUserId,
@@ -1156,7 +1152,7 @@ export default {
                     <ul style="margin: 0; padding-left: 18px; space-y: 4px;">
                       <li>Vào <b>Cài Đặt Phòng Ban</b> để điều chỉnh danh mục bộ phận (Thi công, Thiết kế, Kế hoạch, Xưởng, MEP...).</li>
                       <li>Sử dụng tính năng <b>Tạo Mã QR Tuyển Quân</b> để nhân viên quét điện thoại tự đăng ký vào dự án.</li>
-                      <li>Khởi tạo hoặc chỉnh sửa Dự Án Mẫu đã được tạo sẵn trên Bảng Gantt.</li>
+                      <li>Bấm <b>Tạo Dự Án Mới</b> để bắt đầu lập bảng tiến độ Gantt Chart chuyên nghiệp cho công trình.</li>
                     </ul>
                   </div>
 
@@ -1282,12 +1278,21 @@ export default {
         }
 
         // 1. Storage Add-on Order (+10GB, +20GB...)
-        if (order.order_type === "ADDON_STORAGE") {
+        if (order.order_type === "ADDON_STORAGE" || order.order_type === "STORAGE_ADDON") {
           const addMb = (Number(order.addon_gb) || 10) * 1024;
           await env.DB.prepare("UPDATE tenants SET addon_storage_mb = COALESCE(addon_storage_mb, 0) + ? WHERE id = ?").bind(addMb, order.tenant_id).run();
           await env.DB.prepare("UPDATE payment_orders SET order_status = 'PAID', paid_at = datetime('now'), payment_reference = ? WHERE id = ?")
             .bind(payload.referenceCode || payload.id || "SEPAY", orderId).run();
           return jsonResp({ success: true, message: `Đã cộng thêm +${order.addon_gb}GB cho ${order.subdomain_requested}` });
+        }
+
+        // 1b. Staff Personnel Seats Add-on Order (+10 Seats, +20 Seats...)
+        if (order.order_type === "ADDON_SEATS" || order.order_type === "SEATS_ADDON" || order.order_type === "ADDON_USERS") {
+          const addUsers = Number(order.addon_users) || 10;
+          await env.DB.prepare("UPDATE tenants SET addon_users = COALESCE(addon_users, 0) + ? WHERE id = ?").bind(addUsers, order.tenant_id).run();
+          await env.DB.prepare("UPDATE payment_orders SET order_status = 'PAID', paid_at = datetime('now'), payment_reference = ? WHERE id = ?")
+            .bind(payload.referenceCode || payload.id || "SEPAY", orderId).run();
+          return jsonResp({ success: true, message: `Đã cộng thêm +${addUsers} nhân sự cho ${order.subdomain_requested}` });
         }
 
         // 2. New Registration or Plan Renewal/Upgrade
@@ -2543,12 +2548,15 @@ export default {
         avatarUrl: u.avatar_url || "",
         role: u.role,
         dept: u.dept,
+        department: u.dept,
         deptTags: JSON.parse(u.dept_tags || "[]"),
         prefix: u.prefix || "C",
         taskPermissionMode: u.task_permission_mode || "REPORT_ONLY",
         managedProjectIds: JSON.parse(u.managed_project_ids || "[]"),
         isActive: Number(u.is_active),
+        status: Number(u.is_active) === 1 ? "ACTIVE" : (Number(u.is_active) === 2 ? "WAITING_ROOM" : "LOCKED"),
         passwordHint: u.password_plain_hint || u.pass || "",
+        plainPasswordHint: u.password_plain_hint || u.pass || "",
         createdAt: u.created_at
       }));
 
@@ -2591,10 +2599,13 @@ export default {
           ownerEmail: tenant.owner_email,
           logoUrl: tenant.logo_url || "./asset/Logo_white.png",
           planType: tenant.plan_type || "TRIAL",
+          planCode: tenant.plan_type || "TRIAL",
           status: tenant.status || "TRIAL",
-          maxUsers: tenant.max_users || 15,
+          maxUsers: (Number(tenant.max_users) || 15) + (Number(tenant.addon_users) || 0),
+          baseUsers: Number(tenant.max_users) || 15,
+          addonUsers: Number(tenant.addon_users) || 0,
           activeSeats,
-          maxProjects: tenant.max_projects || 10,
+          maxProjects: 999999, // Không giới hạn số lượng dự án
           storageLimitMb: (Number(tenant.storage_limit_mb) || 500) + (Number(tenant.addon_storage_mb) || 0),
           baseStorageMb: Number(tenant.storage_limit_mb) || 500,
           addonStorageMb: Number(tenant.addon_storage_mb) || 0,
@@ -2603,6 +2614,7 @@ export default {
           aiDailyLimit: Number(tenant.ai_daily_limit) || 25,
           aiUsedToday: Number(tenant.ai_used_today) || 0,
           expiresAt: tenant.expires_at,
+          planExpiresAt: tenant.expires_at,
           isCorporate: tenant.plan_type === "ENTERPRISE"
         },
         plans: PLANS,
@@ -2617,7 +2629,12 @@ export default {
     // CREATE / MANAGE QR INVITE FOR WAITING ROOM
     if (url.pathname === "/api/admin/qr-invite" && request.method === "POST") {
       if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
-      const { action = "CREATE", id, title, maxUses = 10, defaultDept = "", projectId = "", requireGoogle = false } = await request.json();
+      const {
+        action = "CREATE", id, title,
+        maxUses = 10, maxScans,
+        defaultDept = "", defaultDepartment,
+        projectId = "", requireGoogle = false, autoApprove = false
+      } = await request.json();
 
       if (action === "DELETE" && id) {
         await env.DB.prepare("DELETE FROM qr_invites WHERE id = ? AND tenant_id = ?").bind(id, tenantId).run();
@@ -2630,12 +2647,25 @@ export default {
       }
 
       const inviteId = `INV_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const actualMaxUses = Math.max(1, Number(maxScans || maxUses || 10));
+      const actualDefaultDept = String(defaultDepartment || defaultDept || "").trim();
+
       await env.DB.prepare(`
         INSERT INTO qr_invites (id, tenant_id, project_id, title, max_uses, used_count, default_dept, require_google, is_active, created_by)
         VALUES (?, ?, ?, ?, ?, 0, ?, ?, 1, ?)
-      `).bind(inviteId, tenantId, projectId, title || "QR Gia Nhập Đội Ngũ", Math.max(1, Number(maxUses) || 10), defaultDept, requireGoogle ? 1 : 0, authUser.id).run();
+      `).bind(inviteId, tenantId, projectId, title || "QR Gia Nhập Đội Ngũ", actualMaxUses, actualDefaultDept, requireGoogle ? 1 : 0, authUser.id).run();
 
-      return jsonResp({ status: "success", inviteId });
+      return jsonResp({
+        status: "success",
+        inviteId,
+        invite: {
+          inviteCode: inviteId,
+          title: title || "QR Gia Nhập Đội Ngũ",
+          maxUses: actualMaxUses,
+          defaultDept: actualDefaultDept,
+          autoApprove: Boolean(autoApprove)
+        }
+      });
     }
 
     // WAITING ROOM APPROVE OR REJECT (WITH SLOT RESTORATION)
@@ -2654,10 +2684,11 @@ export default {
       }
 
       if (action === "APPROVE") {
-        // Check active seat limit of tenant
+        // Check active seat limit of tenant (including purchased seat add-ons)
+        const effectiveMaxUsers = (Number(tenant.max_users) || 15) + (Number(tenant.addon_users) || 0);
         const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST')").bind(tenantId).first();
-        if ((seatCnt?.cnt || 0) >= Number(tenant.max_users || 15)) {
-          return jsonResp({ error: `Công ty đã chạm giới hạn ${tenant.max_users} tài khoản nhân viên của gói ${tenant.plan_type}. Vui lòng khóa bớt tài khoản cũ hoặc nâng cấp gói!` }, 400);
+        if ((seatCnt?.cnt || 0) >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
+          return jsonResp({ error: `Công ty đã chạm giới hạn ${effectiveMaxUsers} tài khoản nhân sự (${tenant.max_users} gốc + ${tenant.addon_users || 0} add-on) của gói ${tenant.plan_type}. Vui lòng khóa bớt nhân sự cũ hoặc mua thêm gói +10 Nhân Sự!` }, 400);
         }
 
         const finalTags = Array.isArray(deptTags) && deptTags.length > 0 ? deptTags : [dept];
@@ -2678,18 +2709,35 @@ export default {
       }
     }
 
-    // MANAGE DEPARTMENTS (DYNAMIC DEPARTMENT TAGS)
+    // MANAGE DEPARTMENTS (DYNAMIC DEPARTMENT TAGS & EDITING)
     if (url.pathname === "/api/admin/departments" && request.method === "POST") {
       if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
-      const { action = "SAVE", id, code, name, prefix = "C", color = "#2563eb", defaultTaskMode = "REPORT_ONLY" } = await request.json();
+      const { action = "SAVE", id, deptId, code, name, prefix = "C", color = "#2563eb", defaultTaskMode = "REPORT_ONLY" } = await request.json();
+      const targetId = id || deptId;
 
       if (action === "DELETE") {
-        await env.DB.prepare("DELETE FROM departments WHERE (id = ? OR code = ?) AND tenant_id = ?").bind(id || code, code || id, tenantId).run();
+        await env.DB.prepare("DELETE FROM departments WHERE (id = ? OR code = ?) AND tenant_id = ?").bind(targetId || code, code || targetId, tenantId).run();
         return jsonResp({ status: "deleted" });
       }
 
+      if (action === "EDIT" || action === "UPDATE") {
+        if (!targetId && !code) return jsonResp({ error: "Thiếu thông tin phòng ban cần chỉnh sửa!" }, 400);
+        const newName = String(name || "").trim();
+        if (!newName) return jsonResp({ error: "Tên phòng ban không được để trống!" }, 400);
+
+        await env.DB.prepare(`
+          UPDATE departments
+          SET name = ?,
+              prefix = COALESCE(?, prefix),
+              color = COALESCE(?, color)
+          WHERE (id = ? OR code = ?) AND tenant_id = ?
+        `).bind(newName, prefix || null, color || null, targetId || code, code || targetId, tenantId).run();
+
+        return jsonResp({ status: "success", message: "Đã cập nhật tên phòng ban thành công!" });
+      }
+
       const cleanCode = String(code || name || "").trim().toUpperCase().replace(/[^A-Z0-9_]/g, "") || `DEPT_${Date.now().toString(36).toUpperCase()}`;
-      const deptId = id || `dept_${tenantId}_${cleanCode}`;
+      const finalDeptId = targetId || `dept_${tenantId}_${cleanCode}`;
       const cleanPrefix = String(prefix || cleanCode.charAt(0) || "C").trim().toUpperCase().charAt(0);
 
       await env.DB.prepare(`
@@ -2700,7 +2748,7 @@ export default {
           prefix = excluded.prefix,
           color = excluded.color,
           default_task_mode = excluded.default_task_mode
-      `).bind(deptId, tenantId, cleanCode, name || cleanCode, cleanPrefix, color, defaultTaskMode).run();
+      `).bind(finalDeptId, tenantId, cleanCode, name || cleanCode, cleanPrefix, color, defaultTaskMode).run();
 
       // If admin toggles default_task_mode for department, optionally sync to members of that department
       if (defaultTaskMode) {
@@ -2715,6 +2763,7 @@ export default {
       if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const body = await request.json();
       const { action = "SAVE", id, username, fullName, password, phone, email, role = "STAFF", dept = "CONSTRUCTION", deptTags = [], taskPermissionMode = "REPORT_ONLY", managedProjectIds = [], isActive = 1, avatarUrl = "" } = body;
+      const effectiveMaxUsers = (Number(tenant.max_users) || 15) + (Number(tenant.addon_users) || 0);
 
       if (action === "DELETE" && id) {
         await env.DB.prepare("DELETE FROM users WHERE id = ? AND tenant_id = ?").bind(id, tenantId).run();
@@ -2729,8 +2778,8 @@ export default {
       if (action === "TOGGLE_ACTIVE" && id) {
         if (Number(isActive) === 1) {
           const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST') AND id != ?").bind(tenantId, id).first();
-          if ((seatCnt?.cnt || 0) >= Number(tenant.max_users || 15)) {
-            return jsonResp({ error: `Đã đạt trần ${tenant.max_users} tài khoản đang hoạt động của gói ${tenant.plan_type}!` }, 400);
+          if ((seatCnt?.cnt || 0) >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
+            return jsonResp({ error: `Đã đạt trần ${effectiveMaxUsers} tài khoản đang hoạt động của công ty!` }, 400);
           }
         }
         await env.DB.prepare("UPDATE users SET is_active = ? WHERE id = ? AND tenant_id = ?").bind(Number(isActive), id, tenantId).run();
@@ -2740,8 +2789,8 @@ export default {
       // Check seat limit when adding a new active user
       if (!id && role !== "ADMIN") {
         const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST')").bind(tenantId).first();
-        if ((seatCnt?.cnt || 0) >= Number(tenant.max_users || 15)) {
-          return jsonResp({ error: `Công ty đã dùng hết ${tenant.max_users}/${tenant.max_users} suất nhân sự của gói ${tenant.plan_type}. Hãy khóa tài khoản nhân sự đã nghỉ/xong dự án hoặc nâng cấp gói!` }, 400);
+        if ((seatCnt?.cnt || 0) >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
+          return jsonResp({ error: `Công ty đã dùng hết ${effectiveMaxUsers}/${effectiveMaxUsers} suất nhân sự (${tenant.max_users} gốc + ${tenant.addon_users || 0} add-on). Hãy khóa tài khoản nhân sự đã nghỉ hoặc mua thêm gói +10 Nhân Sự!` }, 400);
         }
       }
 
@@ -2993,18 +3042,30 @@ export default {
       });
     }
 
-    // CREATE VIETQR ORDER FOR RENEWAL, UPGRADE OR STORAGE ADD-ON (+10GB, +20GB...)
+    // CREATE VIETQR ORDER FOR RENEWAL, UPGRADE, STORAGE (+10GB) OR PERSONNEL SEATS (+10 NHÂN SỰ)
     if (url.pathname === "/api/admin/create-order" && request.method === "POST") {
       if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
-      const { orderType = "RENEWAL", planType, billingCycle = "YEARLY", addonGb = 10, couponCode } = await request.json();
+      const {
+        orderType = "RENEWAL",
+        planType,
+        planCode,
+        billingCycle = "YEARLY",
+        addonGb = 10,
+        addonUsers = 10,
+        couponCode
+      } = await request.json();
 
       const currentPlan = PLANS[tenant.plan_type] || PLANS.STARTER;
       let basePrice = 0;
-      let targetPlan = planType || tenant.plan_type || "BUSINESS";
+      let targetPlan = planCode || planType || tenant.plan_type || "BUSINESS";
 
-      if (orderType === "ADDON_STORAGE") {
+      if (orderType === "ADDON_STORAGE" || orderType === "STORAGE_ADDON") {
         const blocksOf10Gb = Math.max(1, Math.round(Number(addonGb || 10) / 10));
         basePrice = blocksOf10Gb * (currentPlan.addonPricePer10Gb || 35000);
+      } else if (orderType === "ADDON_SEATS" || orderType === "SEATS_ADDON" || orderType === "ADDON_USERS") {
+        const blocksOf10Users = Math.max(1, Math.round(Number(addonUsers || 10) / 10));
+        const pricePer10 = billingCycle === "MONTHLY" ? 149000 : 1490000;
+        basePrice = blocksOf10Users * pricePer10;
       } else {
         const cfg = PLANS[targetPlan] || PLANS.BUSINESS;
         basePrice = billingCycle === "MONTHLY" ? cfg.priceMonthly : cfg.priceYearly;
@@ -3026,12 +3087,12 @@ export default {
       await env.DB.prepare(`
         INSERT INTO payment_orders (
           id, tenant_id, order_type, subdomain_requested, company_name, owner_email,
-          plan_type, billing_cycle, addon_gb, original_amount, discount_amount, amount,
+          plan_type, billing_cycle, addon_gb, addon_users, original_amount, discount_amount, amount,
           coupon_code, order_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
       `).bind(
         orderId, tenantId, orderType, tenant.subdomain, tenant.company_name, tenant.owner_email || "admin@ltp-soft.com",
-        targetPlan, billingCycle, Number(addonGb || 0), basePrice, discountAmount, finalAmount, appliedCoupon
+        targetPlan, billingCycle, Number(addonGb || 0), Number(addonUsers || 0), basePrice, discountAmount, finalAmount, appliedCoupon
       ).run();
 
       const bankBin = env.VIETQR_BANK_BIN || "970422";
@@ -3043,12 +3104,20 @@ export default {
         success: true,
         order: {
           order_id: orderId,
+          orderId: orderId,
+          orderCode: orderId,
           order_type: orderType,
+          orderType: orderType,
           plan_type: targetPlan,
+          planType: targetPlan,
           addon_gb: Number(addonGb || 0),
+          addonGb: Number(addonGb || 0),
+          addon_users: Number(addonUsers || 0),
+          addonUsers: Number(addonUsers || 0),
           amount: finalAmount,
           formatted_amount: `${finalAmount.toLocaleString("vi-VN")} đ`,
           qr_url: qrUrl,
+          qrUrl: qrUrl,
           bank_bin: bankBin,
           bank_account: bankAccount,
           bank_account_name: bankAccountName,

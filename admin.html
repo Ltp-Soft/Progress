@@ -181,6 +181,19 @@
                 <div id="waiting-room-list" class="space-y-2"></div>
             </div>
 
+            <!-- Department Headcount Strip & Quick Filter -->
+            <div id="dept-headcount-strip" class="p-3.5 card-surface rounded-2xl flex flex-wrap items-center gap-2 border border-slate-800">
+                <div class="flex items-center gap-2 mr-2">
+                    <span class="text-xs font-bold text-slate-300">Quân số phòng ban:</span>
+                </div>
+                <div id="dept-headcount-pills" class="flex flex-wrap items-center gap-1.5 flex-1">
+                    <span class="text-xs text-slate-500">Đang tính quân số...</span>
+                </div>
+                <button onclick="openDeptManagerModal()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold transition">
+                    ⚙️ Sửa phòng ban
+                </button>
+            </div>
+
             <!-- Clean 1-Row-Per-User Table -->
             <div class="card-surface rounded-2xl overflow-hidden">
                 <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
@@ -188,8 +201,13 @@
                         <input id="staff-search-input" type="text" oninput="renderUsersTable()" placeholder="🔍 Tìm tên, mã đăng nhập, bộ phận..."
                                class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white w-64 focus:outline-none focus:border-sky-400">
                     </div>
-                    <div class="text-[11px] text-slate-400">
-                        💡 <strong>Mẹo:</strong> Khi dự án kết thúc, bấm <strong>Khóa ghế</strong> để thu hồi suất nhân sự cấp cho dự án mới.
+                    <div class="flex items-center gap-2">
+                        <button onclick="openBuySeatsModal()" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition">
+                            + Mua Thêm +10 Nhân Sự
+                        </button>
+                        <div class="text-[11px] text-slate-400 hidden sm:block">
+                            💡 Khóa ghế khi dự án xong để thu hồi suất
+                        </div>
                     </div>
                 </div>
 
@@ -593,6 +611,16 @@
                     </select>
                 </div>
 
+                <div id="checkout-seats-options" class="hidden">
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Chọn gói nhân sự muốn mua thêm (+10 Nhân Sự)</label>
+                    <select id="addon-seats-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-bold">
+                        <option value="10">+10 Ghế Nhân Sự (149.000đ/tháng)</option>
+                        <option value="20">+20 Ghế Nhân Sự (298.000đ/tháng)</option>
+                        <option value="30">+30 Ghế Nhân Sự (447.000đ/tháng)</option>
+                        <option value="50">+50 Ghế Nhân Sự (745.000đ/tháng)</option>
+                    </select>
+                </div>
+
                 <div id="checkout-plan-options" class="hidden">
                     <label class="block text-xs font-bold text-slate-300 mb-1">Chu kỳ thanh toán</label>
                     <select id="checkout-cycle-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-bold">
@@ -705,18 +733,35 @@
             const t = adminState.tenant;
             if (!t) return;
 
+            const exp = t.planExpiresAt || t.expiresAt;
+            let expText = "Không giới hạn";
+            let expClass = "text-emerald-400";
+            if (exp) {
+                const expDate = new Date(exp);
+                const diffDays = Math.ceil((expDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                const dateStr = expDate.toLocaleDateString("vi-VN");
+                if (diffDays > 0) {
+                    expText = `${dateStr} (Còn ${diffDays} ngày)`;
+                    expClass = diffDays <= 3 ? "text-rose-400" : "text-emerald-400";
+                } else {
+                    expText = `${dateStr} (Đã hết hạn)`;
+                    expClass = "text-rose-400";
+                }
+            }
+
             document.getElementById("header-company-name").textContent = t.companyName || "LTP Progress Hub";
-            document.getElementById("header-plan-badge").textContent = t.planCode || "BUSINESS";
+            document.getElementById("header-plan-badge").textContent = t.planCode || t.planType || "BUSINESS";
             if (t.logoUrl) {
                 document.getElementById("header-company-logo").src = t.logoUrl;
                 document.getElementById("brand-logo-preview").src = t.logoUrl;
             }
-            document.getElementById("header-sub-info").textContent =
-                `Mã công ty: ${t.subdomain}.ltp-soft.com • Hạn gói: ${t.planExpiresAt ? new Date(t.planExpiresAt).toLocaleDateString("vi-VN") : "Không giới hạn"}`;
+            document.getElementById("header-sub-info").innerHTML =
+                `Mã công ty: <strong class="text-white bg-slate-800/90 px-1.5 py-0.5 rounded border border-slate-700 font-mono">${t.subdomain}</strong> • Domain: <span class="text-sky-400 font-mono">${t.subdomain}-pm.ltp-soft.com</span> • Thời hạn gói: <strong class="${expClass}">${expText}</strong>`;
 
-            const activeUsers = adminState.users.filter(u => u.status === "ACTIVE").length;
-            const waitingUsers = adminState.users.filter(u => u.status === "WAITING_ROOM").length;
-            const maxUsersLabel = t.maxUsers >= 999999 ? "Không giới hạn" : t.maxUsers;
+            const activeUsers = adminState.users.filter(u => u.status === "ACTIVE" || u.isActive === 1).length;
+            const waitingUsers = adminState.users.filter(u => u.status === "WAITING_ROOM" || u.isActive === 2 || u.role === "WAITING").length;
+            const maxUsersVal = Number(t.maxUsers || 15);
+            const maxUsersLabel = maxUsersVal >= 999999 ? "Không giới hạn" : `${maxUsersVal} ghế`;
             document.getElementById("kpi-seats").textContent = `${activeUsers} / ${maxUsersLabel}`;
             document.getElementById("kpi-waiting-note").textContent =
                 waitingUsers > 0 ? `⏳ ${waitingUsers} người đang chờ duyệt` : "✓ Phòng chờ trống";
@@ -856,24 +901,65 @@
             renderUsersTable();
         }
 
+        let selectedDeptFilter = null;
+
+        function filterByDept(code) {
+            selectedDeptFilter = selectedDeptFilter === code ? null : code;
+            renderUsersTable();
+        }
+
         function renderUsersTable() {
             const q = (document.getElementById("staff-search-input")?.value || "").trim().toLowerCase();
             const tbody = document.getElementById("users-table-body");
             const depts = adminState.departments.length
                 ? adminState.departments
-                : [{ name: "Thiết kế" }, { name: "Thi công" }, { name: "Văn phòng" }];
+                : [{ code: "CONSTRUCTION", name: "Thi công", color: "#0284c7" }, { code: "DESIGNER", name: "Thiết kế", color: "#7c3aed" }, { code: "FACTORY", name: "Xưởng SX", color: "#ea580c" }];
             const isEnterprise = adminState.tenant?.planCode === "ENTERPRISE";
 
-            const rows = adminState.users
-                .filter(u => u.status !== "WAITING_ROOM")
-                .filter(u => {
-                    if (!q) return true;
-                    return (
-                        String(u.fullName || "").toLowerCase().includes(q) ||
-                        String(u.username || "").toLowerCase().includes(q) ||
-                        String(u.department || "").toLowerCase().includes(q)
-                    );
+            // 1. Calculate Headcount per Department & Render Quick Filter Pills
+            const activePool = adminState.users.filter(u => u.status !== "WAITING_ROOM" && u.isActive !== 2 && u.role !== "WAITING");
+            const deptHeadcounts = {};
+            activePool.forEach(u => {
+                const uDept = String(u.dept || u.department || "").trim();
+                deptHeadcounts[uDept] = (deptHeadcounts[uDept] || 0) + 1;
+            });
+
+            const pillsEl = document.getElementById("dept-headcount-pills");
+            if (pillsEl) {
+                const totalActive = activePool.length;
+                let pillsHtml = `
+                    <button onclick="filterByDept(null)" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${!selectedDeptFilter ? 'bg-sky-500 text-white shadow-sm' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}">
+                        <span>Tất cả</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] ${!selectedDeptFilter ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-400'}">${totalActive}</span>
+                    </button>
+                `;
+                depts.forEach(d => {
+                    const c = deptHeadcounts[d.code] || deptHeadcounts[d.name] || 0;
+                    const isSelected = selectedDeptFilter === d.code || selectedDeptFilter === d.name;
+                    pillsHtml += `
+                        <button onclick="filterByDept('${d.code || d.name}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${isSelected ? 'bg-sky-500 text-white shadow-sm font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}">
+                            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${d.color || '#3b82f6'};"></span>
+                            <span>${d.name}</span>
+                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold ${isSelected ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-400'}">${c}</span>
+                        </button>
+                    `;
                 });
+                pillsEl.innerHTML = pillsHtml;
+            }
+
+            // 2. Filter Rows by Search Query & Selected Department
+            const rows = activePool.filter(u => {
+                if (selectedDeptFilter) {
+                    const matchDept = (u.dept === selectedDeptFilter || u.department === selectedDeptFilter || (Array.isArray(u.deptTags) && u.deptTags.includes(selectedDeptFilter)));
+                    if (!matchDept) return false;
+                }
+                if (!q) return true;
+                return (
+                    String(u.fullName || "").toLowerCase().includes(q) ||
+                    String(u.username || "").toLowerCase().includes(q) ||
+                    String(u.department || u.dept || "").toLowerCase().includes(q)
+                );
+            });
 
             if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">Chưa có nhân sự nào khớp bộ lọc. Hãy bấm "Tạo Mã QR Phòng Chờ" để thêm nhanh nhân viên!</td></tr>`;
@@ -1310,15 +1396,24 @@
                 const res = await fetch("/api/admin/qr-invite", {
                     method: "POST",
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ action: "CREATE", title, maxScans, defaultDepartment, autoApprove })
+                    body: JSON.stringify({
+                        action: "CREATE",
+                        title,
+                        maxScans,
+                        maxUses: maxScans,
+                        defaultDepartment,
+                        defaultDept: defaultDepartment,
+                        autoApprove
+                    })
                 });
                 const data = await res.json();
-                if (!res.ok || !data.invite) {
+                const inviteCode = data.invite?.inviteCode || data.inviteId;
+                if (!res.ok || !inviteCode) {
                     alert(data.error || "Không thể tạo mã QR.");
                     return;
                 }
 
-                lastGeneratedJoinUrl = `${window.location.origin}/join.html?code=${encodeURIComponent(data.invite.inviteCode)}`;
+                lastGeneratedJoinUrl = `${window.location.origin}/join.html?code=${encodeURIComponent(inviteCode)}`;
                 const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=${encodeURIComponent(lastGeneratedJoinUrl)}`;
 
                 document.getElementById("generated-qr-img").src = qrApiUrl;
@@ -1344,7 +1439,7 @@
             await fetch("/api/admin/qr-invite", {
                 method: "POST",
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ action: "REVOKE", inviteCode })
+                body: JSON.stringify({ action: "REVOKE", inviteCode, id: inviteCode })
             });
             await loadAdminOverview();
         }
@@ -1354,15 +1449,56 @@
             document.getElementById("dept-manager-modal").classList.remove("hidden");
             renderDeptTagsModalList();
         }
+
         function renderDeptTagsModalList() {
             const list = document.getElementById("dept-tags-list");
-            list.innerHTML = (adminState.departments || []).map(d => `
-                <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
-                    <span class="font-bold text-white">🏷️ ${d.name}</span>
-                    <button onclick="deleteDepartmentTag('${d.id}')" class="text-rose-400 hover:underline font-bold">Xóa</button>
+            const deptHeadcounts = {};
+            (adminState.users || []).forEach(u => {
+                if (u.status !== "WAITING_ROOM" && u.isActive !== 2 && u.role !== "WAITING") {
+                    const dName = u.dept || u.department || "Khác";
+                    deptHeadcounts[dName] = (deptHeadcounts[dName] || 0) + 1;
+                }
+            });
+
+            list.innerHTML = (adminState.departments || []).map(d => {
+                const count = deptHeadcounts[d.code] || deptHeadcounts[d.name] || 0;
+                return `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs gap-2">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${d.color || '#3b82f6'};"></span>
+                        <span class="font-bold text-white truncate">🏷️ ${d.name}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono shrink-0">(${count} nhân sự)</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="promptEditDepartment('${d.id}', '${d.code || ''}', '${d.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold transition">✏️ Sửa tên</button>
+                        <button onclick="deleteDepartmentTag('${d.id}', '${d.code || ''}')" class="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold transition">Xóa</button>
+                    </div>
                 </div>
-            `).join("");
+            `;
+            }).join("");
         }
+
+        async function promptEditDepartment(deptId, deptCode, currentName) {
+            const newName = prompt(`Nhập tên mới cho phòng ban [${currentName}]:`, currentName);
+            if (!newName || !newName.trim() || newName.trim() === currentName) return;
+            try {
+                const res = await fetch("/api/admin/departments", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action: "EDIT", id: deptId, code: deptCode, name: newName.trim() })
+                });
+                if (res.ok) {
+                    await loadAdminOverview();
+                    renderDeptTagsModalList();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || "Không thể cập nhật tên phòng ban.");
+                }
+            } catch (e) {
+                alert("Lỗi kết nối khi cập nhật tên phòng ban.");
+            }
+        }
+
         async function addDepartmentTag() {
             const name = document.getElementById("new-dept-name").value.trim();
             if (!name) return;
@@ -1375,11 +1511,13 @@
             await loadAdminOverview();
             renderDeptTagsModalList();
         }
-        async function deleteDepartmentTag(deptId) {
+
+        async function deleteDepartmentTag(deptId, deptCode) {
+            if (!confirm("Bạn có chắc chắn muốn xóa phòng ban này?")) return;
             await fetch("/api/admin/departments", {
                 method: "POST",
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ action: "DELETE", deptId })
+                body: JSON.stringify({ action: "DELETE", id: deptId, deptId, code: deptCode })
             });
             await loadAdminOverview();
             renderDeptTagsModalList();
@@ -1424,12 +1562,24 @@
             await loadAdminOverview();
         }
 
-        // VietQR Checkout for Add-on Storage or Plan Upgrade
+        // VietQR Checkout for Add-on Storage, Add-on Personnel Seats or Plan Upgrade
         function openBuyStorageModal() {
             currentCheckoutType = "STORAGE_ADDON";
             document.getElementById("checkout-modal-title").textContent = "➕ Mua Thêm Dung Lượng Cloud R2";
             document.getElementById("checkout-storage-options").classList.remove("hidden");
+            document.getElementById("checkout-seats-options").classList.add("hidden");
             document.getElementById("checkout-plan-options").classList.add("hidden");
+            document.getElementById("checkout-config-step").classList.remove("hidden");
+            document.getElementById("checkout-qr-step").classList.add("hidden");
+            document.getElementById("vietqr-checkout-modal").classList.remove("hidden");
+        }
+
+        function openBuySeatsModal() {
+            currentCheckoutType = "ADDON_SEATS";
+            document.getElementById("checkout-modal-title").textContent = "👥 Mua Thêm Ghế Nhân Sự (+10 NV)";
+            document.getElementById("checkout-storage-options").classList.add("hidden");
+            document.getElementById("checkout-seats-options").classList.remove("hidden");
+            document.getElementById("checkout-plan-options").classList.remove("hidden");
             document.getElementById("checkout-config-step").classList.remove("hidden");
             document.getElementById("checkout-qr-step").classList.add("hidden");
             document.getElementById("vietqr-checkout-modal").classList.remove("hidden");
@@ -1440,6 +1590,7 @@
             currentCheckoutPlan = planCode;
             document.getElementById("checkout-modal-title").textContent = `💳 Gia Hạn / Nâng Cấp Gói ${planCode}`;
             document.getElementById("checkout-storage-options").classList.add("hidden");
+            document.getElementById("checkout-seats-options").classList.add("hidden");
             document.getElementById("checkout-plan-options").classList.remove("hidden");
             document.getElementById("checkout-config-step").classList.remove("hidden");
             document.getElementById("checkout-qr-step").classList.add("hidden");
@@ -1453,6 +1604,7 @@
 
         async function generateAdminVietQrOrder() {
             const addonGb = Number(document.getElementById("addon-gb-select").value || 10);
+            const addonUsers = Number(document.getElementById("addon-seats-select").value || 10);
             const billingCycle = document.getElementById("checkout-cycle-select").value || "MONTHLY";
 
             const res = await fetch("/api/admin/create-order", {
@@ -1462,24 +1614,30 @@
                     orderType: currentCheckoutType,
                     planCode: currentCheckoutPlan,
                     billingCycle,
-                    addonGb
+                    addonGb,
+                    addonUsers
                 })
             });
             const data = await res.json();
-            if (!res.ok || !data.order) {
+            const ord = data.order;
+            if (!res.ok || !ord) {
                 alert(data.error || "Không thể tạo đơn thanh toán.");
                 return;
             }
 
+            const qrUrl = ord.qrUrl || ord.qr_url;
+            const orderCode = ord.orderCode || ord.order_id || ord.orderId;
+            const amount = Number(ord.amount || 0);
+
             document.getElementById("checkout-config-step").classList.add("hidden");
             document.getElementById("checkout-qr-step").classList.remove("hidden");
-            document.getElementById("admin-vietqr-img").src = data.order.qrUrl;
-            document.getElementById("admin-qr-amount").textContent = Number(data.order.amount).toLocaleString("vi-VN") + "đ";
-            document.getElementById("admin-qr-code").textContent = data.order.orderCode;
+            document.getElementById("admin-vietqr-img").src = qrUrl;
+            document.getElementById("admin-qr-amount").textContent = amount.toLocaleString("vi-VN") + "đ";
+            document.getElementById("admin-qr-code").textContent = orderCode;
 
             if (adminOrderPollTimer) clearInterval(adminOrderPollTimer);
             adminOrderPollTimer = setInterval(async () => {
-                const r = await fetch(`/api/public/order-status?code=${encodeURIComponent(data.order.orderCode)}`);
+                const r = await fetch(`/api/public/order-status?code=${encodeURIComponent(orderCode)}`);
                 const st = await r.json();
                 if (st.status === "PAID") {
                     clearInterval(adminOrderPollTimer);

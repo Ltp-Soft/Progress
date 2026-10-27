@@ -175,23 +175,34 @@ async function verifyPassword(password, storedHash, storedPlain) {
 // EMAIL SENDER VIA RESEND API (OTP & PASSWORD RESET)
 // ============================================================================
 async function sendEmail({ to, subject, html, env = {} }) {
-  const apiKey = env.RESEND_API_KEY || "re_BQejyjFu_3EsgN6Gtdsp1r5FqYh749F1g";
-  const from = env.EMAIL_FROM || "LTP Soft <no-reply@ltp-soft.com>";
-  const trySend = async (fromAddr) => {
-    return fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: fromAddr, to: Array.isArray(to) ? to : [to], subject, html })
-    });
-  };
+  const apiKey = (env.RESEND_API_KEY || "re_BQejyjFu_3EsgN6Gtdsp1r5FqYh749F1g").trim();
+  const from = (env.EMAIL_FROM || "LTP Soft <no-reply@ltp-soft.com>").trim();
+
   try {
-    let res = await trySend(from);
-    let data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      res = await trySend("LTP Soft <onboarding@resend.dev>");
-      data = await res.json().catch(() => ({}));
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.id) {
+      return { success: true, id: data.id };
     }
-    return { success: res.ok, id: data.id, error: res.ok ? null : (data.message || "Resend sandbox") };
+
+    return {
+      success: false,
+      status: res.status,
+      error: data.message || data.error || (typeof data === "string" ? data : `Lỗi HTTP ${res.status}`)
+    };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -816,7 +827,19 @@ export default {
           });
         }
 
-        // 1. Check local Progress Hub DB
+        // SEND TEST EMAIL DIAGNOSTIC ENDPOINT
+        if (url.pathname === "/api/public/test-resend" && request.method === "GET") {
+          const testTo = url.searchParams.get("to") || "loc.gvn1@gmail.com";
+          const resendKey = env.RESEND_API_KEY || "NOT_SET";
+          const keyPrefix = resendKey.slice(0, 7) + "..." + resendKey.slice(-4);
+          const mailRes = await sendEmail({
+            to: testTo,
+            subject: "[LTP Progress Hub] Test Resend Delivery",
+            html: `<h3>Test email lúc ${new Date().toISOString()}</h3><p>Key: ${keyPrefix}</p>`,
+            env
+          });
+          return jsonResp({ keyUsed: keyPrefix, fromUsed: env.EMAIL_FROM || "LTP Soft <no-reply@ltp-soft.com>", result: mailRes });
+        }
         let takenLocal = await env.DB.prepare("SELECT id, company_name FROM tenants WHERE subdomain = ?").bind(cleanSub).first();
         if (takenLocal && takenLocal.id !== "tenant-demo") {
           const pCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM projects WHERE tenant_id = ?").bind(takenLocal.id).first().catch(() => ({ cnt: 0 }));

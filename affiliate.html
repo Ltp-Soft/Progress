@@ -17,11 +17,11 @@
     <!-- Header -->
     <header class="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <a href="landing.html" class="flex items-center gap-3">
+            <a href="/landing" class="flex items-center gap-3">
                 <img src="asset/logo.png" alt="LTP Logo" class="h-9 w-9 rounded-xl object-contain bg-white/5 p-1 border border-slate-700">
                 <div class="flex items-center gap-2">
                     <span class="font-extrabold text-base tracking-tight text-white">LTP PROGRESS HUB</span>
-                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-amber-300 border border-slate-700">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                         KOL / AFFILIATE (20%)
                     </span>
                 </div>
@@ -29,8 +29,9 @@
 
             <div class="flex items-center gap-3">
                 <div id="aff-header-guest" class="flex items-center gap-2">
-                    <a href="landing.html" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition">
-                        Về Trang Chủ Bán Hàng
+                    <a href="/landing" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition inline-flex items-center gap-1.5">
+                        <span>Về Trang Chủ</span>
+                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </a>
                 </div>
                 <div id="aff-header-user" class="hidden items-center gap-3">
@@ -119,6 +120,59 @@
                     </p>
                 </div>
             </div>
+
+            <!-- QUY CHẾ HOẠT ĐỘNG, ĐIỀU KHOẢN & LUẬT CHƠI ĐỐI TÁC AFFILIATE (CHUẨN LTP SOFT) -->
+            <div class="card-surface rounded-3xl p-6 sm:p-8 space-y-6">
+                <div class="flex items-start gap-3.5 border-b border-slate-800 pb-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold text-white">Quy Chế Hoạt Động, Điều Khoản & Miễn Trừ Trách Nhiệm Đối Tác Affiliate</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Đơn vị chủ quản: CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ LÊ TÀI PHÁT • MST: 0317654107</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 leading-relaxed">
+                    <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+                        <h4 class="font-bold text-white flex items-center gap-2 text-sm">
+                            <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            <span>Điều 1. Quyền Lợi & Cơ Chế Đối Soát Hoa Hồng</span>
+                        </h4>
+                        <ul class="space-y-1.5 list-disc list-inside text-slate-300 text-[12px]">
+                            <li><strong>Hoa hồng 2 tầng trọn đời:</strong> Nhận <strong>20% hoa hồng</strong> cho đơn hàng đầu tiên của khách hàng giới thiệu, và <strong>10% hoa hồng</strong> cho mọi lần gia hạn hoặc nâng cấp gói về sau.</li>
+                            <li><strong>Ưu đãi cho khách hàng:</strong> Khách nhập mã giới thiệu được <strong>giảm trực tiếp 10%</strong> trên hóa đơn lần đầu.</li>
+                            <li><strong>Lưu Cookie 30 ngày & Định danh vĩnh viễn:</strong> Hệ thống lưu cookie giới thiệu 30 ngày và gắn khách hàng với đối tác trọn đời.</li>
+                            <li><strong>Duyệt kích hoạt thủ công & Cấp bản Demo:</strong> Sau khi Admin LTP Soft phê duyệt hồ sơ, đối tác được cấp ngay 01 không gian làm việc Demo riêng (Gói Pro) để trình diễn cho khách.</li>
+                            <li><strong>Thời gian giữ bảo đảm (Holding Period 14 ngày):</strong> Khoản hoa hồng mới chờ đối soát 14 ngày để chống đơn ảo/hoàn giao dịch trước khi chuyển sang "Số dư khả dụng".</li>
+                            <li><strong>Rút tiền từ 500.000 VNĐ:</strong> Chuyển khoản trực tiếp vào tài khoản ngân hàng chính chủ trong 24 – 48 giờ làm việc.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+                        <h4 class="font-bold text-white flex items-center gap-2 text-sm">
+                            <svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <span>Điều 2. Hành Vi Nghiêm Cấm Tuyệt Đối & Miễn Trừ Trách Nhiệm</span>
+                        </h4>
+                        <ul class="space-y-1.5 list-disc list-inside text-slate-300 text-[12px]">
+                            <li><strong>Cấm Tự Giới Thiệu (Self-referral):</strong> Nghiêm cấm tự tạo tài khoản hoặc tự dùng mã của chính mình mua gói dịch vụ nhằm trục lợi chiết khấu kép.</li>
+                            <li><strong>Cấm Đấu Thầu Từ Khóa Thương Hiệu (Brand Bidding):</strong> Nghiêm cấm chạy quảng cáo Google Ads, Facebook Ads sử dụng trực tiếp từ khóa thương hiệu độc quyền ("LTP Soft", "LTP Progress", "Lê Tài Phát") khi chưa có văn bản đồng ý.</li>
+                            <li><strong>Cấm Spam & Cam Kết Sai Sự Thật:</strong> Nghiêm cấm phát tán link rác hoặc tư vấn sai lệch về tính năng kỹ thuật và bảng giá niêm yết của phần mềm.</li>
+                            <li><strong>Miễn trừ trách nhiệm:</strong> Đối tác hoạt động với tư cách cộng tác viên độc lập, tự chịu trách nhiệm về nội dung quảng bá cá nhân và nghĩa vụ thuế thu nhập (nếu có) theo quy định pháp luật.</li>
+                        </ul>
+                        <p class="text-[11px] text-rose-400 font-bold pt-1">
+                            * Chế tài xử lý: Nếu phát hiện vi phạm một trong các điều cấm trên, Lê Tài Phát có toàn quyền khóa tài khoản đối tác vĩnh viễn và hủy bỏ toàn bộ số dư hoa hồng chưa thanh toán mà không cần báo trước.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pt-1 text-center">
+                    <button type="button" onclick="openAffRegisterModal()"
+                            class="px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-lg transition">
+                        Tôi Đã Nắm Rõ Quy Chế • Mở Form Đăng Ký Hợp Tác
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- ======================================================================
@@ -130,7 +184,7 @@
             <div id="aff-pending-banner" class="hidden rounded-2xl p-5 bg-amber-500/10 border border-amber-500/40 space-y-2">
                 <div class="flex items-center justify-between flex-wrap gap-2">
                     <span class="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-xs font-extrabold border border-amber-500/40">
-                        ⏳ ĐANG CHỜ QUẢN TRỊ VIÊN DUYỆT TAY (PENDING APPROVAL)
+                        ĐANG CHỜ QUẢN TRỊ VIÊN DUYỆT TAY (PENDING APPROVAL)
                     </span>
                     <span class="text-xs text-slate-300">Hotline/Zalo hỗ trợ duyệt nhanh: <strong class="text-white">0559.595.945</strong></span>
                 </div>
@@ -309,6 +363,11 @@
                     <input id="aff-captcha-ans" type="number" required placeholder="Kết quả"
                            class="w-24 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-center font-bold">
                 </div>
+
+                <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer text-[11px] text-slate-300 leading-relaxed">
+                    <input id="reg-aff-accept-terms" type="checkbox" required class="mt-0.5 rounded border-slate-600">
+                    <span>Tôi xác nhận đã đọc kỹ và cam kết tuân thủ toàn bộ <strong>Quy chế Đối tác Affiliate (20% & 10%), Điều khoản dịch vụ SaaS và Quy định miễn trừ trách nhiệm</strong> của CÔNG TY TNHH TMDV LÊ TÀI PHÁT.</span>
+                </label>
 
                 <button type="submit" id="btn-aff-reg-submit" class="w-full py-3 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
                     Gửi Hồ Sơ Đăng Ký KOL (Chờ Admin Duyệt)

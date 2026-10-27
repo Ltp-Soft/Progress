@@ -17,7 +17,7 @@ export const PLANS = {
     maxProjects: 2,
     storageLimitMb: 500,
     maxFileSizeMb: 50,
-    aiDailyLimit: 10,
+    aiDailyLimit: 999999,
     addonPricePer10Gb: 49000,
     isCorporate: false
   },
@@ -30,7 +30,7 @@ export const PLANS = {
     maxProjects: 10,
     storageLimitMb: 10240, // 10 GB
     maxFileSizeMb: 200,
-    aiDailyLimit: 25,
+    aiDailyLimit: 999999,
     addonPricePer10Gb: 49000,
     isCorporate: false
   },
@@ -43,7 +43,7 @@ export const PLANS = {
     maxProjects: 999999,
     storageLimitMb: 35840, // 35 GB
     maxFileSizeMb: 350,
-    aiDailyLimit: 80,
+    aiDailyLimit: 999999,
     addonPricePer10Gb: 35000,
     isCorporate: false
   },
@@ -56,7 +56,7 @@ export const PLANS = {
     maxProjects: 999999,
     storageLimitMb: 81920, // 80 GB
     maxFileSizeMb: 500,
-    aiDailyLimit: 200,
+    aiDailyLimit: 999999,
     addonPricePer10Gb: 25000,
     isCorporate: false
   },
@@ -69,7 +69,7 @@ export const PLANS = {
     maxProjects: 999999,
     storageLimitMb: 307200, // 300 GB
     maxFileSizeMb: 500,
-    aiDailyLimit: 500,
+    aiDailyLimit: 999999,
     addonPricePer10Gb: 19000,
     isCorporate: true
   }
@@ -505,7 +505,7 @@ async function resolveTenantContext(request, env, authUser) {
     "";
 
   if (explicitSub && env.DB) {
-    const clean = explicitSub.trim().toLowerCase();
+    const clean = explicitSub.trim().toLowerCase().replace(/-(pm|progress)$/i, "");
     const t = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR id = ?").bind(clean, clean).first();
     if (t) return t;
   }

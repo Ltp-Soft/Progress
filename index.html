@@ -207,9 +207,10 @@
         </div>
 
         <div class="user-area">
-            <button id="btn-open-company-admin" class="ltp-btn-dark" onclick="window.location.href='admin.html'" style="display:none; background:#ffffff; color:#0f172a; border-color:#cbd5e1; font-weight:700;" title="Mở Trung Tâm Quản Trị Công Ty (QR Nhân Sự, Dung Lượng, Báo Cáo, Logo)">
+            <button id="btn-open-company-admin" class="ltp-btn-dark" onclick="window.location.href='admin.html'" style="display:none; background:#ffffff; color:#0f172a; border-color:#cbd5e1; font-weight:700; position:relative;" title="Mở Trung Tâm Quản Trị Công Ty (QR Nhân Sự, Dung Lượng, Báo Cáo, Logo)">
                 <img src="./asset/icons/admin-sliders.svg" alt="" style="width:13px; height:13px;">
                 <span>Quản Trị</span>
+                <span id="index-waiting-badge" style="display:none; position:absolute; top:-6px; right:-6px; background:#f43f5e; color:#ffffff; font-size:10px; font-weight:900; border-radius:10px; padding:1px 5px; border:2px solid #0f172a; animation:pulse 1.5s infinite;">0</span>
             </button>
 
             <select id="admin-dept-select" style="display:none; font-size:11px; padding:3px 8px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:6px; cursor:pointer;" onchange="switchAdminDeptContext(this.value)">
@@ -1202,6 +1203,10 @@
             const current = window.authMgr.getCurrentUser();
             const adminSelect = document.getElementById("admin-dept-select");
             if (adminSelect) {
+                const depts = window.DEPARTMENTS || [];
+                if (depts.length > 0) {
+                    adminSelect.innerHTML = depts.map(d => `<option value="${d.id || d.code}">Phòng ${d.name || d.id}</option>`).join("");
+                }
                 adminSelect.value = window.authMgr.getAdminDeptContext();
             }
             updateRoleBadge(current);
@@ -1283,6 +1288,31 @@
                 menuAuthBtn.innerHTML = isGuest ? "🔑 Đăng Nhập" : "🚪 Đăng Xuất";
             }
 
+            const btnOpenAdmin = document.getElementById("btn-open-company-admin");
+            if (btnOpenAdmin) {
+                btnOpenAdmin.style.display = (isAdmin || isDeptAdmin) ? "inline-flex" : "none";
+                if (isAdmin) {
+                    fetch("/api/admin/overview", { headers: window.authMgr ? window.authMgr.getAuthHeaders() : {} })
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => {
+                            if (data && Array.isArray(data.users)) {
+                                const waitingCount = data.users.filter(u => u.status === "WAITING_ROOM" || u.isActive === 2 || u.role === "WAITING").length;
+                                const badge = document.getElementById("index-waiting-badge");
+                                if (badge) {
+                                    if (waitingCount > 0) {
+                                        badge.textContent = waitingCount;
+                                        badge.style.display = "inline-flex";
+                                        badge.title = `Có ${waitingCount} nhân sự đang trong phòng chờ duyệt!`;
+                                    } else {
+                                        badge.style.display = "none";
+                                    }
+                                }
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }
+
             if (isAdmin) {
                 document.body.classList.add("is-admin-mode");
             } else {
@@ -1351,34 +1381,26 @@
                 return;
             }
 
-            if (btnSubmit) btnSubmit.disabled = true;
+            const origHtml = btnSubmit ? btnSubmit.innerHTML : "";
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = `<span style="display:inline-block; width:13px; height:13px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px;"></span> Đang xác thực...`;
+            }
 
             try {
                 const loggedUser = await window.authMgr.loginWithCredentials(u, p);
+                if (loggedUser && (loggedUser.isWaiting || loggedUser.role === "WAITING")) {
+                    const loginScreen = document.getElementById("app-login-screen");
+                    if (loginScreen) loginScreen.style.display = "none";
+                    showWaitingRoomScreen(loggedUser);
+                    return;
+                }
+
                 if (loggedUser && loggedUser.role && loggedUser.role !== "GUEST") {
                     updateRoleBadge(loggedUser);
-                    
-                    const loginScreen = document.getElementById("app-login-screen");
-                    const splashScreen = document.getElementById("app-splash");
-
-                    if (loginScreen) loginScreen.style.display = "none";
-                    if (splashScreen) {
-                        splashScreen.style.display = "flex";
-                        splashScreen.classList.remove("fade-out");
-                    }
-
-                    if (window.ganttCore) {
-                        window.ganttCore.renderProjectsSidebar();
-                        window.ganttCore.renderGantt();
-                    }
-
-                    setTimeout(() => {
-                        if (splashScreen) {
-                            splashScreen.classList.add("fade-out");
-                            setTimeout(() => { splashScreen.style.display = "none"; }, 500);
-                        }
-                    }, 1200);
-
+                    // Instant smooth reload guarantees complete clean initialization of D1 data, session & departments
+                    window.location.reload();
+                    return;
                 } else {
                     if (errBox) {
                         errBox.innerText = "❌ Tên đăng nhập hoặc mật khẩu không đúng!";
@@ -1387,11 +1409,14 @@
                 }
             } catch (e) {
                 if (errBox) {
-                    errBox.innerText = "❌ Lỗi đăng nhập: " + (e.message || "Không thể kết nối Server API");
+                    errBox.innerText = "❌ " + (e.message || "Không thể kết nối Server API");
                     errBox.style.display = "block";
                 }
             } finally {
-                if (btnSubmit) btnSubmit.disabled = false;
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = origHtml;
+                }
             }
         }
 
@@ -2781,8 +2806,11 @@
                     canReportOnly = deptEdit;
                 } else if (user.role === "STAFF") {
                     const isAutonomous = window.authMgr.isStaffAutonomous ? window.authMgr.isStaffAutonomous() : false;
-                    const myName = (user.displayName || user.username || "").trim().toLowerCase();
-                    const isMyTask = (t.staff || "").trim().toLowerCase() === myName || t.createdBy === user.username;
+                    const userNames = [user.name, user.fullName, user.username, user.id, user.displayName]
+                        .filter(Boolean)
+                        .map(s => String(s).trim().toLowerCase());
+                    const staffVal = String(t.staff || "").trim().toLowerCase();
+                    const isMyTask = userNames.some(n => n && (staffVal.includes(n) || n.includes(staffVal))) || t.createdBy === user.username || t.createdBy === user.id;
                     if (isAutonomous && isMyTask && deptEdit) {
                         canFullEdit = true;
                         canReportOnly = true;

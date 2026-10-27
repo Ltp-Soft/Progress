@@ -574,9 +574,7 @@ class GanttCore {
             menuCloseProj.style.display = canClose ? "flex" : "none";
         }
         if (menuStaffUnlock) {
-            menuStaffUnlock.style.display = (isStaff && !isStaffAuto) ? "flex" : "none";
-            const unlocked = window.authMgr.isStaffPinUnlocked(prj.id);
-            menuStaffUnlock.innerText = unlocked ? "🔓 Đã Giải Khóa PIN" : "🔑 Nhập PIN Giải Khóa Edit";
+            menuStaffUnlock.style.display = "none";
         }
 
         const settingsUserLabel = document.getElementById("settings-user-label");
@@ -834,31 +832,44 @@ class GanttCore {
     // CAN USER FULL-EDIT / ADD TASK IN THIS PROJECT & DEPT?
     // Trưởng phòng (DEPT_ADMIN) phân công và quản trị toàn bộ task phòng mình. Nhân viên chỉ nhận việc và báo cáo.
     canUserEditTaskInDept(deptId, project) {
-        const user = window.authMgr.getCurrentUser();
+        const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
         if (user.role === "BOSS" || user.role === "GUEST") return false;
         if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") return true;
 
         const isBidding = Boolean(project.isDeptReport || project.category === "REPORT" || project.category === "BIDDING" || (project.id && project.id.startsWith("PRJ_RPT_")));
+        const userDept = (user.dept || "").toUpperCase();
+        const targetDept = (deptId || "").toUpperCase();
+        const creatorDept = (project.creatorDept || "").toUpperCase();
+        const invited = (project.invitedDepts || []).map(d => String(d).toUpperCase());
+
         if (isBidding) {
-            if (!project.invitedDepts || !project.invitedDepts.includes(user.dept)) {
-                if (project.creatorDept !== user.dept) return false;
-            }
+            if (!invited.includes(userDept) && creatorDept !== userDept) return false;
             if (user.role === "DEPT_ADMIN") {
-                return user.dept === deptId;
+                return userDept === targetDept || userDept === creatorDept;
+            }
+            if (user.role === "STAFF") {
+                const isAuto = user.taskPermissionMode === "AUTONOMOUS" || (window.authMgr && window.authMgr.isStaffAutonomous && window.authMgr.isStaffAutonomous());
+                if (isAuto) {
+                    return userDept === targetDept || (user.deptTags && user.deptTags.some(t => String(t).toUpperCase() === targetDept));
+                }
             }
             return false;
         }
 
-        if (project.isShared && (!project.invitedDepts || !project.invitedDepts.includes(user.dept))) {
+        if (project.isShared && (!invited.includes(userDept) && creatorDept !== userDept)) {
             return false;
         }
 
         if (user.role === "DEPT_ADMIN") {
-            return user.dept === deptId || user.dept === project.creatorDept;
+            return userDept === targetDept || userDept === creatorDept;
         }
 
-        // Staff does not add or reschedule department tasks; they only report progress on tasks assigned to them
+        // Staff in AUTONOMOUS mode can add & edit tasks in their assigned department
         if (user.role === "STAFF") {
+            const isAuto = user.taskPermissionMode === "AUTONOMOUS" || (window.authMgr && window.authMgr.isStaffAutonomous && window.authMgr.isStaffAutonomous());
+            if (isAuto) {
+                return userDept === targetDept || (user.deptTags && user.deptTags.some(t => String(t).toUpperCase() === targetDept));
+            }
             return false;
         }
 
@@ -878,15 +889,19 @@ class GanttCore {
         }
 
         if (user.role === "STAFF") {
-            const userNameLower = String(user.name || user.id || user.username || "").trim().toLowerCase();
+            const userNames = [user.name, user.fullName, user.username, user.id, user.displayName]
+                .filter(Boolean)
+                .map(s => String(s).trim().toLowerCase());
             const staffLower = String(task.staff || "").trim().toLowerCase();
             const taskDept = (task.dept || getDeptFromCodeIn(task.codeIn) || "").toUpperCase();
             const userDept = (user.dept || "").toUpperCase();
+            const isMyDept = userDept === taskDept || (user.deptTags && user.deptTags.some(t => String(t).toUpperCase() === taskDept));
 
             // Match assigned staff directly
-            if (userNameLower && staffLower && (staffLower.includes(userNameLower) || userNameLower.includes(staffLower))) return true;
+            if (userNames.some(n => n && (staffLower.includes(n) || n.includes(staffLower)))) return true;
+            if (task.createdBy && (task.createdBy === user.username || task.createdBy === user.id)) return true;
             // Or unassigned task within their department
-            if ((!task.staff || task.staff === "Chưa giao" || task.staff === "Chưa gán") && taskDept === userDept) return true;
+            if ((!task.staff || task.staff === "Chưa giao" || task.staff === "Chưa gán" || task.staff === "Chưa Phân Công") && isMyDept) return true;
         }
 
         return false;
@@ -1009,8 +1024,9 @@ class GanttCore {
         if (!prj) return;
 
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
-        if (user.role === "GUEST") {
-            alert("🔒 Tài khoản Khách không có quyền quản lý nhân sự!");
+        const canManage = user.role === "ADMIN" || user.role === "PROJECT_ADMIN" || user.role === "DEPT_ADMIN";
+        if (!canManage) {
+            alert("🔒 Chỉ Quản trị viên (Admin) hoặc Trưởng Phòng mới có quyền quản lý & xóa nhân sự!");
             return;
         }
 
@@ -1045,6 +1061,13 @@ class GanttCore {
     reassignAndDeleteStaff(staffName) {
         const prj = this.getCurrentProject();
         if (!prj || !prj.staffs) return;
+
+        const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
+        const canManage = user.role === "ADMIN" || user.role === "PROJECT_ADMIN" || user.role === "DEPT_ADMIN";
+        if (!canManage) {
+            alert("🔒 Chỉ Quản trị viên (Admin) hoặc Trưởng Phòng mới có quyền xóa nhân sự khỏi dự án!");
+            return;
+        }
 
         if (!confirm(`Bạn có chắc muốn xóa nhân viên "${staffName}"? Tất cả công việc của nhân viên này sẽ được chuyển sang "Chưa Phân Công".`)) {
             return;
@@ -1268,20 +1291,21 @@ class GanttCore {
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST", dept: "CONSTRUCTION" };
         const isAdminOrBoss = (user.role === "ADMIN" || user.role === "BOSS");
 
+        const depts = window.DEPARTMENTS || DEPARTMENTS;
         const currentProj = this.getCurrentProject();
-        if (currentProj && !currentProj.isShared && !currentProj.isDeptReport && (!this.openSidebarDept || !DEPARTMENTS.some(d => d.id === this.openSidebarDept))) {
-            this.openSidebarDept = currentProj.creatorDept || "CONSTRUCTION";
+        if (currentProj && !currentProj.isShared && !currentProj.isDeptReport && (!this.openSidebarDept || !depts.some(d => d.id === this.openSidebarDept))) {
+            this.openSidebarDept = currentProj.creatorDept || (depts[0]?.id || "CONSTRUCTION");
         }
 
         const internalProjectsByDept = {};
-        DEPARTMENTS.forEach(d => { internalProjectsByDept[d.id] = []; });
+        depts.forEach(d => { internalProjectsByDept[d.id] = []; });
 
         this.workspace.projects.forEach(p => {
             if (p.status === "ARCHIVED") return;
             if (!this.canUserSeeProject(p)) return;
 
             const isReport = Boolean(p.isDeptReport || p.category === "REPORT" || (p.id && p.id.startsWith("PRJ_RPT_")));
-            const creatorDept = p.creatorDept || "CONSTRUCTION";
+            const creatorDept = p.creatorDept || (depts[0]?.id || "CONSTRUCTION");
             const deptClass = `dept-tag-${creatorDept.toLowerCase()}`;
             const active = p.id === this.workspace.currentProjectId ? "active" : "";
 
@@ -1307,7 +1331,9 @@ class GanttCore {
                 sharedCount++;
             } else {
                 let deptKey = creatorDept;
-                if (!internalProjectsByDept[deptKey]) deptKey = "CONSTRUCTION";
+                if (!internalProjectsByDept[deptKey]) {
+                    internalProjectsByDept[deptKey] = [];
+                }
                 internalProjectsByDept[deptKey].push(p);
                 internalTotalCount++;
             }
@@ -1317,14 +1343,14 @@ class GanttCore {
         // For ADMIN & BOSS: Only show folders with 1+ projects (hide empty folders (0) for a cleaner UI)
         // For DEPT_ADMIN: Show own department folder AND any department folders linked via D2D (where fromDept is linked to user.dept)
         // For STAFF: Show their own department folder only
-        const visibleDepts = DEPARTMENTS.filter(d => {
+        const visibleDepts = depts.filter(d => {
             if (user.role === "GUEST") return false;
             const deptJobs = internalProjectsByDept[d.id] || [];
             if (user.role === "ADMIN" || user.role === "BOSS") {
                 return deptJobs.length > 0;
             }
             if (user.role === "DEPT_ADMIN") {
-                if (d.id === user.dept) return true;
+                if (d.id === user.dept || (user.deptTags && user.deptTags.includes(d.id))) return true;
                 // Check if there is a D2D link from this department to the user's department
                 const d2dLinks = (this.workspace && Array.isArray(this.workspace.d2dLinks) && this.workspace.d2dLinks.length > 0)
                     ? this.workspace.d2dLinks
@@ -1334,7 +1360,7 @@ class GanttCore {
                 return false;
             }
             if (user.role === "STAFF") {
-                return d.id === user.dept;
+                return d.id === user.dept || (user.deptTags && user.deptTags.includes(d.id));
             }
             return deptJobs.length > 0;
         });
@@ -1356,8 +1382,7 @@ class GanttCore {
                 const isOpen = (this.openSidebarDept === d.id);
                 const countStr = `(${deptJobs.length})`;
 
-                // Format Department Title to Title Case (Construction, Designer, Planning...)
-                const titleFormatted = d.id.charAt(0).toUpperCase() + d.id.slice(1).toLowerCase();
+                const titleFormatted = d.name || (d.id.charAt(0).toUpperCase() + d.id.slice(1).toLowerCase());
 
                 let sublistHtml = "";
                 if (isOpen) {

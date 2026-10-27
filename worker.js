@@ -550,25 +550,16 @@ async function ensureMultiTenantSchema(env) {
         `).bind(`dept_demo_${d.code}`, d.code, d.name, d.prefix, d.color, i).run();
       }
 
-      // Seed default demo users into 'tenant-demo'
+      // Seed default admin user into 'tenant-demo' if not exists
       const demoUsers = [
-        { id: "Admin", username: "Admin", name: "Quản Trị Viên Tổng", pass: "Tpl@1234", role: "ADMIN", dept: "ALL", prefix: "C", mode: "AUTONOMOUS" },
-        { id: "boss", username: "boss", name: "Ban Giám Đốc (Boss)", pass: "Tpl@1235", role: "BOSS", dept: "ALL", prefix: "C", mode: "AUTONOMOUS" },
-        { id: "Designer", username: "Designer", name: "Trưởng Phòng Thiết Kế", pass: "Tpl@1236", role: "DEPT_ADMIN", dept: "DESIGNER", prefix: "G", mode: "AUTONOMOUS" },
-        { id: "Designer-staff", username: "Designer-staff", name: "KTS. Minh Thiết Kế", pass: "Tpl@1237", role: "STAFF", dept: "DESIGNER", prefix: "G", mode: "REPORT_ONLY" },
-        { id: "MEP", username: "MEP", name: "Trưởng Phòng MEP", pass: "Tpl@1244", role: "DEPT_ADMIN", dept: "MEP", prefix: "E", mode: "AUTONOMOUS" },
-        { id: "MEP-staff", username: "MEP-staff", name: "KS. Thợ Điện TPL", pass: "Tpl@1245", role: "STAFF", dept: "MEP", prefix: "E", mode: "REPORT_ONLY" },
-        { id: "Construction", username: "Construction", name: "Trưởng Phòng Thi Công", pass: "Tpl@1240", role: "DEPT_ADMIN", dept: "CONSTRUCTION", prefix: "C", mode: "AUTONOMOUS" },
-        { id: "Construction-staff", username: "Construction-staff", name: "KS. Lê Văn C (Thi Công)", pass: "Tpl@1241", role: "STAFF", dept: "CONSTRUCTION", prefix: "C", mode: "REPORT_ONLY" },
-        { id: "Factory", username: "Factory", name: "Quản Đốc Xưởng SX", pass: "Tpl@1242", role: "DEPT_ADMIN", dept: "FACTORY", prefix: "X", mode: "AUTONOMOUS" },
-        { id: "Factory-staff", username: "Factory-staff", name: "Tổ Trưởng Xưởng TPL", pass: "Tpl@1243", role: "STAFF", dept: "FACTORY", prefix: "X", mode: "REPORT_ONLY" }
+        { id: "Admin", username: "Admin", name: "Quản Trị Viên Tổng", pass: "Tpl@1234", role: "ADMIN", dept: "ALL", prefix: "C", mode: "AUTONOMOUS" }
       ];
       for (const u of demoUsers) {
         await db.prepare(`
           INSERT OR IGNORE INTO users (
             id, tenant_id, username, full_name, pass, password_plain_hint, role, dept, dept_tags, prefix, task_permission_mode, is_active
           ) VALUES (?, 'tenant-demo', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-        `).bind(u.id, u.username, u.name, u.pass, u.pass, u.role, u.dept, JSON.stringify(u.dept === "ALL" ? [] : [u.dept]), u.prefix, u.mode).run();
+        `).bind(u.id, u.username, u.name, u.pass, u.pass, u.role, u.dept, JSON.stringify([]), u.prefix, u.mode).run();
       }
     }
 
@@ -2653,7 +2644,15 @@ export default {
         return jsonResp({ error: "Chỉ Quản trị viên (Admin / Trưởng Ban QLDA) mới có quyền truy cập trang Quản trị!" }, 403);
       }
 
-      const deptsRes = await env.DB.prepare("SELECT * FROM departments WHERE tenant_id = ? ORDER BY order_index ASC, rowid ASC").bind(tenantId).all();
+      const [deptsRes, usersRes, projectsRes, tasksRes, filesRes, invitesRes] = await Promise.all([
+        env.DB.prepare("SELECT * FROM departments WHERE tenant_id = ? ORDER BY order_index ASC, rowid ASC").bind(tenantId).all(),
+        env.DB.prepare("SELECT * FROM users WHERE tenant_id = ? ORDER BY created_at DESC").bind(tenantId).all(),
+        env.DB.prepare("SELECT * FROM projects WHERE (tenant_id = ? OR tenant_id IS NULL) AND status != 'DELETED' ORDER BY updated_at DESC").bind(tenantId).all(),
+        env.DB.prepare("SELECT * FROM tasks WHERE (tenant_id = ? OR tenant_id IS NULL) AND is_deleted = 0").bind(tenantId).all(),
+        env.DB.prepare("SELECT project_id, COUNT(*) as file_count, COALESCE(SUM(file_size), 0) as total_bytes FROM task_files WHERE (tenant_id = ? OR tenant_id IS NULL) GROUP BY project_id").bind(tenantId).all(),
+        env.DB.prepare("SELECT * FROM qr_invites WHERE tenant_id = ? ORDER BY created_at DESC").bind(tenantId).all()
+      ]);
+
       let departments = deptsRes.results || [];
       if (departments.length === 0) {
         for (let i = 0; i < DEFAULT_DEPARTMENTS.length; i++) {
@@ -2664,12 +2663,6 @@ export default {
         const retry = await env.DB.prepare("SELECT * FROM departments WHERE tenant_id = ? ORDER BY order_index ASC").bind(tenantId).all();
         departments = retry.results || [];
       }
-
-      const usersRes = await env.DB.prepare("SELECT * FROM users WHERE tenant_id = ? ORDER BY created_at DESC").bind(tenantId).all();
-      const projectsRes = await env.DB.prepare("SELECT * FROM projects WHERE (tenant_id = ? OR tenant_id IS NULL) AND status != 'DELETED' ORDER BY updated_at DESC").bind(tenantId).all();
-      const tasksRes = await env.DB.prepare("SELECT * FROM tasks WHERE (tenant_id = ? OR tenant_id IS NULL) AND is_deleted = 0").bind(tenantId).all();
-      const filesRes = await env.DB.prepare("SELECT project_id, COUNT(*) as file_count, COALESCE(SUM(file_size), 0) as total_bytes FROM task_files WHERE (tenant_id = ? OR tenant_id IS NULL) GROUP BY project_id").bind(tenantId).all();
-      const invitesRes = await env.DB.prepare("SELECT * FROM qr_invites WHERE tenant_id = ? ORDER BY created_at DESC").bind(tenantId).all();
 
       const fileMap = {};
       let totalTenantBytes = 0;
@@ -2904,32 +2897,94 @@ export default {
     if (url.pathname === "/api/admin/users" && request.method === "POST") {
       if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const body = await request.json();
-      const { action = "SAVE", id, username, fullName, password, phone, email, role = "STAFF", dept = "CONSTRUCTION", deptTags = [], taskPermissionMode = "REPORT_ONLY", managedProjectIds = [], isActive = 1, avatarUrl = "" } = body;
+      const targetUserId = body.id || body.userId;
+      const { action = "SAVE", username, fullName, password, newPassword, phone, email, role = "STAFF", dept = "CONSTRUCTION", department, deptTags = [], taskPermissionMode = "REPORT_ONLY", managedProjectIds = [], isActive = 1, avatarUrl = "", status } = body;
       const effectiveMaxUsers = (Number(tenant.max_users) || 15) + (Number(tenant.addon_users) || 0);
 
-      if (action === "DELETE" && id) {
-        await env.DB.prepare("DELETE FROM users WHERE id = ? AND tenant_id = ?").bind(id, tenantId).run();
-        return jsonResp({ status: "deleted", id });
+      if (action === "DELETE" && targetUserId) {
+        await env.DB.prepare("DELETE FROM users WHERE id = ? AND tenant_id = ?").bind(targetUserId, tenantId).run();
+        return jsonResp({ status: "deleted", id: targetUserId });
       }
 
-      if (action === "TOGGLE_MODE" && id) {
-        await env.DB.prepare("UPDATE users SET task_permission_mode = ? WHERE id = ? AND tenant_id = ?").bind(taskPermissionMode, id, tenantId).run();
-        return jsonResp({ status: "updated", id, taskPermissionMode });
+      if (action === "TOGGLE_MODE" && targetUserId) {
+        await env.DB.prepare("UPDATE users SET task_permission_mode = ? WHERE id = ? AND tenant_id = ?").bind(taskPermissionMode, targetUserId, tenantId).run();
+        return jsonResp({ status: "updated", id: targetUserId, taskPermissionMode });
       }
 
-      if (action === "TOGGLE_ACTIVE" && id) {
-        if (Number(isActive) === 1) {
-          const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST') AND id != ?").bind(tenantId, id).first();
+      if (action === "TOGGLE_ACTIVE" && targetUserId) {
+        const nextActive = Number(isActive);
+        if (nextActive === 1) {
+          const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST') AND id != ?").bind(tenantId, targetUserId).first();
           if ((seatCnt?.cnt || 0) >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
             return jsonResp({ error: `Đã đạt trần ${effectiveMaxUsers} tài khoản đang hoạt động của công ty!` }, 400);
           }
         }
-        await env.DB.prepare("UPDATE users SET is_active = ? WHERE id = ? AND tenant_id = ?").bind(Number(isActive), id, tenantId).run();
-        return jsonResp({ status: "updated", id, isActive: Number(isActive) });
+        await env.DB.prepare("UPDATE users SET is_active = ? WHERE id = ? AND tenant_id = ?").bind(nextActive, targetUserId, tenantId).run();
+        return jsonResp({ status: "updated", id: targetUserId, isActive: nextActive });
+      }
+
+      // Quick Update (called by quickUpdateUser from Admin table for role, status, dept, pw, mode)
+      if (action === "UPDATE" && targetUserId) {
+        const existingU = await env.DB.prepare("SELECT * FROM users WHERE id = ? AND tenant_id = ?").bind(targetUserId, tenantId).first();
+        if (!existingU) return jsonResp({ error: "Không tìm thấy người dùng!" }, 404);
+
+        if (status !== undefined) {
+          const nextActive = status === "ACTIVE" ? 1 : 0;
+          if (nextActive === 1 && Number(existingU.is_active) !== 1) {
+            const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST') AND id != ?").bind(tenantId, targetUserId).first();
+            if ((seatCnt?.cnt || 0) >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
+              return jsonResp({ error: `Đã đạt trần ${effectiveMaxUsers} tài khoản đang hoạt động của công ty!` }, 400);
+            }
+          }
+          await env.DB.prepare("UPDATE users SET is_active = ? WHERE id = ? AND tenant_id = ?").bind(nextActive, targetUserId, tenantId).run();
+          return jsonResp({ status: "success", id: targetUserId, isActive: nextActive });
+        }
+
+        if (body.isActive !== undefined) {
+          const nextActive = Number(body.isActive);
+          if (nextActive === 1 && Number(existingU.is_active) !== 1) {
+            const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST') AND id != ?").bind(tenantId, targetUserId).first();
+            if ((seatCnt?.cnt || 0) >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
+              return jsonResp({ error: `Đã đạt trần ${effectiveMaxUsers} tài khoản đang hoạt động của công ty!` }, 400);
+            }
+          }
+          await env.DB.prepare("UPDATE users SET is_active = ? WHERE id = ? AND tenant_id = ?").bind(nextActive, targetUserId, tenantId).run();
+          return jsonResp({ status: "success", id: targetUserId, isActive: nextActive });
+        }
+
+        if (department || dept || body.deptTags) {
+          const finalDept = department || dept || existingU.dept;
+          const finalTags = Array.isArray(body.deptTags) && body.deptTags.length > 0 ? body.deptTags : [finalDept];
+          const deptRow = await env.DB.prepare("SELECT prefix FROM departments WHERE tenant_id = ? AND (code = ? OR name = ?)").bind(tenantId, finalDept, finalDept).first();
+          const prefix = deptRow?.prefix || "C";
+          await env.DB.prepare("UPDATE users SET dept = ?, dept_tags = ?, prefix = ? WHERE id = ? AND tenant_id = ?")
+            .bind(finalDept, JSON.stringify(finalTags), prefix, targetUserId, tenantId).run();
+          return jsonResp({ status: "success", id: targetUserId, department: finalDept });
+        }
+
+        if (role) {
+          await env.DB.prepare("UPDATE users SET role = ? WHERE id = ? AND tenant_id = ?").bind(role, targetUserId, tenantId).run();
+          return jsonResp({ status: "success", id: targetUserId, role });
+        }
+
+        if (taskPermissionMode) {
+          await env.DB.prepare("UPDATE users SET task_permission_mode = ? WHERE id = ? AND tenant_id = ?").bind(taskPermissionMode, targetUserId, tenantId).run();
+          return jsonResp({ status: "success", id: targetUserId, taskPermissionMode });
+        }
+
+        if (newPassword || password) {
+          const rawPw = String(newPassword || password).trim();
+          const pHash = await hashPassword(rawPw);
+          await env.DB.prepare("UPDATE users SET pass = ?, password_hash = ?, password_plain_hint = ? WHERE id = ? AND tenant_id = ?")
+            .bind(rawPw, pHash, rawPw, targetUserId, tenantId).run();
+          return jsonResp({ status: "success", id: targetUserId, message: "Đã cập nhật mật khẩu!" });
+        }
+
+        return jsonResp({ status: "success", id: targetUserId });
       }
 
       // Check seat limit when adding a new active user
-      if (!id && role !== "ADMIN") {
+      if (!targetUserId && role !== "ADMIN") {
         const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST')").bind(tenantId).first();
         if ((seatCnt?.cnt || 0) >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
           return jsonResp({ error: `Công ty đã dùng hết ${effectiveMaxUsers}/${effectiveMaxUsers} suất nhân sự (${tenant.max_users} gốc + ${tenant.addon_users || 0} add-on). Hãy khóa tài khoản nhân sự đã nghỉ hoặc mua thêm gói +10 Nhân Sự!` }, 400);

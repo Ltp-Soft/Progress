@@ -6,35 +6,18 @@
  */
 
 const ACCOUNTS_DB = [
-    { id: "ADMIN", pass: "123456", role: "ADMIN", dept: "ALL", isBoss: false, canEditAll: true, taskPermissionMode: "AUTONOMOUS" },
     { id: "Admin", pass: "Tpl@1234", role: "ADMIN", dept: "ALL", isBoss: false, canEditAll: true, taskPermissionMode: "AUTONOMOUS" },
-    { id: "BOSS", pass: "123456", role: "BOSS", dept: "ALL", isBoss: true, canEditAll: false, taskPermissionMode: "AUTONOMOUS" },
-    { id: "boss", pass: "Tpl@1235", role: "BOSS", dept: "ALL", isBoss: true, canEditAll: false, taskPermissionMode: "AUTONOMOUS" },
-    { id: "CONSTRUCTION_ADMIN", pass: "123456", role: "DEPT_ADMIN", dept: "CONSTRUCTION", prefix: "C", taskPermissionMode: "AUTONOMOUS" },
-    { id: "MEP_ADMIN", pass: "123456", role: "DEPT_ADMIN", dept: "MEP", prefix: "E", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Designer", pass: "Tpl@1236", role: "DEPT_ADMIN", dept: "DESIGNER", prefix: "G", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Designer-staff", pass: "Tpl@1237", role: "STAFF", dept: "DESIGNER", prefix: "G", taskPermissionMode: "REPORT_ONLY" },
-    { id: "Planing", pass: "Tpl@1238", role: "DEPT_ADMIN", dept: "PLANNING", prefix: "G", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Planing-staff", pass: "Tpl@1239", role: "STAFF", dept: "PLANNING", prefix: "G", taskPermissionMode: "REPORT_ONLY" },
-    { id: "Construction", pass: "Tpl@1240", role: "DEPT_ADMIN", dept: "CONSTRUCTION", prefix: "C", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Construction-staff", pass: "Tpl@1241", role: "STAFF", dept: "CONSTRUCTION", prefix: "C", taskPermissionMode: "REPORT_ONLY" },
-    { id: "Factory", pass: "Tpl@1242", role: "DEPT_ADMIN", dept: "FACTORY", prefix: "X", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Factory-staff", pass: "Tpl@1243", role: "STAFF", dept: "FACTORY", prefix: "X", taskPermissionMode: "REPORT_ONLY" },
-    { id: "MEP", pass: "Tpl@1244", role: "DEPT_ADMIN", dept: "MEP", prefix: "E", taskPermissionMode: "AUTONOMOUS" },
-    { id: "MEP-staff", pass: "Tpl@1245", role: "STAFF", dept: "MEP", prefix: "E", taskPermissionMode: "REPORT_ONLY" },
-    { id: "Storage", pass: "Tpl@1246", role: "DEPT_ADMIN", dept: "STORAGE", prefix: "H", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Storage-staff", pass: "Tpl@1247", role: "STAFF", dept: "STORAGE", prefix: "H", taskPermissionMode: "REPORT_ONLY" },
-    { id: "Purchasing", pass: "Tpl@1248", role: "DEPT_ADMIN", dept: "PURCHASING", prefix: "H", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Purchasing-staff", pass: "Tpl@1249", role: "STAFF", dept: "PURCHASING", prefix: "H", taskPermissionMode: "REPORT_ONLY" },
-    { id: "Accountant", pass: "Tpl@1250", role: "DEPT_ADMIN", dept: "ACCOUNTANT", prefix: "A", taskPermissionMode: "AUTONOMOUS" },
-    { id: "Accountant-staff", pass: "Tpl@1251", role: "STAFF", dept: "ACCOUNTANT", prefix: "A", taskPermissionMode: "REPORT_ONLY" },
     { id: "Guess", pass: "guest123", role: "GUEST", dept: "NONE", isGuest: true, taskPermissionMode: "REPORT_ONLY" }
 ];
 
-// Determine Department from Code In Prefix
+// Determine Department from Code In Prefix (Dynamic based on window.DEPARTMENTS)
 function getDeptFromCodeIn(codeIn) {
-    if (!codeIn) return "CONSTRUCTION";
+    if (!codeIn) return (window.DEPARTMENTS && window.DEPARTMENTS[0]?.id) || "CONSTRUCTION";
     const prefix = codeIn.trim().charAt(0).toUpperCase();
+    if (Array.isArray(window.DEPARTMENTS)) {
+        const found = window.DEPARTMENTS.find(d => (d.prefix || d.code || "").toUpperCase() === prefix);
+        if (found) return found.id || found.code || found.name;
+    }
     switch (prefix) {
         case 'E': return "MEP";
         case 'G': return "DESIGNER";
@@ -42,7 +25,7 @@ function getDeptFromCodeIn(codeIn) {
         case 'H': return "PURCHASING";
         case 'A': return "ACCOUNTANT";
         case 'C': return "CONSTRUCTION";
-        default: return "CONSTRUCTION";
+        default: return (window.DEPARTMENTS && window.DEPARTMENTS[0]?.id) || "CONSTRUCTION";
     }
 }
 
@@ -81,6 +64,13 @@ class AuthManager {
         this.tenantInfo = null;
         this.directoryUsers = [];
         this.tenantDepartments = [];
+        try {
+            const cached = JSON.parse(localStorage.getItem("tenant_branding") || "null");
+            if (cached) {
+                this.tenantInfo = cached;
+                this.applyBrandingToHeader(cached);
+            }
+        } catch(e) {}
         this.loadSession();
         this.loadPublicTenantBrand();
     }
@@ -429,6 +419,9 @@ class AuthManager {
 
     applyBrandingToHeader(tenant) {
         if (!tenant) return;
+        try {
+            localStorage.setItem("tenant_branding", JSON.stringify(tenant));
+        } catch(e) {}
         const logoEl = document.getElementById("workspace-brand-logo");
         const titleEl = document.getElementById("workspace-brand-title");
         const subEl = document.getElementById("workspace-brand-subtitle");

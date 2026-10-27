@@ -5,16 +5,17 @@
  * and Responsive Mobile/Tablet Touch Interaction.
  */
 
-const DEPARTMENTS = [
-    { id: "CONSTRUCTION", name: "CONSTRUCTION", code: "C", class: "dept-construction", defaultExpanded: true },
-    { id: "DESIGNER", name: "DESIGNER", code: "G", class: "dept-designer", defaultExpanded: true },
-    { id: "PLANNING", name: "PLANNING", code: "G", class: "dept-planning", defaultExpanded: true },
-    { id: "FACTORY", name: "FACTORY", code: "X", class: "dept-factory", defaultExpanded: true },
-    { id: "MEP", name: "MEP", code: "E", class: "dept-mep", defaultExpanded: true },
-    { id: "STORAGE", name: "STORAGE", code: "H", class: "dept-storage", defaultExpanded: true },
-    { id: "PURCHASING", name: "PURCHASING", code: "H", class: "dept-purchasing", defaultExpanded: true },
-    { id: "ACCOUNTANT", name: "ACCOUNTANT", code: "A", class: "dept-accountant", defaultExpanded: true }
+let DEPARTMENTS = [
+    { id: "CONSTRUCTION", name: "CONSTRUCTION", code: "C", prefix: "C", class: "dept-construction", color: "#2563eb", defaultExpanded: true },
+    { id: "DESIGNER", name: "DESIGNER", code: "G", prefix: "G", class: "dept-designer", color: "#7c3aed", defaultExpanded: true },
+    { id: "PLANNING", name: "PLANNING", code: "G", prefix: "G", class: "dept-planning", color: "#059669", defaultExpanded: true },
+    { id: "FACTORY", name: "FACTORY", code: "X", prefix: "X", class: "dept-factory", color: "#ea580c", defaultExpanded: true },
+    { id: "MEP", name: "MEP", code: "E", prefix: "E", class: "dept-mep", color: "#d97706", defaultExpanded: true },
+    { id: "STORAGE", name: "STORAGE", code: "H", prefix: "H", class: "dept-storage", color: "#64748b", defaultExpanded: true },
+    { id: "PURCHASING", name: "PURCHASING", code: "H", prefix: "H", class: "dept-purchasing", color: "#0891b2", defaultExpanded: true },
+    { id: "ACCOUNTANT", name: "ACCOUNTANT", code: "A", prefix: "A", class: "dept-accountant", color: "#4f46e5", defaultExpanded: true }
 ];
+window.DEPARTMENTS = DEPARTMENTS;
 
 const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const DAY_W = 50;
@@ -29,6 +30,7 @@ class GanttCore {
         this.autoScrollInterval = null;
         this.lastMouseEvent = null;
         this.expandedDepts = {};
+        this.directoryUsers = [];
 
         DEPARTMENTS.forEach(d => {
             this.expandedDepts[d.id] = d.defaultExpanded;
@@ -43,6 +45,52 @@ class GanttCore {
         this.loadFromCloudflareD1();
         this.initUrlHashListener();
         this.startRealtimePolling();
+    }
+
+    getStaffAvatar(staffName) {
+        if (!staffName || staffName === "Chưa giao" || staffName === "Chưa phân công" || staffName === "Chưa Phân Công") {
+            return `https://ui-avatars.com/api/?name=%3F&background=475569&color=fff&size=40&bold=true`;
+        }
+        const clean = String(staffName).trim();
+        const found = (this.directoryUsers || []).find(u => 
+            (u.fullName && u.fullName.toLowerCase() === clean.toLowerCase()) ||
+            (u.username && u.username.toLowerCase() === clean.toLowerCase()) ||
+            (u.id && u.id.toLowerCase() === clean.toLowerCase())
+        );
+        if (found && found.avatarUrl) {
+            return found.avatarUrl;
+        }
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(clean)}&background=0284c7&color=fff&size=40&bold=true`;
+    }
+
+    updateWorkspaceBranding(tenant) {
+        if (!tenant) return;
+        const logoImg = document.getElementById("workspace-brand-logo");
+        const titleEl = document.getElementById("workspace-brand-title");
+        const sloganEl = document.getElementById("workspace-brand-slogan");
+
+        if (logoImg && tenant.logoUrl) {
+            logoImg.src = tenant.logoUrl;
+        }
+        if (titleEl && tenant.companyName) {
+            titleEl.textContent = tenant.companyName;
+        }
+        if (sloganEl && tenant.slogan) {
+            sloganEl.textContent = tenant.slogan;
+            sloganEl.style.display = "block";
+        }
+    }
+
+    updateDepartmentSelectors() {
+        const depts = window.DEPARTMENTS || DEPARTMENTS;
+        const taskDeptSelect = document.getElementById("task-dept");
+        if (taskDeptSelect) {
+            const curVal = taskDeptSelect.value;
+            taskDeptSelect.innerHTML = depts.map(d => `<option value="${d.id}">${d.name}</option>`).join("");
+            if (curVal && depts.some(d => d.id === curVal)) {
+                taskDeptSelect.value = curVal;
+            }
+        }
     }
 
     startRealtimePolling() {
@@ -168,6 +216,27 @@ class GanttCore {
                 const data = await res.json();
                 if (data && data.projects && Array.isArray(data.projects)) {
                     loadedData = data;
+                    if (data.departments && Array.isArray(data.departments) && data.departments.length > 0) {
+                        window.DEPARTMENTS = data.departments.map(d => ({
+                            id: d.code || d.id,
+                            code: d.prefix || d.code?.charAt(0) || "C",
+                            name: d.name || d.code,
+                            class: `dept-${(d.code || d.id).toLowerCase()}`,
+                            color: d.color || "#2563eb",
+                            prefix: d.prefix || "C",
+                            defaultTaskMode: d.defaultTaskMode || "REPORT_ONLY",
+                            defaultExpanded: true
+                        }));
+                        DEPARTMENTS = window.DEPARTMENTS;
+                        this.updateDepartmentSelectors();
+                    }
+                    if (data.directoryUsers && Array.isArray(data.directoryUsers)) {
+                        this.directoryUsers = data.directoryUsers;
+                        window.directoryUsers = data.directoryUsers;
+                    }
+                    if (data.tenant) {
+                        this.updateWorkspaceBranding(data.tenant);
+                    }
                 }
             }
         } catch (e) {
@@ -1406,10 +1475,44 @@ class GanttCore {
     }
 
     renderGantt() {
+        if (!this.workspace || !Array.isArray(this.workspace.projects) || this.workspace.projects.length === 0) {
+            const container = document.getElementById("gantt-unified-container");
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 80px 20px; text-align: center; color: #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;">
+                        <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                        </div>
+                        <div style="font-size: 16px; font-weight: 700; color: #ffffff;">Chưa có dự án nào trong Không Gian Làm Việc</div>
+                        <div style="font-size: 12.5px; color: #64748b; max-width: 420px; line-height: 1.5;">Vui lòng bấm nút <b>"+ Tạo Dự Án Mới"</b> ở thanh bên trái để bắt đầu lập kế hoạch và quản lý tiến độ!</div>
+                        <button onclick="openNewProjectModal()" class="ltp-btn" style="margin-top: 6px; padding: 8px 18px; font-weight: 700; font-size: 13px; background: #0284c7; color: #ffffff; border: none; border-radius: 8px; cursor: pointer;">
+                            + Tạo Dự Án Mới
+                        </button>
+                    </div>`;
+            }
+            return;
+        }
+
         const prj = this.getCurrentProject();
         if (!prj || !this.canUserSeeProject(prj)) {
             const container = document.getElementById("gantt-unified-container");
             if (container) container.innerHTML = `<div style="padding:50px; text-align:center; color:#64748b;">🔒 Bạn không có quyền truy cập vào dự án này.</div>`;
+            return;
+        }
+
+        const unifiedContainer = document.getElementById("gantt-unified-container");
+        if (unifiedContainer && (!prj.tasks || prj.tasks.length === 0)) {
+            unifiedContainer.innerHTML = `
+                <div style="padding: 70px 20px; text-align: center; color: #94a3b8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
+                    <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                    </div>
+                    <div style="font-size: 15px; font-weight: 700; color: #ffffff;">Dự án [${prj.name}] chưa có công việc nào</div>
+                    <div style="font-size: 12px; color: #64748b; max-width: 380px; line-height: 1.5;">Hãy bấm nút <b>"+ Thêm Việc"</b> hoặc nhập file Excel để bắt đầu vẽ sơ đồ tiến độ!</div>
+                    <button onclick="openNewTaskModal()" class="ltp-btn" style="padding: 7px 18px; font-weight: 700; font-size: 12.5px; background: #0284c7; color: #ffffff; border: none; border-radius: 8px; cursor: pointer;">
+                        + Thêm Công Việc Đầu Tiên
+                    </button>
+                </div>`;
             return;
         }
 
@@ -1810,6 +1913,7 @@ class GanttCore {
                         };
 
                         const staffCellText = (isDeptJob && this.ganttViewMode === 'STAFF') ? getTaskTag(t) : (maskedTask.staff || "Chưa giao");
+                        const staffAvatarUrl = this.getStaffAvatar(maskedTask.staff);
                         const mirrorBadge = t.isMirror ? `<span style="display:inline-flex; align-items:center; margin-right:3px; vertical-align:middle; color:#0284c7;" title="Task phản chiếu D2D (Mirror)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></span>` : "";
                         let deptBadgeHtml = "";
                         if (t.isMirror && t.sourceDept) {
@@ -1824,7 +1928,10 @@ class GanttCore {
                                     ${mirrorBadge}
                                     ${deptBadgeHtml}
                                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; padding-right:4px;">${maskedTask.name}</span>
-                                    <small style="color:#64748b; font-weight:600; font-size:11px; width:85px; min-width:85px; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-left:1px solid #f1f5f9; padding-left:4px;">${staffCellText}</small>
+                                    <div style="display:inline-flex; align-items:center; gap:4px; max-width:95px; width:95px; min-width:95px; border-left:1px solid #f1f5f9; padding-left:4px; overflow:hidden;" title="Người phụ trách: ${staffCellText}">
+                                        <img src="${staffAvatarUrl}" alt="${staffCellText}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(0,0,0,0.12);" onerror="this.src='https://ui-avatars.com/api/?name=%3F&background=475569&color=fff&size=40';">
+                                        <small style="color:#64748b; font-weight:600; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${staffCellText}</small>
+                                    </div>
                                 </div>
                                 <div class="timeline-cell-grid" style="width:${totalTimelineW}px; min-width:${totalTimelineW}px;">
                                     ${gridCellsHtml}
@@ -1834,7 +1941,11 @@ class GanttCore {
                                          onclick="ganttCore.onTaskSingleClick('${t.id}', event)" 
                                          ondblclick="ganttCore.onTaskDoubleClick('${t.id}', event)">
                                         ${todayProgressBadgeHtml}
-                                        <span style="overflow:hidden; text-overflow:ellipsis; display:inline-flex; align-items:center; gap:3px;">${t.isMirror ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' : ''}${maskedTask.name}</span>
+                                        <span style="overflow:hidden; text-overflow:ellipsis; display:inline-flex; align-items:center; gap:4px;">
+                                            ${t.isMirror ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' : ''}
+                                            <img src="${staffAvatarUrl}" title="Phụ trách: ${staffCellText}" alt="${staffCellText}" style="width:15px; height:15px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 2px rgba(0,0,0,0.2);" onerror="this.style.display='none';">
+                                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${maskedTask.name}</span>
+                                        </span>
                                         ${attachmentIconHtml}
                                         ${alertIconHtml}
                                         <div class="handle handle-right" onmousedown="ganttCore.startLinkDrag('${t.id}', event)"></div>

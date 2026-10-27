@@ -409,10 +409,24 @@
                 });
                 const data = await res.json();
 
-                if (res.status === 409 && data.alreadyClaimed) {
-                    document.getElementById("claimed-name").textContent = data.existingFullName || fullName;
-                    document.getElementById("claimed-username").textContent = data.existingUsername || "---";
-                    document.getElementById("claimed-password").textContent = "Đã cấp trước đó trên thiết bị này";
+                if ((res.status === 409 && data.alreadyClaimed) || data.status === "already_registered") {
+                    document.getElementById("claimed-name").textContent = data.existingFullName || data.user?.fullName || fullName;
+                    document.getElementById("claimed-username").textContent = data.existingUsername || data.user?.username || "---";
+                    document.getElementById("claimed-password").textContent = data.user?.password || data.user?.passwordHint || "Đã cấp trước đó trên thiết bị này";
+                    if (data.token && data.user) {
+                        lastCreatedCreds = {
+                            fullName: data.user.fullName,
+                            username: data.user.username,
+                            password: data.user.password || data.user.passwordHint || "••••••",
+                            department: data.user.department || data.user.dept,
+                            avatarUrl: data.user.avatarUrl,
+                            status: data.user.status,
+                            token: data.token,
+                            tenant: data.tenant
+                        };
+                        localStorage.setItem("ltp_qr_claimed_" + inviteCode, JSON.stringify(lastCreatedCreds));
+                        saveSessionToWorkspace(lastCreatedCreds);
+                    }
                     showState("state-claimed");
                     return;
                 }
@@ -463,16 +477,20 @@
         function saveSessionToWorkspace(creds) {
             if (!creds || !creds.token) return;
             localStorage.setItem("ltp_jwt_token", creds.token);
+            localStorage.setItem("gantt_auth_token", creds.token);
+            localStorage.setItem("gantt_session_user", creds.username);
+            const isWaiting = creds.status === "WAITING_ROOM";
             localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
                 id: creds.username,
                 username: creds.username,
                 name: creds.fullName,
-                role: "STAFF",
+                role: isWaiting ? "WAITING" : "STAFF",
                 department: creds.department || "STAFF",
                 deptTags: [creds.department || "STAFF"],
                 taskPermissionMode: "REPORT_ONLY",
                 avatarUrl: creds.avatarUrl || "",
-                status: creds.status || "ACTIVE",
+                status: creds.status || (isWaiting ? "WAITING_ROOM" : "ACTIVE"),
+                isWaiting,
                 tenant: creds.tenant || null,
                 token: creds.token,
                 loginTime: new Date().toISOString()

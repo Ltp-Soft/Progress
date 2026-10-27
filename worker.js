@@ -689,8 +689,15 @@ export default {
     if (url.pathname === "/api/public/tenant-brand" && request.method === "GET") {
       let depts = [];
       if (env.DB) {
-        const res = await env.DB.prepare("SELECT code, name, prefix, color, default_task_mode FROM departments WHERE tenant_id = ? ORDER BY order_index ASC").bind(tenantId).all();
-        depts = res.results || [];
+        const res = await env.DB.prepare("SELECT id, code, name, prefix, color, default_task_mode FROM departments WHERE tenant_id = ? ORDER BY order_index ASC").bind(tenantId).all();
+        depts = (res.results || []).map(d => ({
+          id: d.code || d.id,
+          code: d.code,
+          name: d.name,
+          prefix: d.prefix || "C",
+          color: d.color || "#2563eb",
+          defaultTaskMode: d.default_task_mode || "REPORT_ONLY"
+        }));
       }
       return jsonResp({
         tenant: {
@@ -2312,12 +2319,20 @@ export default {
       return jsonResp({
         invite: {
           id: invite.id,
+          inviteCode: invite.id,
           title: invite.title,
           maxUses: invite.max_uses,
+          maxScans: invite.max_uses,
           usedCount: invite.used_count,
           remainingSlots: Math.max(0, invite.max_uses - invite.used_count),
           requireGoogle: Boolean(invite.require_google),
-          defaultDept: invite.default_dept
+          defaultDept: invite.default_dept,
+          defaultDepartment: invite.default_dept,
+          status: invite.is_active === 1 ? "ACTIVE" : "INACTIVE",
+          isExpired: invite.is_active !== 1 || (invite.max_uses > 0 && invite.used_count >= invite.max_uses),
+          isFull: invite.max_uses > 0 && invite.used_count >= invite.max_uses,
+          companyName: t?.company_name || "Doanh Nghiệp",
+          logoUrl: t?.logo_url || "./asset/Logo_white.png"
         },
         tenant: {
           id: t?.id || invite.tenant_id,
@@ -2329,9 +2344,88 @@ export default {
       });
     }
 
+    // Public Tenant Branding Info (For workspace login screens & dynamic subdomains)
+    if (url.pathname === "/api/public/tenant-info" && request.method === "GET") {
+      try {
+        const resolvedTenant = await resolveTenantContext(request, env, authUser);
+        return jsonResp({
+          status: "success",
+          subdomain: resolvedTenant?.subdomain || "demo",
+          companyName: resolvedTenant?.company_name || "LTP PROGRESS HUB",
+          slogan: resolvedTenant?.slogan || "SAAS PROJECT & WORKFORCE MANAGEMENT",
+          logoUrl: resolvedTenant?.logo_url || "./asset/Logo_white.png",
+          planType: resolvedTenant?.plan_type || "TRIAL"
+        });
+      } catch (e) {
+        return jsonResp({ error: e.message }, 500);
+      }
+    }
+
+    // Auth status & profile check (used by unapproved employees in Waiting Room to auto-refresh)
+    if (url.pathname === "/api/auth/me" && request.method === "GET") {
+      try {
+        if (!authUser || !authUser.id) {
+          return jsonResp({ error: "Chưa đăng nhập!" }, 401);
+        }
+        const freshUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(authUser.id).first();
+        if (!freshUser) {
+          return jsonResp({ error: "Tài khoản không tồn tại trên hệ thống!" }, 404);
+        }
+        if (Number(freshUser.is_active) === 0) {
+          return jsonResp({ error: "Tài khoản này đã bị khóa hoặc thu hồi quyền truy cập!", isLocked: true }, 403);
+        }
+
+        const isStillWaiting = Number(freshUser.is_active) === 2 || freshUser.role === "WAITING";
+        const currentTargetTenant = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(freshUser.tenant_id).first();
+
+        const updatedPayload = {
+          id: freshUser.id,
+          username: freshUser.username || freshUser.id,
+          fullName: freshUser.full_name || freshUser.username,
+          avatarUrl: freshUser.avatar_url || "",
+          role: freshUser.role,
+          dept: freshUser.dept,
+          deptTags: JSON.parse(freshUser.dept_tags || "[]"),
+          prefix: freshUser.prefix || "C",
+          taskPermissionMode: freshUser.task_permission_mode || "REPORT_ONLY",
+          managedProjectIds: JSON.parse(freshUser.managed_project_ids || "[]"),
+          isWaiting: isStillWaiting,
+          tenantId: freshUser.tenant_id,
+          subdomain: currentTargetTenant?.subdomain || "demo",
+          companyName: currentTargetTenant?.company_name || "Doanh Nghiệp",
+          logoUrl: currentTargetTenant?.logo_url || "./asset/Logo_white.png"
+        };
+
+        const refreshedToken = await signJwt(env, updatedPayload);
+        return jsonResp({
+          status: "success",
+          isWaiting: isStillWaiting,
+          statusLabel: isStillWaiting ? "WAITING_ROOM" : "ACTIVE",
+          token: refreshedToken,
+          user: updatedPayload,
+          tenant: {
+            id: currentTargetTenant?.id || freshUser.tenant_id,
+            subdomain: currentTargetTenant?.subdomain || "demo",
+            companyName: currentTargetTenant?.company_name || "Doanh Nghiệp",
+            logoUrl: currentTargetTenant?.logo_url || "./asset/Logo_white.png"
+          }
+        });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
     if (url.pathname === "/api/public/qr-join" && request.method === "POST") {
       try {
-        const { code, fullName, phone, avatarUrl, googleToken, hardwareHash } = await request.json();
+        const body = await request.json();
+        const code = body.code || body.inviteCode;
+        const fullName = body.fullName;
+        const phone = body.phone;
+        const password = body.password;
+        const avatarUrl = body.avatarUrl;
+        const googleToken = body.googleToken;
+        const hardwareHash = body.hardwareHash || body.deviceFingerprintHash;
+
         const cleanCode = String(code || "").trim();
         const cleanHw = String(hardwareHash || "").trim() || `hw_${request.headers.get("cf-connecting-ip") || "ip"}_${(request.headers.get("user-agent") || "").slice(0, 40)}`;
 
@@ -2348,6 +2442,7 @@ export default {
         if (existingScan) {
           const existingU = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(existingScan.user_id).first();
           if (existingU) {
+            const isWaiting = Number(existingU.is_active) === 2 || existingU.role === "WAITING";
             const payload = {
               id: existingU.id,
               username: existingU.username,
@@ -2357,16 +2452,32 @@ export default {
               dept: existingU.dept,
               deptTags: JSON.parse(existingU.dept_tags || "[]"),
               taskPermissionMode: existingU.task_permission_mode || "REPORT_ONLY",
-              isWaiting: Number(existingU.is_active) === 2 || existingU.role === "WAITING",
+              isWaiting,
               tenantId: invite.tenant_id,
               subdomain: targetTenant?.subdomain || "demo"
             };
             const token = await signJwt(env, payload);
             return jsonResp({
               status: "already_registered",
+              success: true,
+              alreadyClaimed: true,
+              existingFullName: existingU.full_name,
+              existingUsername: existingU.username,
               message: `Thiết bị này đã được cấp tài khoản "${existingU.full_name}" (${existingU.username}). Đang đăng nhập lại vào tài khoản của bạn!`,
               token,
-              user: { ...payload, passwordHint: existingU.password_plain_hint }
+              tenant: {
+                id: targetTenant?.id || invite.tenant_id,
+                subdomain: targetTenant?.subdomain || "demo",
+                companyName: targetTenant?.company_name || "Doanh Nghiệp",
+                logoUrl: targetTenant?.logo_url || "./asset/Logo_white.png"
+              },
+              user: {
+                ...payload,
+                password: existingU.password_plain_hint,
+                passwordHint: existingU.password_plain_hint,
+                department: existingU.dept,
+                status: isWaiting ? "WAITING_ROOM" : "ACTIVE"
+              }
             });
           }
         }
@@ -2408,6 +2519,7 @@ export default {
           ).bind(invite.tenant_id, googleId || "__none__", cleanPhone || "__none__").first();
 
           if (dupUser) {
+            const isWaiting = Number(dupUser.is_active) === 2 || dupUser.role === "WAITING";
             const payload = {
               id: dupUser.id,
               username: dupUser.username,
@@ -2417,16 +2529,32 @@ export default {
               dept: dupUser.dept,
               deptTags: JSON.parse(dupUser.dept_tags || "[]"),
               taskPermissionMode: dupUser.task_permission_mode || "REPORT_ONLY",
-              isWaiting: Number(dupUser.is_active) === 2 || dupUser.role === "WAITING",
+              isWaiting,
               tenantId: invite.tenant_id,
               subdomain: targetTenant?.subdomain || "demo"
             };
             const token = await signJwt(env, payload);
             return jsonResp({
               status: "already_registered",
+              success: true,
+              alreadyClaimed: true,
+              existingFullName: dupUser.full_name,
+              existingUsername: dupUser.username,
               message: `Tài khoản của bạn (${dupUser.username}) đã tồn tại trên hệ thống. Tự động đăng nhập lại!`,
               token,
-              user: { ...payload, passwordHint: dupUser.password_plain_hint }
+              tenant: {
+                id: targetTenant?.id || invite.tenant_id,
+                subdomain: targetTenant?.subdomain || "demo",
+                companyName: targetTenant?.company_name || "Doanh Nghiệp",
+                logoUrl: targetTenant?.logo_url || "./asset/Logo_white.png"
+              },
+              user: {
+                ...payload,
+                password: dupUser.password_plain_hint,
+                passwordHint: dupUser.password_plain_hint,
+                department: dupUser.dept,
+                status: isWaiting ? "WAITING_ROOM" : "ACTIVE"
+              }
             });
           }
         }
@@ -2441,7 +2569,8 @@ export default {
           .replace(/[^a-z0-9]/g, "")
           .slice(0, 8) || "nv";
         const generatedUsername = `${baseSlug}${String(seqNum).padStart(2, "0")}_${Math.floor(10 + Math.random() * 89)}`;
-        const generatedPass = String(Math.floor(100000 + Math.random() * 900000));
+        const userProvidedPass = String(password || "").trim();
+        const generatedPass = userProvidedPass && userProvidedPass.length >= 6 ? userProvidedPass : String(Math.floor(100000 + Math.random() * 900000));
         const pwHash = await hashPassword(generatedPass);
         const newUserId = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
@@ -2493,8 +2622,21 @@ export default {
 
         return jsonResp({
           status: "success",
+          success: true,
           token,
-          user: { ...payload, passwordHint: generatedPass }
+          tenant: {
+            id: targetTenant?.id || invite.tenant_id,
+            subdomain: targetTenant?.subdomain || "demo",
+            companyName: targetTenant?.company_name || "Doanh Nghiệp",
+            logoUrl: targetTenant?.logo_url || "./asset/Logo_white.png"
+          },
+          user: {
+            ...payload,
+            password: generatedPass,
+            passwordHint: generatedPass,
+            department: assignedDept,
+            status: initialActive === 2 ? "WAITING_ROOM" : "ACTIVE"
+          }
         });
       } catch (err) {
         return jsonResp({ error: err.message }, 500);
@@ -2891,15 +3033,31 @@ export default {
 
       if (action === "ARCHIVE") {
         const nowStr = new Date().toISOString().split("T")[0];
-        await env.DB.prepare("UPDATE projects SET status = 'Closed', closed_at = ?, updated_at = ? WHERE id = ?")
-          .bind(nowStr, Math.floor(Date.now() / 1000), projectId).run();
+        await env.DB.prepare("UPDATE projects SET status = 'Closed', closed_at = ?, updated_at = ? WHERE id = ? AND tenant_id = ?")
+          .bind(nowStr, Math.floor(Date.now() / 1000), projectId, tenantId).run();
         return jsonResp({ status: "success", message: "Đã lưu trữ và đóng dự án an toàn!" });
       }
 
       if (action === "REOPEN") {
-        await env.DB.prepare("UPDATE projects SET status = 'Active', closed_at = NULL, updated_at = ? WHERE id = ?")
-          .bind(Math.floor(Date.now() / 1000), projectId).run();
-        return jsonResp({ status: "success", message: "Đã mở lại dự án!" });
+        const proj = await env.DB.prepare("SELECT * FROM projects WHERE id = ? AND tenant_id = ?").bind(projectId, tenantId).first();
+        if (!proj) return jsonResp({ error: "Dự án không tồn tại hoặc không thuộc quyền quản lý của công ty bạn!" }, 404);
+
+        const effectiveMaxUsers = (Number(tenant.max_users) || 10) + (Number(tenant.addon_users) || 0);
+        const seatCnt = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users WHERE tenant_id = ? AND is_active = 1 AND role NOT IN ('ADMIN','GUEST')").bind(tenantId).first();
+        const activeSeats = seatCnt?.cnt || 0;
+
+        if (activeSeats >= effectiveMaxUsers && effectiveMaxUsers < 999999) {
+          return jsonResp({
+            error: `Không thể khôi phục dự án: Số lượng nhân sự đang hoạt động (${activeSeats}/${effectiveMaxUsers}) đã đạt giới hạn gói của công ty! Vui lòng mua thêm gói +10 nhân sự hoặc tạm khóa bớt nhân sự không hoạt động trong Admin trước khi khôi phục dự án.`,
+            requireAddon: true,
+            activeSeats,
+            maxUsers: effectiveMaxUsers
+          }, 400);
+        }
+
+        await env.DB.prepare("UPDATE projects SET status = 'Active', closed_at = NULL, updated_at = ? WHERE id = ? AND tenant_id = ?")
+          .bind(Math.floor(Date.now() / 1000), projectId, tenantId).run();
+        return jsonResp({ status: "success", message: "Đã khôi phục dự án về Không Gian Làm Việc!" });
       }
 
       if (action === "CLEAN_FILES") {
@@ -3151,9 +3309,18 @@ export default {
           "SELECT * FROM tasks WHERE (tenant_id = ? OR (tenant_id IS NULL AND ? = 'tenant-demo')) AND is_deleted = 0 ORDER BY order_index ASC, rowid ASC"
         ).bind(tenantId, tenantId).all();
 
-        const { results: depts } = await env.DB.prepare(
-          "SELECT code, name, prefix, color, default_task_mode FROM departments WHERE tenant_id = ? ORDER BY order_index ASC"
+        const { results: rawDepts } = await env.DB.prepare(
+          "SELECT id, code, name, prefix, color, default_task_mode FROM departments WHERE tenant_id = ? ORDER BY order_index ASC"
         ).bind(tenantId).all();
+
+        const depts = (rawDepts || []).map(d => ({
+          id: d.code || d.id,
+          code: d.code,
+          name: d.name,
+          prefix: d.prefix || "C",
+          color: d.color || "#2563eb",
+          defaultTaskMode: d.default_task_mode || "REPORT_ONLY"
+        }));
 
         const { results: tenantUsers } = await env.DB.prepare(
           "SELECT id, username, full_name, avatar_url, role, dept, dept_tags, prefix, task_permission_mode, is_active FROM users WHERE tenant_id = ? AND is_active = 1"

@@ -181,25 +181,30 @@
                 <div id="waiting-room-list" class="space-y-2"></div>
             </div>
 
-            <!-- Department Headcount Strip & Quick Filter -->
-            <div id="dept-headcount-strip" class="p-3.5 card-surface rounded-2xl flex flex-wrap items-center gap-2 border border-slate-800">
-                <div class="flex items-center gap-2 mr-2">
-                    <span class="text-xs font-bold text-slate-300">Quân số phòng ban:</span>
-                </div>
-                <div id="dept-headcount-pills" class="flex flex-wrap items-center gap-1.5 flex-1">
-                    <span class="text-xs text-slate-500">Đang tính quân số...</span>
-                </div>
-                <button onclick="openDeptManagerModal()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold transition">
-                    ⚙️ Sửa phòng ban
-                </button>
-            </div>
-
             <!-- Clean 1-Row-Per-User Table -->
             <div class="card-surface rounded-2xl overflow-hidden">
                 <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <input id="staff-search-input" type="text" oninput="renderUsersTable()" placeholder="🔍 Tìm tên, mã đăng nhập, bộ phận..."
-                               class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white w-64 focus:outline-none focus:border-sky-400">
+                               class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white w-56 focus:outline-none focus:border-sky-400">
+                        
+                        <!-- Compact Department Headcount Dropdown Button -->
+                        <div class="relative">
+                            <button id="btn-dept-headcount-toggle" onclick="toggleDeptHeadcountDropdown()" type="button" class="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs text-sky-400 font-bold transition flex items-center gap-1.5">
+                                <span id="btn-dept-headcount-label">👥 Quân số phòng ban ▾</span>
+                            </button>
+                            <div id="dept-headcount-dropdown" class="hidden absolute left-0 top-full mt-1.5 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2.5 z-50 space-y-1.5">
+                                <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 px-1">
+                                    <span class="text-xs font-bold text-white">Quân số theo phòng ban</span>
+                                    <button onclick="openDeptManagerModal(); toggleDeptHeadcountDropdown(false);" class="text-[11px] text-sky-400 hover:underline font-semibold">
+                                        ⚙️ Sửa phòng ban
+                                    </button>
+                                </div>
+                                <div id="dept-headcount-items" class="max-h-60 overflow-y-auto space-y-1">
+                                    <!-- Dynamic headcount options -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="openBuySeatsModal()" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition">
@@ -903,8 +908,28 @@
 
         let selectedDeptFilter = null;
 
+        function toggleDeptHeadcountDropdown(force) {
+            const dd = document.getElementById("dept-headcount-dropdown");
+            if (!dd) return;
+            if (typeof force === "boolean") {
+                dd.classList.toggle("hidden", !force);
+            } else {
+                dd.classList.toggle("hidden");
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener("click", (e) => {
+            const btn = document.getElementById("btn-dept-headcount-toggle");
+            const dd = document.getElementById("dept-headcount-dropdown");
+            if (btn && dd && !btn.contains(e.target) && !dd.contains(e.target)) {
+                dd.classList.add("hidden");
+            }
+        });
+
         function filterByDept(code) {
             selectedDeptFilter = selectedDeptFilter === code ? null : code;
+            toggleDeptHeadcountDropdown(false);
             renderUsersTable();
         }
 
@@ -916,7 +941,7 @@
                 : [{ code: "CONSTRUCTION", name: "Thi công", color: "#0284c7" }, { code: "DESIGNER", name: "Thiết kế", color: "#7c3aed" }, { code: "FACTORY", name: "Xưởng SX", color: "#ea580c" }];
             const isEnterprise = adminState.tenant?.planCode === "ENTERPRISE";
 
-            // 1. Calculate Headcount per Department & Render Quick Filter Pills
+            // 1. Calculate Headcount per Department & Render Compact Dropdown
             const activePool = adminState.users.filter(u => u.status !== "WAITING_ROOM" && u.isActive !== 2 && u.role !== "WAITING");
             const deptHeadcounts = {};
             activePool.forEach(u => {
@@ -924,27 +949,43 @@
                 deptHeadcounts[uDept] = (deptHeadcounts[uDept] || 0) + 1;
             });
 
-            const pillsEl = document.getElementById("dept-headcount-pills");
-            if (pillsEl) {
-                const totalActive = activePool.length;
-                let pillsHtml = `
-                    <button onclick="filterByDept(null)" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${!selectedDeptFilter ? 'bg-sky-500 text-white shadow-sm' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}">
-                        <span>Tất cả</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] ${!selectedDeptFilter ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-400'}">${totalActive}</span>
-                    </button>
+            const totalActive = activePool.length;
+            const btnLabel = document.getElementById("btn-dept-headcount-label");
+            if (btnLabel) {
+                if (selectedDeptFilter) {
+                    const matchedDept = depts.find(d => d.code === selectedDeptFilter || d.name === selectedDeptFilter);
+                    const labelName = matchedDept?.name || selectedDeptFilter;
+                    const count = deptHeadcounts[selectedDeptFilter] || (matchedDept ? (deptHeadcounts[matchedDept.code] || deptHeadcounts[matchedDept.name] || 0) : 0);
+                    btnLabel.innerHTML = `👥 ${labelName} (${count} NV) ▾`;
+                } else {
+                    btnLabel.innerHTML = `👥 Quân số phòng ban (Tổng: ${totalActive}) ▾`;
+                }
+            }
+
+            const itemsEl = document.getElementById("dept-headcount-items");
+            if (itemsEl) {
+                let itemsHtml = `
+                    <div onclick="filterByDept(null)" class="p-2 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${!selectedDeptFilter ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'hover:bg-slate-800 text-slate-300'}">
+                        <span class="flex items-center gap-2">
+                            <span>🌐 Tất cả phòng ban</span>
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full text-[11px] bg-slate-800 font-extrabold text-white">${totalActive}</span>
+                    </div>
                 `;
                 depts.forEach(d => {
                     const c = deptHeadcounts[d.code] || deptHeadcounts[d.name] || 0;
                     const isSelected = selectedDeptFilter === d.code || selectedDeptFilter === d.name;
-                    pillsHtml += `
-                        <button onclick="filterByDept('${d.code || d.name}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${isSelected ? 'bg-sky-500 text-white shadow-sm font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'}">
-                            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${d.color || '#3b82f6'};"></span>
-                            <span>${d.name}</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold ${isSelected ? 'bg-sky-700 text-white' : 'bg-slate-800 text-slate-400'}">${c}</span>
-                        </button>
+                    itemsHtml += `
+                        <div onclick="filterByDept('${d.code || d.name}')" class="p-2 rounded-xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${isSelected ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold' : 'hover:bg-slate-800 text-slate-300'}">
+                            <span class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${d.color || '#3b82f6'};"></span>
+                                <span>${d.name}</span>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold ${isSelected ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300'}">${c}</span>
+                        </div>
                     `;
                 });
-                pillsEl.innerHTML = pillsHtml;
+                itemsEl.innerHTML = itemsHtml;
             }
 
             // 2. Filter Rows by Search Query & Selected Department

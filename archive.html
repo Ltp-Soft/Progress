@@ -86,7 +86,7 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data && Array.isArray(data.projects)) {
-                        archivedProjects = data.projects.filter(p => p.status === "ARCHIVED" || p.status === "CLOSED");
+                        archivedProjects = data.projects.filter(p => p.status === "ARCHIVED" || p.status === "CLOSED" || p.status === "Closed");
                     }
                 }
             } catch (e) {
@@ -240,7 +240,7 @@
             });
         }
 
-        function promptRestoreProjectPin(projId) {
+        async function promptRestoreProjectPin(projId) {
             const targetId = projId || (currentViewingProj ? currentViewingProj.id : null);
             const p = archivedProjects.find(x => x.id === targetId);
             if (!p) return;
@@ -252,11 +252,33 @@
                 const pass = prompt(`🔒 XÁC NHẬN KHÔI PHỤC DỰ ÁN [${p.name}]\nVui lòng nhập Mật Khẩu Admin (Administrator Password):`);
                 if (!pass) return;
                 if (!window.authMgr || !window.authMgr.validateAdminPassword(pass)) {
-                    alert("❌ Mật khẩu Admin không đúng! Chỉ Admin tối cao mới có quyền khôi phục dự án.");
+                    alert("❌ Mật khẩu Admin không đúng! Chỉ Admin mới có quyền khôi phục dự án.");
                     return;
                 }
             } else {
                 if (!confirm(`Xác nhận khôi phục dự án [${p.name}] về Active Workspace?`)) return;
+            }
+
+            try {
+                const actionUrl = window.getApiUrl ? window.getApiUrl("/api/admin/project-action") : "/api/admin/project-action";
+                const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
+                const res = await fetch(actionUrl, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ action: "REOPEN", projectId: p.id })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    if (data.requireAddon) {
+                        alert(`⚠️ ${data.error}\n\nVui lòng vào Trang Quản Trị (admin.html) bấm "+ Mua Thêm +10 Nhân Sự" hoặc khóa bớt ghế nhân viên cũ trước khi khôi phục dự án.`);
+                    } else {
+                        alert(data.error || "Không thể khôi phục dự án.");
+                    }
+                    return;
+                }
+            } catch (e) {
+                alert("Lỗi kết nối khi gửi yêu cầu khôi phục dự án.");
+                return;
             }
 
             p.status = "Active";
@@ -273,17 +295,10 @@
                         ws.projects.push(p);
                     }
                     localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(ws));
-                    const wsUrl = window.getApiUrl ? window.getApiUrl(`/api/workspace?_t=${Date.now()}`) : `/api/workspace?_t=${Date.now()}`;
-                    const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
-                    fetch(wsUrl, {
-                        method: "POST",
-                        headers,
-                        body: JSON.stringify(ws)
-                    }).catch(() => {});
                 }
             } catch (e) {}
 
-            alert(`🎉 Đã khôi phục thành công dự án [${p.name}] về Active Workspace!\nHệ thống sẽ tự động kết nối lại đồng bộ với công việc nội bộ của các phòng ban.`);
+            alert(`🎉 Đã khôi phục thành công dự án [${p.name}] về Active Workspace!\nHệ thống đã đồng bộ lại tiến độ của dự án.`);
             archivedProjects = archivedProjects.filter(x => x.id !== p.id);
             localStorage.setItem("gantt_archived_projects", JSON.stringify(archivedProjects));
             closeModal("readonly-gantt-modal");

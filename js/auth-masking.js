@@ -82,6 +82,7 @@ class AuthManager {
         this.directoryUsers = [];
         this.tenantDepartments = [];
         this.loadSession();
+        this.loadPublicTenantBrand();
     }
 
     loadSession() {
@@ -102,6 +103,7 @@ class AuthManager {
                     }
                     if (v2.tenant) {
                         this.tenantInfo = v2.tenant;
+                        this.applyBrandingToHeader(v2.tenant);
                     }
                     this.currentUser = {
                         id: v2.username || v2.id,
@@ -430,6 +432,9 @@ class AuthManager {
         const logoEl = document.getElementById("workspace-brand-logo");
         const titleEl = document.getElementById("workspace-brand-title");
         const subEl = document.getElementById("workspace-brand-subtitle");
+        const loginLogo = document.getElementById("login-screen-logo");
+        const loginTitle = document.getElementById("login-screen-title");
+        const loginTagline = document.getElementById("login-screen-tagline");
 
         if (logoEl && tenant.logoUrl) {
             logoEl.src = tenant.logoUrl;
@@ -440,9 +445,30 @@ class AuthManager {
         if (subEl && tenant.slogan) {
             subEl.textContent = tenant.slogan;
         }
+        if (loginLogo && tenant.logoUrl) {
+            loginLogo.src = tenant.logoUrl;
+        }
+        if (loginTitle && tenant.companyName) {
+            loginTitle.textContent = tenant.companyName;
+        }
+        if (loginTagline && tenant.slogan) {
+            loginTagline.textContent = tenant.slogan;
+        }
         if (tenant.companyName) {
             document.title = `${tenant.companyName} | LTP Progress Hub`;
         }
+    }
+
+    async loadPublicTenantBrand() {
+        try {
+            const res = await fetch(getApiUrl("/api/public/tenant-info?_t=" + Date.now()));
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.status === "success") {
+                    this.applyBrandingToHeader(data);
+                }
+            }
+        } catch (e) {}
     }
 }
 

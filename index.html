@@ -57,10 +57,10 @@
     <div id="app-login-screen" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: #0b0f19; z-index: 9999999; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; padding: 20px;">
         <div class="splash-content" style="width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center;">
             <div class="splash-logo-wrapper" style="margin-bottom: 12px;">
-                <img src="./asset/logo.png" alt="LTP Progress Hub Logo" class="splash-logo-img" style="height: 52px; width: auto; object-fit: contain;" onerror="this.src='./asset/Logo_white.png'">
+                <img id="login-screen-logo" src="./asset/logo.png" alt="Company Logo" class="splash-logo-img" style="height: 52px; width: auto; object-fit: contain;" onerror="this.src='./asset/Logo_white.png'">
             </div>
-            <h1 class="splash-title" style="font-size: 20px; letter-spacing: 1.5px; color: #ffffff; margin-bottom: 2px;">LTP PROGRESS HUB</h1>
-            <div class="splash-tagline" style="font-size: 11px; letter-spacing: 2px; color: #38bdf8; margin-bottom: 20px; font-weight: 700;">SAAS PROJECT & WORKFORCE MANAGEMENT</div>
+            <h1 id="login-screen-title" class="splash-title" style="font-size: 20px; letter-spacing: 1.5px; color: #ffffff; margin-bottom: 2px;">LTP PROGRESS HUB</h1>
+            <div id="login-screen-tagline" class="splash-tagline" style="font-size: 11px; letter-spacing: 2px; color: #38bdf8; margin-bottom: 20px; font-weight: 700;">SAAS PROJECT & WORKFORCE MANAGEMENT</div>
 
             <!-- LOGIN CARD MODAL -->
             <div style="width: 100%; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); box-sizing: border-box;">
@@ -141,6 +141,43 @@
         </div>
     </div>
 
+    <!-- WAITING ROOM HOLDING SCREEN (FOR STAFF WAITING FOR ADMIN APPROVAL) -->
+    <div id="waiting-room-screen" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: #0b0f19; z-index: 9999998; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; padding: 20px;">
+        <div style="width: 100%; max-width: 440px; background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 28px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); box-sizing: border-box; text-align: center; display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 2px solid #38bdf8; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                <i data-lucide="clock" size="30" style="color: #38bdf8;"></i>
+            </div>
+            <h2 style="font-size: 18px; font-weight: 700; color: #ffffff; margin: 0 0 6px 0;">Đang Trong Phòng Chờ Phê Duyệt</h2>
+            <p style="font-size: 12.5px; color: #94a3b8; line-height: 1.6; margin: 0 0 20px 0;">
+                Tài khoản của bạn đã được ghi nhận trên hệ thống công ty.<br>
+                Quản trị viên (Admin) đang xem xét và phân công bộ phận làm việc cho bạn.
+            </p>
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 12px 16px; width: 100%; margin-bottom: 20px; box-sizing: border-box; text-align: left;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                    <span style="color: #94a3b8;">Nhân sự:</span>
+                    <strong id="waiting-user-name" style="color: #ffffff;">---</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                    <span style="color: #94a3b8;">Tên đăng nhập:</span>
+                    <strong id="waiting-user-code" style="color: #38bdf8;">---</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                    <span style="color: #94a3b8;">Trạng thái:</span>
+                    <span style="color: #f59e0b; font-weight: 700;">Chờ Admin duyệt & gán phòng ban</span>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                <button type="button" id="btn-check-waiting-status" onclick="checkWaitingApprovalStatus()" class="ltp-btn" style="width: 100%; justify-content: center; height: 38px; font-weight: 700; font-size: 13px; background: #0284c7; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="refresh-cw" size="15"></i>
+                    <span>Kiểm Tra Trạng Thái Duyệt</span>
+                </button>
+                <button type="button" onclick="logoutFromWaitingRoom()" class="ltp-btn-dark" style="width: 100%; justify-content: center; height: 36px; font-size: 12px; border-radius: 8px; cursor: pointer;">
+                    <span>Đăng Xuất</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 0.5. APP ANIMATED SPLASH SCREEN (INSTANT DARK DEEP-SPACE INTRO) -->
     <div id="app-splash" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: #0b0f19; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box;">
         <div class="splash-content">
@@ -170,11 +207,6 @@
         </div>
 
         <div class="user-area">
-            <a href="landing.html" class="ltp-btn-dark" title="Trang Chủ & Bảng Giá Gói Cước">
-                <img src="./asset/icons/pricing-grid.svg" alt="" style="width:13px; height:13px; filter:invert(0.88);">
-                <span class="hide-on-mobile">Bảng Giá</span>
-            </a>
-
             <button id="btn-open-company-admin" class="ltp-btn-dark" onclick="window.location.href='admin.html'" style="display:none; background:#ffffff; color:#0f172a; border-color:#cbd5e1; font-weight:700;" title="Mở Trung Tâm Quản Trị Công Ty (QR Nhân Sự, Dung Lượng, Báo Cáo, Logo)">
                 <img src="./asset/icons/admin-sliders.svg" alt="" style="width:13px; height:13px;">
                 <span>Quản Trị</span>
@@ -575,9 +607,10 @@
 
                     <!-- Checkboxes & Progress % Field -->
                     <div style="margin:10px 0; background:#f1f5f9; padding:10px; border-radius:4px; border:1px solid #cbd5e1;">
-                        <div style="display:flex; gap:15px; margin-bottom:8px;">
+                        <div style="display:flex; gap:15px; margin-bottom:8px; align-items:center; flex-wrap:wrap;">
                             <label><input type="checkbox" id="task-started" onchange="onTaskStartedCheckboxChanged()"> Bắt đầu nhận việc</label>
                             <label><input type="checkbox" id="task-completed" onchange="onTaskCompletedCheckboxChanged()"> Hoàn thành việc</label>
+                            <small id="task-completed-time" style="font-size:11px; margin-left:4px;"></small>
                         </div>
                         
                         <div style="display:flex; align-items:center; gap:10px; background:white; padding:8px; border-radius:4px; border:1px solid #cbd5e1;">
@@ -2200,8 +2233,9 @@
                 return;
             }
 
+            const depts = window.DEPARTMENTS || DEPARTMENTS;
             const container = document.getElementById("manage-dept-checkbox-container");
-            container.innerHTML = DEPARTMENTS.map(d => {
+            container.innerHTML = depts.map(d => {
                 const isChecked = prj.invitedDepts && prj.invitedDepts.includes(d.id) ? "checked" : "";
                 return `<label><input type="checkbox" class="manage-dept-chk" value="${d.id}" ${isChecked}> ${d.name}</label>`;
             }).join('');
@@ -2771,6 +2805,17 @@
                 if (endTimeEl) endTimeEl.value = t.endTime || "";
                 document.getElementById("task-started").checked = t.isStarted;
                 document.getElementById("task-completed").checked = t.isCompleted;
+                const completedTimeEl = document.getElementById("task-completed-time");
+                if (completedTimeEl) {
+                    if (t.isCompleted && t.completedAt) {
+                        const isLate = t.end && t.completedAt > t.end;
+                        completedTimeEl.innerHTML = isLate ? 
+                            `<span style="color:#f43f5e; font-weight:700;">(Xong: ${t.completedAt} - Trễ hạn)</span>` : 
+                            `<span style="color:#10b981; font-weight:700;">(Xong: ${t.completedAt} - Đúng hạn)</span>`;
+                    } else {
+                        completedTimeEl.innerHTML = "";
+                    }
+                }
                 document.getElementById("task-progress").value = t.progressPercent !== undefined ? t.progressPercent : 0;
                 document.getElementById("task-progress-time").innerText = t.lastProgressDate ? `(Cập nhật: ${t.lastProgressDate})` : "";
                 document.getElementById("task-notes").value = t.notes || "";
@@ -2839,8 +2884,9 @@
                 canFullEdit = ganttCore.canUserEditTaskInDept(targetDept, prj);
                 canReportOnly = canFullEdit;
 
-                const deptObj = DEPARTMENTS.find(d => d.id === targetDept) || DEPARTMENTS[0];
-                const prefix = deptObj ? deptObj.code : "C";
+                const depts = window.DEPARTMENTS || DEPARTMENTS;
+                const deptObj = depts.find(d => d.id === targetDept) || depts[0];
+                const prefix = deptObj ? (deptObj.prefix || deptObj.code) : "C";
 
                 document.getElementById("task-id").value = "";
                 document.getElementById("task-name").value = "";
@@ -2856,6 +2902,8 @@
                 document.getElementById("task-started").checked = false;
                 document.getElementById("task-completed").checked = false;
                 document.getElementById("task-completed").disabled = false;
+                const resetCompTime = document.getElementById("task-completed-time");
+                if (resetCompTime) resetCompTime.innerHTML = "";
                 document.getElementById("task-progress").value = 0;
                 document.getElementById("task-progress-time").innerText = "";
                 document.getElementById("dependency-warning").style.display = "none";
@@ -3033,6 +3081,7 @@
                 endTime: endTimeVal,
                 isStarted: isStarted,
                 isCompleted: document.getElementById("task-completed").checked,
+                completedAt: document.getElementById("task-completed").checked ? (existingTask?.completedAt || new Date().toISOString().split("T")[0]) : "",
                 progressPercent: newProgress,
                 lastProgressDate: isStarted ? todayStr : "",
                 hasFiles: hasFilesVal,
@@ -3558,6 +3607,71 @@
             } catch (e) {}
         };
 
+        function showWaitingRoomScreen(user) {
+            const screen = document.getElementById("waiting-room-screen");
+            if (!screen) return;
+            const nameEl = document.getElementById("waiting-user-name");
+            const codeEl = document.getElementById("waiting-user-code");
+            if (nameEl) nameEl.textContent = user.name || user.fullName || user.username || "Nhân viên";
+            if (codeEl) codeEl.textContent = user.username || user.id || "---";
+            screen.style.display = "flex";
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function checkWaitingApprovalStatus() {
+            const btn = document.getElementById("btn-check-waiting-status");
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> <span>Đang kiểm tra...</span>`;
+            }
+            try {
+                const token = window.authMgr ? window.authMgr.getToken() : localStorage.getItem("ltp_jwt_token");
+                const res = await fetch("/api/auth/me", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok && data.status === "success") {
+                    if (!data.isWaiting && data.statusLabel !== "WAITING_ROOM") {
+                        alert("🎉 Chúc mừng! Tài khoản của bạn đã được Quản trị viên duyệt và phân quyền. Đang chuyển vào không gian làm việc...");
+                        if (data.token) {
+                            localStorage.setItem("ltp_jwt_token", data.token);
+                            localStorage.setItem("gantt_auth_token", data.token);
+                        }
+                        if (data.user) {
+                            localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                                ...data.user,
+                                isWaiting: false,
+                                token: data.token,
+                                loginTime: new Date().toISOString()
+                            }));
+                        }
+                        window.location.reload();
+                        return;
+                    } else {
+                        alert("⏳ Tài khoản của bạn vẫn đang trong hàng chờ duyệt của Admin. Vui lòng thử lại sau ít phút hoặc nhắc Admin duyệt trên trang Quản trị!");
+                    }
+                } else if (data.isLocked) {
+                    alert("Tài khoản này đã bị khóa bởi Quản trị viên.");
+                    handleLogout();
+                    return;
+                }
+            } catch (e) {
+                alert("Lỗi kết nối khi kiểm tra trạng thái duyệt.");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i data-lucide="refresh-cw" size="15"></i> <span>Kiểm Tra Trạng Thái Duyệt</span>`;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        }
+
+        function logoutFromWaitingRoom() {
+            handleLogout();
+            const waitingScreen = document.getElementById("waiting-room-screen");
+            if (waitingScreen) waitingScreen.style.display = "none";
+        }
+
         window.onload = () => {
             try {
                 checkMobileViewportMode();
@@ -3589,6 +3703,10 @@
             if (!isLoggedIn) {
                 if (splashScreen) splashScreen.style.display = "none";
                 if (loginScreen) loginScreen.style.display = "flex";
+            } else if (user.isWaiting || user.role === "WAITING") {
+                if (splashScreen) splashScreen.style.display = "none";
+                if (loginScreen) loginScreen.style.display = "none";
+                showWaitingRoomScreen(user);
             } else {
                 if (loginScreen) loginScreen.style.display = "none";
                 if (splashScreen) {

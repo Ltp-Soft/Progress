@@ -124,6 +124,10 @@ class GanttCore {
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (parsed && parsed.projects && Array.isArray(parsed.projects)) {
+                    parsed.projects = parsed.projects.filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
+                    if (['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(parsed.currentProjectId)) {
+                        parsed.currentProjectId = parsed.projects[0]?.id || "";
+                    }
                     this.workspace = parsed;
                     return;
                 }
@@ -131,6 +135,16 @@ class GanttCore {
         } catch (e) {
             console.warn("Could not init workspace from LocalStorage:", e);
         }
+        try {
+            const rawArch = localStorage.getItem("gantt_archived_projects");
+            if (rawArch) {
+                const parsedArch = JSON.parse(rawArch);
+                if (Array.isArray(parsedArch)) {
+                    const cleanArch = parsedArch.filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
+                    localStorage.setItem("gantt_archived_projects", JSON.stringify(cleanArch));
+                }
+            }
+        } catch (e) {}
         this.workspace = this.getDefaultWorkspaceData();
     }
 
@@ -270,14 +284,18 @@ class GanttCore {
         } catch(e) {}
         loadedData.showMirrorTasks = (this.workspace && this.workspace.showMirrorTasks !== undefined) ? this.workspace.showMirrorTasks : localShowMirrors;
 
-        const currentId = (this.workspace && this.workspace.currentProjectId) ? this.workspace.currentProjectId : (localData?.currentProjectId || loadedData.projects[0].id);
+        const currentId = (this.workspace && this.workspace.currentProjectId) ? this.workspace.currentProjectId : (localData?.currentProjectId || (loadedData.projects && loadedData.projects[0] ? loadedData.projects[0].id : ""));
         
+        // Filter out legacy demo projects from loadedData
+        loadedData.projects = (loadedData.projects || []).filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
+
         // Merge local data into loadedData so mirror tasks and custom project tags are NEVER lost on F5!
         if (localData && localData.projects && Array.isArray(localData.projects)) {
             localData.projects.forEach(localP => {
+                if (!localP || ['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(localP.id)) return;
                 const srvP = loadedData.projects.find(sp => sp.id === localP.id);
                 if (!srvP) {
-                    loadedData.projects.push(localP);
+                    return; // Deleted on server D1, do not resurrect!
                 } else {
                     // 1. Merge tags
                     if (Array.isArray(localP.projectTags)) {
@@ -396,7 +414,7 @@ class GanttCore {
             this.workspace.currentProjectId = currentId;
         } else {
             const firstActive = loadedData.projects.find(p => p.status !== "ARCHIVED") || loadedData.projects[0];
-            this.workspace.currentProjectId = firstActive ? firstActive.id : "PRJ_01";
+            this.workspace.currentProjectId = firstActive ? firstActive.id : "";
         }
 
         localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(this.workspace));
@@ -420,10 +438,12 @@ class GanttCore {
     }
 
     getCurrentProject() {
-        if (!this.workspace || !Array.isArray(this.workspace.projects) || this.workspace.projects.length === 0) {
+        if (!this.workspace || !Array.isArray(this.workspace.projects)) {
             this.initDefaultWorkspace();
         }
-        this.ensureDefaultProjects(this.workspace.projects);
+        if (!this.workspace || !Array.isArray(this.workspace.projects) || this.workspace.projects.length === 0) {
+            return null;
+        }
 
         let proj = this.workspace.projects.find(p => p.id === this.workspace.currentProjectId && p.status !== "ARCHIVED");
         if (!proj) {
@@ -474,11 +494,7 @@ class GanttCore {
         if (minaFab) minaFab.style.display = canUseAi ? "flex" : "none";
         if (!canUseAi && minaChat) minaChat.style.display = "none";
 
-        // Show Company Admin Portal button for ADMIN / PROJECT_ADMIN / BOSS
-        const btnCompanyAdmin = document.getElementById("btn-open-company-admin");
-        if (btnCompanyAdmin) {
-            btnCompanyAdmin.style.display = (isAdmin || isBoss) ? "inline-flex" : "none";
-        }
+
 
         const adminToolsContainer = document.getElementById("admin-tools-container");
         const dropdownWrapper = document.querySelector(".settings-dropdown-wrapper");

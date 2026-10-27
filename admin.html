@@ -52,6 +52,46 @@
         </div>
     </div>
 
+    <!-- Dedicated Admin Login Gate (shows securely when visiting admin.html without prior session) -->
+    <div id="admin-login-gate" class="fixed inset-0 z-50 hidden bg-[#090d16]/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl border border-slate-700/80 p-7 shadow-2xl bg-slate-900/95 relative overflow-hidden">
+            <div class="absolute -top-16 -right-16 w-36 h-36 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="text-center mb-6 relative">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-sky-500/25">
+                    <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-black text-white tracking-wide">Cổng Quản Trị Hệ Thống</h2>
+                <p class="text-xs text-slate-400 mt-1">Đăng nhập tài khoản Quản trị viên (Admin / Ban QLDA)</p>
+            </div>
+
+            <form onsubmit="handleAdminGateLogin(event)" class="space-y-4 relative">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Mã công ty (Subdomain) <span class="text-slate-500 font-normal">(Bỏ trống nếu đã vào đúng domain con)</span></label>
+                    <input id="admin-gate-subdomain" type="text" placeholder="VD: taiphat"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-sky-400 font-mono focus:outline-none focus:border-sky-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Tài khoản Admin / Email <span class="text-rose-400">*</span></label>
+                    <input id="admin-gate-username" type="text" required placeholder="admin hoặc email@domain.com"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Mật khẩu Admin <span class="text-rose-400">*</span></label>
+                    <input id="admin-gate-password" type="password" required placeholder="••••••••"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                </div>
+
+                <div id="admin-gate-error" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-medium"></div>
+
+                <button id="admin-gate-submit-btn" type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2">
+                    <span>Xác Thực & Vào Quản Trị</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Top Minimalist Header -->
     <header class="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
@@ -739,15 +779,137 @@
             }
         }
 
+        function getSubdomainFromHost() {
+            const host = window.location.hostname;
+            const parts = host.split(".");
+            if (parts.length >= 3 && parts[0] !== "www") {
+                return parts[0].replace(/-(pm|progress)$/i, "");
+            }
+            return "";
+        }
+
+        function showAdminLoginGate() {
+            const gate = document.getElementById("admin-login-gate");
+            if (gate) gate.classList.remove("hidden");
+            const splash = document.getElementById("admin-splash");
+            if (splash) splash.style.display = "none";
+
+            const subInput = document.getElementById("admin-gate-subdomain");
+            if (subInput && !subInput.value) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const subParam = urlParams.get("tenant") || getSubdomainFromHost();
+                if (subParam && subParam !== "default" && subParam !== "www") {
+                    subInput.value = subParam;
+                }
+            }
+        }
+
+        function hideAdminLoginGate() {
+            const gate = document.getElementById("admin-login-gate");
+            if (gate) gate.classList.add("hidden");
+        }
+
+        async function handleAdminGateLogin(e) {
+            e.preventDefault();
+            const subInput = document.getElementById("admin-gate-subdomain");
+            const uInput = document.getElementById("admin-gate-username");
+            const pInput = document.getElementById("admin-gate-password");
+            const errBox = document.getElementById("admin-gate-error");
+            const btn = document.getElementById("admin-gate-submit-btn");
+
+            errBox.classList.add("hidden");
+            const subdomain = (subInput?.value || "").trim() || getSubdomainFromHost();
+            const username = (uInput?.value || "").trim();
+            const password = (pInput?.value || "").trim();
+
+            if (!username || !password) {
+                errBox.textContent = "Vui lòng nhập tài khoản và mật khẩu.";
+                errBox.classList.remove("hidden");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> <span>Đang xác thực...</span>`;
+
+            try {
+                const res = await fetch("/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ subdomain, username, password })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errBox.textContent = data.error || "Tài khoản hoặc mật khẩu không chính xác.";
+                    errBox.classList.remove("hidden");
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>Xác Thực & Vào Quản Trị</span>`;
+                    return;
+                }
+
+                if (!["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(data.user?.role)) {
+                    errBox.textContent = "Tài khoản này không có quyền truy cập trang Quản Trị Admin.";
+                    errBox.classList.remove("hidden");
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>Xác Thực & Vào Quản Trị</span>`;
+                    return;
+                }
+
+                if (data.token) {
+                    localStorage.setItem("ltp_jwt_token", data.token);
+                }
+                localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                    id: data.user.id || data.user.username,
+                    username: data.user.username,
+                    name: data.user.fullName || data.user.name,
+                    role: data.user.role,
+                    dept: data.user.dept || "ALL",
+                    department: data.user.dept || "ALL",
+                    deptTags: data.user.deptTags || [data.user.dept || "ALL"],
+                    prefix: data.user.prefix || "C",
+                    taskPermissionMode: data.user.taskPermissionMode || "REPORT_ONLY",
+                    avatarUrl: data.user.avatarUrl || "",
+                    tenant: data.tenant || null,
+                    token: data.token,
+                    loginTime: new Date().toISOString()
+                }));
+
+                hideAdminLoginGate();
+                btn.disabled = false;
+                btn.innerHTML = `<span>Xác Thực & Vào Quản Trị</span>`;
+                await loadAdminOverview(false);
+            } catch (err) {
+                errBox.textContent = "Lỗi kết nối máy chủ khi đăng nhập.";
+                errBox.classList.remove("hidden");
+                btn.disabled = false;
+                btn.innerHTML = `<span>Xác Thực & Vào Quản Trị</span>`;
+            }
+        }
+
         async function loadAdminOverview(silent = false) {
+            let token = localStorage.getItem("ltp_jwt_token");
+            if (!token) {
+                try {
+                    const sess = JSON.parse(localStorage.getItem("CRYSTAL_ACTIVE_SESSION_V2") || "null");
+                    if (sess && sess.token) token = sess.token;
+                } catch (e) {}
+            }
+            if (!token) {
+                showAdminLoginGate();
+                return;
+            }
+
             try {
                 const res = await fetch("/api/admin/overview", { headers: getAuthHeaders() });
                 if (res.status === 401 || res.status === 403) {
-                    window.location.href = "landing.html";
+                    showAdminLoginGate();
                     return;
                 }
                 const data = await res.json();
-                if (!res.ok) return;
+                if (!res.ok) {
+                    showAdminLoginGate();
+                    return;
+                }
+                hideAdminLoginGate();
 
                 adminState.tenant = data.tenant;
                 adminState.departments = data.departments || [];
@@ -940,8 +1102,13 @@
                                 <img src="${u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName)}&background=0284c7&color=fff`}"
                                      class="w-10 h-10 rounded-xl object-cover border border-amber-400/50">
                                 <div>
-                                    <div class="text-xs font-extrabold text-white">${u.fullName} <span class="text-sky-400 font-mono">(@${u.username})</span></div>
-                                    <div class="text-[11px] text-slate-400">SĐT: ${u.phone || "---"} • Mật khẩu: <span class="font-mono text-amber-300">${u.plainPasswordHint || "123456"}</span></div>
+                                    <div class="flex items-center gap-2">
+                                        <input id="wait-name-${u.id}" type="text" value="${(u.fullName || '').replace(/"/g, '&quot;')}"
+                                               class="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-bold text-white focus:border-amber-400 focus:outline-none w-36 sm:w-44"
+                                               title="Admin có thể sửa lại họ tên trước khi duyệt">
+                                        <span class="text-sky-400 font-mono text-xs">(@${u.username})</span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">SĐT: ${u.phone || "---"} • Mật khẩu: <span class="font-mono text-amber-300">${u.plainPasswordHint || "123456"}</span></div>
                                 </div>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -1085,7 +1252,12 @@
                             <div class="flex items-center gap-3">
                                 <img src="${avatar}" class="w-9 h-9 rounded-xl object-cover border border-slate-700 shrink-0" alt="">
                                 <div>
-                                    <div class="font-bold text-white">${u.fullName}</div>
+                                    <div class="font-bold text-white flex items-center gap-1.5">
+                                        <span>${u.fullName}</span>
+                                        <button onclick="promptEditUserName('${u.id}', '${(u.fullName || '').replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-white p-0.5 rounded transition" title="Đổi tên nhân sự">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                        </button>
+                                    </div>
                                     <div class="text-[11px] font-mono text-sky-400">@${u.username} ${u.phone ? `• ${u.phone}` : ""}</div>
                                 </div>
                             </div>
@@ -1149,6 +1321,12 @@
             el.textContent = el.textContent === "••••••" ? plainPw : "••••••";
         }
 
+        async function promptEditUserName(userId, currentName) {
+            const newName = prompt("Nhập họ và tên mới cho nhân sự:", currentName);
+            if (!newName || newName.trim() === "" || newName.trim() === currentName) return;
+            await quickUpdateUser(userId, { fullName: newName.trim() });
+        }
+
         async function promptResetPassword(userId, name) {
             const newPassword = prompt(`Nhập mật khẩu mới cho nhân sự [${name}]:`, "123456");
             if (!newPassword || !newPassword.trim()) return;
@@ -1176,8 +1354,10 @@
         async function decideWaitingUser(userId, decision) {
             const deptEl = document.getElementById("wait-dept-" + userId);
             const permEl = document.getElementById("wait-perm-" + userId);
+            const nameEl = document.getElementById("wait-name-" + userId);
             const department = deptEl ? deptEl.value : "Thi công";
             const taskPermissionMode = permEl ? permEl.value : "REPORT_ONLY";
+            const fullName = nameEl ? nameEl.value.trim() : "";
 
             try {
                 const res = await fetch("/api/admin/waiting-room", {
@@ -1186,6 +1366,7 @@
                     body: JSON.stringify({
                         action: decision,
                         userId,
+                        fullName,
                         department,
                         deptTags: [department],
                         taskPermissionMode
@@ -1196,7 +1377,7 @@
                     alert(data.error || "Không thể xử lý phòng chờ.");
                     return;
                 }
-                await loadAdminOverview();
+                await loadAdminOverview(true);
             } catch (e) {}
         }
 
@@ -1769,7 +1950,7 @@
         function logoutAdmin() {
             localStorage.removeItem("ltp_jwt_token");
             localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
-            window.location.href = "landing.html";
+            showAdminLoginGate();
         }
 
         window.addEventListener("DOMContentLoaded", () => {

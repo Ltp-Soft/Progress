@@ -563,6 +563,13 @@ async function ensureMultiTenantSchema(env) {
       }
     }
 
+    // Purge legacy demo / orphan projects and tasks from before multi-tenancy
+    try {
+      await db.prepare("DELETE FROM projects WHERE tenant_id IS NULL OR tenant_id = 'demo_legacy' OR id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
+      await db.prepare("DELETE FROM tasks WHERE tenant_id IS NULL OR project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
+      await db.prepare("DELETE FROM projects WHERE tenant_id = 'tenant-demo' AND status = 'ARCHIVED'").run();
+    } catch (e) {}
+
     await db.prepare("INSERT OR IGNORE INTO coupons (code, discount_percent, is_active) VALUES ('LTPSOFT10', 10, 1), ('NAM10', 10, 1)").run();
   } catch (e) {}
 
@@ -2647,9 +2654,9 @@ export default {
       const [deptsRes, usersRes, projectsRes, tasksRes, filesRes, invitesRes] = await Promise.all([
         env.DB.prepare("SELECT * FROM departments WHERE tenant_id = ? ORDER BY order_index ASC, rowid ASC").bind(tenantId).all(),
         env.DB.prepare("SELECT * FROM users WHERE tenant_id = ? ORDER BY created_at DESC").bind(tenantId).all(),
-        env.DB.prepare("SELECT * FROM projects WHERE (tenant_id = ? OR tenant_id IS NULL) AND status != 'DELETED' ORDER BY updated_at DESC").bind(tenantId).all(),
-        env.DB.prepare("SELECT * FROM tasks WHERE (tenant_id = ? OR tenant_id IS NULL) AND is_deleted = 0").bind(tenantId).all(),
-        env.DB.prepare("SELECT project_id, COUNT(*) as file_count, COALESCE(SUM(file_size), 0) as total_bytes FROM task_files WHERE (tenant_id = ? OR tenant_id IS NULL) GROUP BY project_id").bind(tenantId).all(),
+        env.DB.prepare("SELECT * FROM projects WHERE tenant_id = ? AND status != 'DELETED' ORDER BY updated_at DESC").bind(tenantId).all(),
+        env.DB.prepare("SELECT * FROM tasks WHERE tenant_id = ? AND is_deleted = 0").bind(tenantId).all(),
+        env.DB.prepare("SELECT project_id, COUNT(*) as file_count, COALESCE(SUM(file_size), 0) as total_bytes FROM task_files WHERE tenant_id = ? GROUP BY project_id").bind(tenantId).all(),
         env.DB.prepare("SELECT * FROM qr_invites WHERE tenant_id = ? ORDER BY created_at DESC").bind(tenantId).all()
       ]);
 
@@ -2829,12 +2836,15 @@ export default {
         const finalTags = Array.isArray(deptTags) && deptTags.length > 0 ? deptTags : [dept];
         const deptRow = await env.DB.prepare("SELECT prefix FROM departments WHERE tenant_id = ? AND code = ?").bind(tenantId, finalTags[0]).first();
         const prefix = deptRow?.prefix || "C";
+        const newFullName = String(body.fullName || body.full_name || "").trim();
 
         await env.DB.prepare(`
           UPDATE users
-          SET role = ?, dept = ?, dept_tags = ?, prefix = ?, task_permission_mode = ?, is_active = 1
+          SET role = ?, dept = ?, dept_tags = ?, prefix = ?, task_permission_mode = ?,
+              full_name = CASE WHEN ? != '' THEN ? ELSE full_name END,
+              is_active = 1
           WHERE id = ? AND tenant_id = ?
-        `).bind(role, finalTags[0], JSON.stringify(finalTags), prefix, taskPermissionMode, userId, tenantId).run();
+        `).bind(role, finalTags[0], JSON.stringify(finalTags), prefix, taskPermissionMode, newFullName, newFullName, userId, tenantId).run();
 
         if (role === "DEPT_ADMIN") {
           await env.DB.prepare("UPDATE departments SET leader_user_id = ? WHERE tenant_id = ? AND code = ?").bind(userId, tenantId, finalTags[0]).run();
@@ -2970,6 +2980,20 @@ export default {
         if (taskPermissionMode) {
           await env.DB.prepare("UPDATE users SET task_permission_mode = ? WHERE id = ? AND tenant_id = ?").bind(taskPermissionMode, targetUserId, tenantId).run();
           return jsonResp({ status: "success", id: targetUserId, taskPermissionMode });
+        }
+
+        if (body.fullName !== undefined || body.full_name !== undefined || body.name !== undefined) {
+          const newName = String(body.fullName || body.full_name || body.name || "").trim();
+          if (newName) {
+            await env.DB.prepare("UPDATE users SET full_name = ? WHERE id = ? AND tenant_id = ?").bind(newName, targetUserId, tenantId).run();
+            return jsonResp({ status: "success", id: targetUserId, fullName: newName });
+          }
+        }
+
+        if (body.avatarUrl !== undefined || body.avatar_url !== undefined) {
+          const newAvatar = String(body.avatarUrl || body.avatar_url || "").trim();
+          await env.DB.prepare("UPDATE users SET avatar_url = ? WHERE id = ? AND tenant_id = ?").bind(newAvatar, targetUserId, tenantId).run();
+          return jsonResp({ status: "success", id: targetUserId, avatarUrl: newAvatar });
         }
 
         if (newPassword || password) {
@@ -3357,12 +3381,12 @@ export default {
     if (url.pathname === "/api/workspace" && request.method === "GET") {
       try {
         const { results: rawProjects } = await env.DB.prepare(
-          "SELECT * FROM projects WHERE (tenant_id = ? OR (tenant_id IS NULL AND ? = 'tenant-demo')) AND status != 'DELETED'"
-        ).bind(tenantId, tenantId).all();
+          "SELECT * FROM projects WHERE tenant_id = ? AND status != 'DELETED'"
+        ).bind(tenantId).all();
 
         const { results: rawTasks } = await env.DB.prepare(
-          "SELECT * FROM tasks WHERE (tenant_id = ? OR (tenant_id IS NULL AND ? = 'tenant-demo')) AND is_deleted = 0 ORDER BY order_index ASC, rowid ASC"
-        ).bind(tenantId, tenantId).all();
+          "SELECT * FROM tasks WHERE tenant_id = ? AND is_deleted = 0 ORDER BY order_index ASC, rowid ASC"
+        ).bind(tenantId).all();
 
         const { results: rawDepts } = await env.DB.prepare(
           "SELECT id, code, name, prefix, color, default_task_mode FROM departments WHERE tenant_id = ? ORDER BY order_index ASC"
@@ -3510,7 +3534,7 @@ export default {
             prefix: u.prefix || "C",
             taskPermissionMode: u.task_permission_mode || "REPORT_ONLY"
           })),
-          currentProjectId: formattedProjects[0]?.id || "PRJ_01",
+          currentProjectId: formattedProjects[0]?.id || "",
           projects: formattedProjects,
           d2dLinks,
           serverTime: Date.now()

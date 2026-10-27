@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tham Gia Không Gian Làm Việc | LTP Progress Hub</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(circle at 50% 0%, #1e293b 0%, #090d16 75%);
+            min-height: 100vh;
+            color: #f8fafc;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4 min-h-screen">
+
+    <!-- Top Brand Header -->
+    <div class="flex items-center gap-3 mb-5">
+        <img id="company-logo" src="asset/logo.png" alt="LTP Soft" class="h-10 w-10 rounded-xl object-contain bg-white/10 p-1.5 border border-white/15">
+        <div>
+            <div id="company-name" class="text-base font-extrabold tracking-tight text-white">LTP Progress Hub</div>
+            <div class="text-xs text-sky-400 font-medium">Cổng Tiếp Nhận Nhân Sự Qua Mã QR</div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="glass-card w-full max-w-md rounded-3xl p-6 sm:p-7 relative overflow-hidden">
+        <!-- Decorative glow -->
+        <div class="absolute -top-20 -right-20 w-44 h-44 bg-sky-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Loading State -->
+        <div id="state-loading" class="py-12 text-center">
+            <div class="w-10 h-10 border-3 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <p class="text-sm text-slate-300 font-medium">Đang kiểm tra mã QR phòng chờ...</p>
+        </div>
+
+        <!-- Error / Expired / Full State -->
+        <div id="state-error" class="hidden py-8 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto mb-4 text-3xl">⛔</div>
+            <h2 id="error-title" class="text-lg font-extrabold text-white mb-2">Mã QR không khả dụng</h2>
+            <p id="error-desc" class="text-sm text-slate-300 leading-relaxed mb-6"></p>
+            <a href="index.html" class="inline-flex items-center justify-center w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold text-white transition">
+                Về trang đăng nhập
+            </a>
+        </div>
+
+        <!-- Already Claimed on This Device State -->
+        <div id="state-claimed" class="hidden py-4">
+            <div class="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 mb-5">
+                <span class="text-2xl">✅</span>
+                <div>
+                    <div class="text-sm font-bold text-emerald-300">Thiết bị này đã nhận tài khoản!</div>
+                    <div class="text-xs text-slate-300">Mỗi điện thoại/thiết bị chỉ được cấp 1 tài khoản duy nhất để chống trùng lặp.</div>
+                </div>
+            </div>
+            <div id="claimed-credentials-box" class="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 mb-5 space-y-2.5">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">Họ và tên:</span>
+                    <span id="claimed-name" class="font-bold text-white"></span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">Mã đăng nhập:</span>
+                    <span id="claimed-username" class="font-mono font-bold text-sky-400 text-sm"></span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">Mật khẩu mặc định:</span>
+                    <span id="claimed-password" class="font-mono font-bold text-amber-300 text-sm"></span>
+                </div>
+            </div>
+            <button onclick="goToWorkspace()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 transition">
+                🚀 Vào Không Gian Làm Việc Ngay
+            </button>
+        </div>
+
+        <!-- Join Form State -->
+        <div id="state-form" class="hidden">
+            <div class="flex items-center justify-between bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 mb-5">
+                <div>
+                    <div id="invite-title" class="text-sm font-bold text-white">Phòng chờ nhân sự mới</div>
+                    <div id="invite-dept" class="text-xs text-sky-400 font-medium mt-0.5">Bộ phận: Chờ phân bổ</div>
+                </div>
+                <div class="text-right">
+                    <span id="invite-slots" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        Còn 10/10 suất
+                    </span>
+                </div>
+            </div>
+
+            <!-- Fast Google Sign-In for Instant Avatar + Name -->
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-slate-300 mb-2 text-center">Cách 1: Lấy tự động Tên & Ảnh đại diện (1 chạm)</div>
+                <div id="google-btn-wrapper" class="flex justify-center"></div>
+            </div>
+
+            <div class="relative flex py-2 items-center mb-4">
+                <div class="flex-grow border-t border-slate-800"></div>
+                <span class="flex-shrink mx-3 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Hoặc điền nhanh 5 giây</span>
+                <div class="flex-grow border-t border-slate-800"></div>
+            </div>
+
+            <!-- Avatar Picker + Form -->
+            <form id="qr-join-form" onsubmit="submitJoinForm(event)" class="space-y-4">
+                <div class="flex items-center gap-4">
+                    <label for="avatar-input" class="relative group cursor-pointer shrink-0">
+                        <img id="avatar-preview" src="https://ui-avatars.com/api/?name=NV&background=0284c7&color=fff&bold=true"
+                             class="w-16 h-16 rounded-2xl object-cover border-2 border-sky-400/60 shadow-md" alt="Avatar">
+                        <span class="absolute -bottom-1 -right-1 bg-sky-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow">
+                            📷 Ảnh
+                        </span>
+                        <input id="avatar-input" type="file" accept="image/*" class="hidden" onchange="handleAvatarFile(event)">
+                    </label>
+                    <div class="text-xs text-slate-300 leading-relaxed">
+                        <div class="font-bold text-white mb-0.5">Ảnh đại diện hiển thị trên Gantt</div>
+                        <div class="text-slate-400">Chạm vào khung ảnh để chọn ảnh đại diện Zalo / chân dung của bạn.</div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Họ và Tên của bạn <span class="text-rose-400">*</span></label>
+                    <input id="input-fullname" type="text" required placeholder="VD: Nguyễn Văn Minh"
+                           oninput="updateDefaultAvatar(this.value)"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Số điện thoại / Zalo <span class="text-rose-400">*</span></label>
+                        <input id="input-phone" type="tel" required placeholder="VD: 0909123456"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Mật khẩu tự chọn</label>
+                        <input id="input-password" type="text" placeholder="Để trống = tự cấp"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
+                    </div>
+                </div>
+
+                <div id="join-error-msg" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-medium"></div>
+
+                <button id="btn-submit-join" type="submit"
+                        class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2">
+                    <span>✨ Nhận Tài Khoản & Vào Phòng Chờ</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Success State -->
+        <div id="state-success" class="hidden py-3">
+            <div class="text-center mb-5">
+                <img id="success-avatar" src="" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 mx-auto mb-2.5 shadow-lg" alt="Avatar">
+                <h2 class="text-lg font-extrabold text-white">Chào mừng <span id="success-name" class="text-sky-400"></span>!</h2>
+                <p id="success-status-badge" class="text-xs text-emerald-300 mt-1 font-medium">
+                    Tài khoản của bạn đã được tạo thành công. Hãy lưu lại thông tin đăng nhập dưới đây:
+                </p>
+            </div>
+
+            <div class="bg-slate-900/95 border border-sky-500/30 rounded-2xl p-4 mb-5 space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Mã đăng nhập (Username):</span>
+                    <span id="success-username" class="font-mono font-extrabold text-base text-sky-400"></span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Mật khẩu của bạn:</span>
+                    <span id="success-password" class="font-mono font-extrabold text-base text-amber-300"></span>
+                </div>
+                <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
+                    <span class="text-[11px] text-slate-400">Bộ phận mặc định:</span>
+                    <span id="success-dept" class="text-xs font-bold text-white"></span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+                <button onclick="copyCredentials()" id="btn-copy-cred" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition">
+                    📋 Sao chép Mã đăng nhập & Mật khẩu
+                </button>
+                <button onclick="goToWorkspace()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 transition">
+                    🚀 Mở Bảng Tiến Độ Ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 text-center text-[11px] text-slate-400">
+        Nền tảng điều phối tiến độ <strong class="text-slate-300">LTP Progress Hub</strong> • Phát triển bởi <a href="https://ltp-soft.com" class="text-sky-400 hover:underline">LTP SOFT</a>
+    </div>
+
+    <script>
+        const GOOGLE_CLIENT_ID = "383174442594-tfaqba8noaibh1sr24tpcj1nl3ckq851.apps.googleusercontent.com";
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteCode = (urlParams.get("code") || "").trim();
+        let currentAvatarDataUrl = "";
+        let hardwareHash = "";
+        let lastCreatedCreds = null;
+
+        // 3-Layer Hardware Fingerprint (Consistent across Zalo In-App Browser & System Camera Browser on same device)
+        async function computeHardwareFingerprint() {
+            const parts = [
+                screen.width + "x" + screen.height + "x" + screen.colorDepth,
+                window.devicePixelRatio || 1,
+                navigator.hardwareConcurrency || 0,
+                navigator.deviceMemory || 0,
+                Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+                navigator.platform || ""
+            ];
+
+            // WebGL GPU Renderer signature (identical across browsers on the same phone)
+            try {
+                const canvas = document.createElement("canvas");
+                const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+                if (gl) {
+                    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+                    if (debugInfo) {
+                        parts.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || "");
+                        parts.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || "");
+                    }
+                }
+            } catch (e) {}
+
+            // Canvas 2D geometry signature
+            try {
+                const c = document.createElement("canvas");
+                c.width = 180;
+                c.height = 40;
+                const ctx = c.getContext("2d");
+                ctx.textBaseline = "top";
+                ctx.font = "14px 'Arial'";
+                ctx.fillStyle = "#0ea5e9";
+                ctx.fillRect(10, 5, 80, 22);
+                ctx.fillStyle = "#0f172a";
+                ctx.fillText("LTP-QR-GUARD-v2", 12, 10);
+                parts.push(c.toDataURL().slice(-64));
+            } catch (e) {}
+
+            const raw = parts.join("|");
+            const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+        }
+
+        function updateDefaultAvatar(name) {
+            if (currentAvatarDataUrl) return;
+            const clean = (name || "NV").trim() || "NV";
+            document.getElementById("avatar-preview").src =
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(clean)}&background=0284c7&color=fff&bold=true`;
+        }
+
+        function handleAvatarFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    const size = 160;
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext("2d");
+                    const minSide = Math.min(img.width, img.height);
+                    const sx = (img.width - minSide) / 2;
+                    const sy = (img.height - minSide) / 2;
+                    ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+                    currentAvatarDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+                    document.getElementById("avatar-preview").src = currentAvatarDataUrl;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showState(id) {
+            ["state-loading", "state-error", "state-claimed", "state-form", "state-success"].forEach(s => {
+                document.getElementById(s).classList.toggle("hidden", s !== id);
+            });
+        }
+
+        async function initPage() {
+            if (!inviteCode) {
+                document.getElementById("error-title").textContent = "Thiếu mã QR phòng chờ";
+                document.getElementById("error-desc").textContent = "Đường dẫn không hợp lệ. Vui lòng quét lại mã QR do Quản trị viên (Admin) cung cấp.";
+                showState("state-error");
+                return;
+            }
+
+            hardwareHash = await computeHardwareFingerprint();
+
+            // Check localStorage first if this browser already claimed this invite code
+            const localSaved = localStorage.getItem("ltp_qr_claimed_" + inviteCode);
+            if (localSaved) {
+                try {
+                    const parsed = JSON.parse(localSaved);
+                    if (parsed && parsed.username) {
+                        lastCreatedCreds = parsed;
+                        document.getElementById("claimed-name").textContent = parsed.fullName || parsed.username;
+                        document.getElementById("claimed-username").textContent = parsed.username;
+                        document.getElementById("claimed-password").textContent = parsed.password || "********";
+                        showState("state-claimed");
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            try {
+                const res = await fetch(`/api/public/qr-invite-info?code=${encodeURIComponent(inviteCode)}`);
+                const data = await res.json();
+                if (!res.ok || !data.invite) {
+                    document.getElementById("error-title").textContent = "Mã QR không tồn tại";
+                    document.getElementById("error-desc").textContent = data.error || "Mã QR này đã bị hủy hoặc không tồn tại trên hệ thống.";
+                    showState("state-error");
+                    return;
+                }
+
+                const inv = data.invite;
+                if (inv.companyName) document.getElementById("company-name").textContent = inv.companyName;
+                if (inv.logoUrl) document.getElementById("company-logo").src = inv.logoUrl;
+
+                if (inv.isExpired || inv.status !== "ACTIVE") {
+                    document.getElementById("error-title").textContent = "Mã QR đã hết hạn";
+                    document.getElementById("error-desc").textContent = "Mã QR phòng chờ này đã hết thời hạn hoặc đã được Admin đóng lại.";
+                    showState("state-error");
+                    return;
+                }
+
+                if (inv.isFull || inv.remainingSlots <= 0) {
+                    document.getElementById("error-title").textContent = `Đã đủ ${inv.maxScans}/${inv.maxScans} nhân sự`;
+                    document.getElementById("error-desc").textContent = "Mã QR này đã nhận đủ số lượng nhân sự tối đa mà Admin cho phép.";
+                    showState("state-error");
+                    return;
+                }
+
+                document.getElementById("invite-title").textContent = inv.title || "Phòng chờ nhân sự mới";
+                document.getElementById("invite-dept").textContent = `Bộ phận mặc định: ${inv.defaultDepartment || "Chờ Admin phân bổ"}`;
+                document.getElementById("invite-slots").textContent = `Còn ${inv.remainingSlots}/${inv.maxScans} suất`;
+
+                showState("state-form");
+                initGoogleButton();
+            } catch (err) {
+                document.getElementById("error-title").textContent = "Lỗi kết nối máy chủ";
+                document.getElementById("error-desc").textContent = "Không thể kết nối tới máy chủ LTP Progress Hub. Vui lòng thử lại sau.";
+                showState("state-error");
+            }
+        }
+
+        function initGoogleButton() {
+            if (!window.google || !window.google.accounts) {
+                setTimeout(initGoogleButton, 400);
+                return;
+            }
+            try {
+                window.google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleCredential
+                });
+                window.google.accounts.id.renderButton(
+                    document.getElementById("google-btn-wrapper"),
+                    { theme: "filled_blue", size: "large", shape: "pill", text: "continue_with", width: 300 }
+                );
+            } catch (e) {}
+        }
+
+        function handleGoogleCredential(response) {
+            try {
+                const payload = JSON.parse(atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+                if (payload.name) {
+                    document.getElementById("input-fullname").value = payload.name;
+                }
+                if (payload.picture) {
+                    currentAvatarDataUrl = payload.picture;
+                    document.getElementById("avatar-preview").src = payload.picture;
+                }
+            } catch (e) {}
+        }
+
+        async function submitJoinForm(e) {
+            e.preventDefault();
+            const fullName = document.getElementById("input-fullname").value.trim();
+            const phone = document.getElementById("input-phone").value.trim();
+            const password = document.getElementById("input-password").value.trim();
+            const errBox = document.getElementById("join-error-msg");
+            const btn = document.getElementById("btn-submit-join");
+
+            errBox.classList.add("hidden");
+            btn.disabled = true;
+            btn.innerHTML = `<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> <span>Đang cấp tài khoản...</span>`;
+
+            try {
+                const avatarToUse = currentAvatarDataUrl || document.getElementById("avatar-preview").src;
+                const res = await fetch("/api/public/qr-join", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        inviteCode,
+                        fullName,
+                        phone,
+                        password,
+                        avatarUrl: avatarToUse,
+                        deviceFingerprintHash: hardwareHash
+                    })
+                });
+                const data = await res.json();
+
+                if (res.status === 409 && data.alreadyClaimed) {
+                    document.getElementById("claimed-name").textContent = data.existingFullName || fullName;
+                    document.getElementById("claimed-username").textContent = data.existingUsername || "---";
+                    document.getElementById("claimed-password").textContent = "Đã cấp trước đó trên thiết bị này";
+                    showState("state-claimed");
+                    return;
+                }
+
+                if (!res.ok || !data.success) {
+                    errBox.textContent = data.error || "Không thể tạo tài khoản. Vui lòng kiểm tra lại.";
+                    errBox.classList.remove("hidden");
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>✨ Nhận Tài Khoản & Vào Phòng Chờ</span>`;
+                    return;
+                }
+
+                lastCreatedCreds = {
+                    fullName: data.user.fullName,
+                    username: data.user.username,
+                    password: data.user.password,
+                    department: data.user.department,
+                    avatarUrl: data.user.avatarUrl,
+                    status: data.user.status,
+                    token: data.token,
+                    tenant: data.tenant
+                };
+
+                // Save anti-duplicate claim record & session in localStorage
+                localStorage.setItem("ltp_qr_claimed_" + inviteCode, JSON.stringify(lastCreatedCreds));
+                saveSessionToWorkspace(lastCreatedCreds);
+
+                document.getElementById("success-avatar").src = data.user.avatarUrl;
+                document.getElementById("success-name").textContent = data.user.fullName;
+                document.getElementById("success-username").textContent = data.user.username;
+                document.getElementById("success-password").textContent = data.user.password;
+                document.getElementById("success-dept").textContent = data.user.department || "Chờ Admin phân bổ";
+
+                if (data.user.status === "WAITING_ROOM") {
+                    document.getElementById("success-status-badge").textContent =
+                        "Bạn đã vào Phòng Chờ! Admin sẽ nhấn Duyệt & Gán bộ phận cho bạn ngay lập tức.";
+                }
+
+                showState("state-success");
+            } catch (err) {
+                errBox.textContent = "Lỗi kết nối mạng. Vui lòng thử lại.";
+                errBox.classList.remove("hidden");
+                btn.disabled = false;
+                btn.innerHTML = `<span>✨ Nhận Tài Khoản & Vào Phòng Chờ</span>`;
+            }
+        }
+
+        function saveSessionToWorkspace(creds) {
+            if (!creds || !creds.token) return;
+            localStorage.setItem("ltp_jwt_token", creds.token);
+            localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                id: creds.username,
+                username: creds.username,
+                name: creds.fullName,
+                role: "STAFF",
+                department: creds.department || "STAFF",
+                deptTags: [creds.department || "STAFF"],
+                taskPermissionMode: "REPORT_ONLY",
+                avatarUrl: creds.avatarUrl || "",
+                status: creds.status || "ACTIVE",
+                tenant: creds.tenant || null,
+                token: creds.token,
+                loginTime: new Date().toISOString()
+            }));
+        }
+
+        function copyCredentials() {
+            if (!lastCreatedCreds) return;
+            const text = `Đăng nhập LTP Progress Hub\n- Tài khoản: ${lastCreatedCreds.username}\n- Mật khẩu: ${lastCreatedCreds.password}`;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById("btn-copy-cred");
+                btn.textContent = "✅ Đã sao chép vào bộ nhớ tạm!";
+                setTimeout(() => {
+                    btn.textContent = "📋 Sao chép Mã đăng nhập & Mật khẩu";
+                }, 2500);
+            });
+        }
+
+        function goToWorkspace() {
+            if (lastCreatedCreds) {
+                saveSessionToWorkspace(lastCreatedCreds);
+            }
+            window.location.href = "index.html?workspace=1";
+        }
+
+        window.addEventListener("DOMContentLoaded", initPage);
+    </script>
+</body>
+</html>

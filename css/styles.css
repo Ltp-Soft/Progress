@@ -1,0 +1,3255 @@
+:root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --today: #ef4444;
+    --bg: #f8fafc;
+    --border: #cbd5e1;
+    --sidebar-w: 260px;
+    --task-col-w: 305px;
+    --day-w: 50px;
+    --row-h: 46px;
+    --dept-header-h: 30px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+body { display: flex; flex-direction: column; height: 100vh; background: var(--bg); overflow: hidden; color: #0f172a; }
+
+/* ================= 1. GLOBAL APP HEADER (TOP BAR TEMPLE STYLE) ================= */
+.app-header, .top-account-bar {
+    height: 48px;
+    min-height: 48px;
+    width: 100%;
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid #334155;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.35);
+    z-index: 50;
+}
+.brand, .brand-title { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: 0.5px; font-size: 14px; }
+.brand-logo { width: 24px; height: 24px; background: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; }
+.collapse-btn { 
+    background: rgba(56, 189, 248, 0.15); 
+    border: 1.5px solid #38bdf8; 
+    color: #38bdf8; 
+    cursor: pointer; 
+    padding: 4px 8px; 
+    border-radius: 6px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: all 0.2s;
+    animation: cyanGlowPulse 1.5s infinite alternate;
+}
+
+@keyframes cyanGlowPulse {
+    0% {
+        box-shadow: 0 0 6px rgba(56, 189, 248, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: #38bdf8;
+        color: #38bdf8;
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.95), 0 0 24px rgba(2, 132, 199, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+        border-color: #7dd3fc;
+        color: #ffffff;
+        transform: scale(1.08);
+    }
+}
+
+.collapse-btn:hover { 
+    background: #0284c7; 
+    color: #ffffff; 
+    box-shadow: 0 0 20px rgba(56, 189, 248, 1);
+}
+
+.user-area, .account-selector { display: flex; align-items: center; gap: 12px; }
+.role-badge { background: #1e293b; border: 1px solid #334155; padding: 4px 10px; border-radius: 20px; font-size: 11px; color: #cbd5e1; display: flex; align-items: center; gap: 6px; }
+.role-tag { background: #6366f1; color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+.btn-login { background: #f59e0b; color: #000; font-weight: 600; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+.btn-login:hover { background: #d97706; color: #fff; }
+
+/* AI status indicator */
+.ai-status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #1e293b;
+    padding: 3px 10px;
+    border-radius: 14px;
+    border: 1px solid #334155;
+    font-size: 11px;
+    font-weight: 600;
+}
+.ai-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 6px #10b981;
+    animation: blink 1.5s infinite;
+}
+.ai-led.offline {
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444;
+    animation: none;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* App Main Body Layout */
+.app-container { display: flex; flex: 1; height: calc(100vh - 48px); overflow: hidden; }
+
+/* ================= 2. LEFT SIDEBAR (TEMPLE STYLE) ================= */
+.sidebar, .project-sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: linear-gradient(180deg, #0f172a 0%, #090d18 100%);
+    color: #94a3b8;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #1e293b;
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05), 4px 0 12px rgba(0, 0, 0, 0.25);
+    transition: width 0.2s;
+    z-index: 30;
+    overflow: hidden;
+}
+.sidebar-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    padding: 16px 16px 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.menu-group { display: flex; flex-direction: column; overflow-x: hidden !important; }
+.menu-item {
+    padding: 9px 14px;
+    margin: 2px 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #cbd5e1;
+    cursor: pointer;
+    text-decoration: none;
+    border-left: 3.5px solid transparent;
+    font-weight: 600;
+    font-size: 12.5px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.12) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 4px rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.15s ease-in-out;
+}
+.menu-item:hover { 
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.18) 0%, rgba(14, 165, 233, 0.28) 100%); 
+    color: #ffffff; 
+    border-top-color: rgba(56, 189, 248, 0.3);
+    box-shadow: 0 4px 10px rgba(56, 189, 248, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateX(2px);
+}
+.menu-item.active { 
+    background: linear-gradient(180deg, rgba(2, 132, 199, 0.45) 0%, rgba(3, 105, 161, 0.65) 100%); 
+    color: #38bdf8; 
+    border-left-color: #38bdf8 !important; 
+    font-weight: 700; 
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 12px rgba(2, 132, 199, 0.4);
+}
+.menu-item .label { display: flex; align-items: center; gap: 10px; }
+.menu-count { font-size: 11px; background: #334155; padding: 2px 7px; border-radius: 10px; color: #cbd5e1; font-weight: 600; box-shadow: inset 0 1px 2px rgba(0,0,0,0.4); }
+
+.project-sublist {
+    max-height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden !important;
+    background: #090e1a;
+    border-radius: 6px;
+    margin: 2px 8px;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.project-item {
+    padding: 8px 12px 8px 30px;
+    cursor: pointer;
+    border-bottom: 1px solid #1e293b;
+    transition: 0.2s;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #94a3b8;
+}
+.project-item:hover {
+    background: linear-gradient(90deg, rgba(56, 189, 248, 0.15) 0%, transparent 100%);
+    color: #ffffff;
+    padding-left: 34px;
+}
+/* Collapsed Sidebar Mode - ABSOLUTE COLLAPSE (XẾP TUYỆT ĐỐI 0PX) */
+.sidebar.collapsed, .project-sidebar.collapsed {
+    width: 0px !important;
+    min-width: 0px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.vault-link {
+    padding: 10px 16px;
+    background: #0f172a;
+    border-top: 1px solid #1e293b;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.vault-link:hover { background: #1e293b; color: white; }
+
+/* ================= 3. MAIN WORKSPACE & PROJECT SUBHEADER (TEMPLE STYLE) ================= */
+.workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
+
+.project-subheader, .top-bar {
+    padding: 8px 20px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    min-height: 50px;
+}
+.project-header-left { display: flex; flex-direction: column; gap: 2px; }
+.project-title-row { display: flex; align-items: center; gap: 10px; }
+.project-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; }
+.project-badge-dept { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+.project-meta-info { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 8px; }
+
+/* TOOLBAR RIGHT */
+.project-toolbar, .actions { display: flex; align-items: center; gap: 10px; }
+.date-picker-box, .date-range-picker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #334155;
+}
+.date-picker-box input, .date-range-picker input {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-size: 12px;
+    outline: none;
+    padding: 2px 6px;
+    color: #0f172a;
+    font-weight: 600;
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* UNIFIED ACTION BUTTON GROUP (TEMPLE.HTML) */
+.action-icon-group {
+    display: flex;
+    align-items: center;
+    gap: 6px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+.btn-tool, .btn-square-icon {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #475569 !important;
+    border-radius: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.15s !important;
+    font-size: 14px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+.btn-tool:hover, .btn-square-icon:hover {
+    background: #0284c7 !important;
+    color: #fff !important;
+}
+.btn-tool.active, .btn-square-icon.active {
+    background: #0284c7 !important;
+    color: #fff !important;
+}
+.tool-divider {
+    width: 1px;
+    height: 20px;
+    background: #cbd5e1;
+    margin: 0 2px;
+}
+
+/* TOOLBAR COLORED ACCENT BUTTON GROUPS */
+.btn-tool.btn-yellow-accent,
+#btn-switch-gantt-view-mode,
+#btn-toggle-links {
+    background: #f59e0b !important;
+    color: #1e293b !important;
+    border: 1px solid #d97706 !important;
+}
+.btn-tool.btn-yellow-accent:hover,
+#btn-switch-gantt-view-mode:hover,
+#btn-toggle-links:hover {
+    background: #d97706 !important;
+    color: #ffffff !important;
+}
+#btn-toggle-links.active {
+    background: #d97706 !important;
+    color: #ffffff !important;
+}
+
+.btn-tool.btn-green-accent,
+#btn-add-project-tag,
+#btn-add-task {
+    background: #86efac !important;
+    color: #14532d !important;
+    border: 1px solid #4ade80 !important;
+}
+.btn-tool.btn-green-accent:hover,
+#btn-add-project-tag:hover,
+#btn-add-task:hover {
+    background: #22c55e !important;
+    color: #ffffff !important;
+}
+
+.btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+    
+    /* 3D GLOSSY BEVEL OVERLAY */
+    background-image: linear-gradient(
+        180deg, 
+        rgba(255, 255, 255, 0.28) 0%, 
+        rgba(255, 255, 255, 0.06) 48%, 
+        rgba(0, 0, 0, 0.12) 100%
+    );
+    
+    /* 3D ELEVATION SHADOW */
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        0 3px 6px rgba(0, 0, 0, 0.22),
+        0 1px 2px rgba(0, 0, 0, 0.15);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.1s, opacity 0.15s;
+}
+
+.btn:hover {
+    opacity: 0.96;
+    transform: translateY(-1px);
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 5px 10px rgba(0, 0, 0, 0.28),
+        0 2px 4px rgba(0, 0, 0, 0.18);
+}
+
+.btn:active {
+    transform: translateY(1.5px);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.35),
+        0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.btn-success { background-color: #10b981; }
+.btn-warning { background-color: #f59e0b; color: #1e293b; }
+#btn-create-dept-job:hover { background-color: #fde047 !important; color: #422006 !important; opacity: 1 !important; }
+.btn-secondary { background-color: #64748b; }
+.btn-danger { background-color: #ef4444; }
+.btn-admin { background-color: #8b5cf6; }
+
+/* Gantt Chart Grid Wrapper 3D Container */
+.gantt-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: white;
+    margin: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    position: relative;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.gantt-header {
+    display: flex;
+    background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+    border-bottom: 2px solid var(--border);
+    height: 46px;
+    font-weight: bold;
+    font-size: 11px;
+    z-index: 25;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
+
+/* Sticky Task Column Header */
+.gantt-task-head {
+    width: var(--task-col-w);
+    min-width: var(--task-col-w);
+    padding: 8px 12px;
+    border-right: 1px solid var(--border);
+    background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+    color: #0f172a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    left: 0;
+    z-index: 30;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+.gantt-days-head-scroll {
+    flex: 1;
+    overflow-x: hidden;
+    display: flex;
+    position: relative;
+}
+
+.gantt-body-scroll {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+/* 10-Department Accordion Unified Row */
+.dept-unified-row {
+    display: flex;
+    height: var(--dept-header-h);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    min-width: 100%;
+    flex-shrink: 0;
+}
+
+/* Sticky Department Tag Title Cell 3D Bevel */
+.dept-title-cell {
+    width: var(--task-col-w);
+    min-width: var(--task-col-w);
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    position: sticky;
+    left: 0;
+    z-index: 26;
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(0,0,0,0.08) 100%);
+    box-shadow: 2px 0 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.dept-title-cell .toggle-btn {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: rgba(0,0,0,0.08);
+    font-size: 12px;
+}
+
+.dept-timeline-bg {
+    display: flex;
+    height: 100%;
+}
+
+/* Department Color Palettes (Sleek Pastels with Opaque Backgrounds for Sticky Left) */
+.dept-designer { background-color: #eff6ff !important; color: #1e40af; border-left: 4px solid #3b82f6; }
+.dept-planning { background-color: #f0fdf4 !important; color: #166534; border-left: 4px solid #22c55e; }
+.dept-construction { background-color: #fff7ed !important; color: #9a3412; border-left: 4px solid #f97316; }
+.dept-factory { background-color: #faf5ff !important; color: #6b21a8; border-left: 4px solid #a855f7; }
+.dept-mep { background-color: #fdf2f8 !important; color: #9d174d; border-left: 4px solid #ec4899; }
+.dept-storage { background-color: #fefce8 !important; color: #854d0e; border-left: 4px solid #eab308; }
+.dept-purchasing { background-color: #f0fdfa !important; color: #115e59; border-left: 4px solid #14b8a6; }
+.dept-accountant { background-color: #f8fafc !important; color: #334155; border-left: 4px solid #64748b; }
+.dept-tag-dept-job { background-color: #f0fdf4 !important; color: #15803d; border-left: 4px solid #16a34a; }
+
+/* 8 Random/Cycle Color Palettes for Project Tag Names */
+.dept-tag-style-0 { background-color: #eff6ff !important; color: #1e40af; border-left: 4px solid #3b82f6; }
+.dept-tag-style-1 { background-color: #f0fdf4 !important; color: #166534; border-left: 4px solid #22c55e; }
+.dept-tag-style-2 { background-color: #fff7ed !important; color: #9a3412; border-left: 4px solid #f97316; }
+.dept-tag-style-3 { background-color: #faf5ff !important; color: #6b21a8; border-left: 4px solid #a855f7; }
+.dept-tag-style-4 { background-color: #fdf2f8 !important; color: #9d174d; border-left: 4px solid #ec4899; }
+.dept-tag-style-5 { background-color: #fefce8 !important; color: #854d0e; border-left: 4px solid #eab308; }
+.dept-tag-style-6 { background-color: #f0fdfa !important; color: #115e59; border-left: 4px solid #14b8a6; }
+.dept-tag-style-7 { background-color: #f1f5f9 !important; color: #334155; border-left: 4px solid #64748b; }
+
+/* UNIFIED ROW INTEGRITY */
+.gantt-unified-row {
+    display: flex;
+    height: var(--row-h);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    min-width: 100%;
+    flex-shrink: 0;
+}
+.gantt-unified-row:hover { background-color: #f8fafc; }
+
+/* Sticky Task Title Cell */
+.task-title-cell {
+    width: var(--task-col-w);
+    min-width: var(--task-col-w);
+    padding: 0 12px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    background: #ffffff !important;
+    position: sticky;
+    left: 0;
+    z-index: 25;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+}
+.timeline-cell-grid { display: flex; position: relative; height: 100%; flex-shrink: 0; }
+
+
+.day-cell {
+    min-width: var(--day-w);
+    border-right: 1px solid #f1f5f9;
+    text-align: center;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+}
+
+/* Weekend Styling (Sat/Sun Bôi Đỏ) */
+.day-cell.is-weekend {
+    background-color: #fef2f2 !important;
+    color: #dc2626 !important;
+    font-weight: bold;
+}
+.day-cell.is-weekend .day-name {
+    color: #b91c1c;
+}
+
+/* TODAY LINE */
+.today-line {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    background: #ef4444;
+    z-index: 18;
+    pointer-events: none;
+    box-shadow: 0 0 8px #ef4444;
+    animation: todayGlow 1.5s infinite alternate;
+}
+
+@keyframes todayGlow {
+    from { opacity: 0.75; box-shadow: 0 0 4px #ef4444; }
+    to { opacity: 1; box-shadow: 0 0 12px #ef4444; }
+}
+
+.today-line::before {
+    content: 'TODAY';
+    position: absolute;
+    top: 2px;
+    left: -18px;
+    background: #ef4444;
+    color: white;
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+}
+
+/* SVG DEPENDENCY OVERLAY */
+#dependency-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 15;
+}
+
+/* 3D GLASS TUBE (SLEEK GLASS TUBE UI - NO HEAVY END CAPS) */
+.task-bar {
+    position: absolute;
+    height: 28px;
+    top: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: visible !important;
+    z-index: 6;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s, outline 0.15s;
+    user-select: none;
+    touch-action: manipulation;
+    text-rendering: optimizeLegibility;
+    backdrop-filter: blur(4px);
+
+    /* HIGH-GLOSS GLASS REFRACTION OVERLAY */
+    background-image: linear-gradient(
+        180deg, 
+        rgba(255, 255, 255, 0.75) 0%, 
+        rgba(255, 255, 255, 0.3) 28%, 
+        rgba(255, 255, 255, 0.05) 55%, 
+        rgba(0, 0, 0, 0.15) 75%,
+        rgba(0, 0, 0, 0.45) 100%
+    ) !important;
+
+    /* 3D GLASS EDGE REFRACTION SHADOWS */
+    box-shadow: 
+        inset 0 2px 2px rgba(255, 255, 255, 0.92),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+        0 6px 14px rgba(15, 23, 42, 0.28),
+        0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.task-bar span {
+    color: #000000 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2px;
+    text-shadow: none !important; /* Sharp solid black text */
+    position: relative;
+    z-index: 10;
+}
+
+.task-bar:hover {
+    transform: translateY(-1.5px) scale(1.008);
+    box-shadow: 
+        inset 0 2px 2.5px rgba(255, 255, 255, 0.98),
+        inset 0 -2.5px 4px rgba(0, 0, 0, 0.5),
+        0 8px 18px rgba(15, 23, 42, 0.35),
+        0 2px 5px rgba(0, 0, 0, 0.25);
+    z-index: 18;
+}
+
+.task-bar.selected-task {
+    outline: 2.5px solid #f97316;
+    outline-offset: 1px;
+    box-shadow: 
+        0 0 16px rgba(249, 115, 22, 0.9),
+        inset 0 2px 2px rgba(255, 255, 255, 0.98),
+        inset 0 -2.5px 4px rgba(0, 0, 0, 0.5),
+        0 6px 14px rgba(0, 0, 0, 0.38);
+    z-index: 20;
+}
+
+/* Alert Icons Distinction - HIGH VISIBILITY FLOATING BADGES (Z-INDEX 100) */
+.alert-dot-predecessor {
+    position: absolute;
+    top: -9px;
+    right: -8px;
+    width: 18px;
+    height: 18px;
+    background: #dc2626 !important;
+    background-image: radial-gradient(circle at 35% 35%, #fca5a5 0%, #ef4444 60%, #991b1b 100%) !important;
+    color: #ffffff !important;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 900 !important;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 0 10px #ef4444, 0 3px 6px rgba(0, 0, 0, 0.5) !important;
+    z-index: 100 !important;
+    animation: alertPulse 1.2s infinite alternate;
+}
+@keyframes alertPulse { from { transform: scale(1); } to { transform: scale(1.3); } }
+
+.alert-dot-successor {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 13px;
+    height: 13px;
+    background: radial-gradient(circle at 35% 35%, #fca5a5 0%, #ef4444 60%, #991b1b 100%) !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 50%;
+    z-index: 100 !important;
+    box-shadow: 0 0 8px #ef4444 !important;
+}
+
+/* Shadow Task styling */
+.task-bar.shadow-task {
+    opacity: 0.65;
+    border: 2px dashed #64748b !important;
+}
+
+/* Sleek Drag Link Handles */
+.handle {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    background: radial-gradient(circle at 35% 35%, #fed7aa 0%, #f97316 60%, #c2410c 100%);
+    border: 1.5px solid #ffffff;
+    border-radius: 50%;
+    top: 9px;
+    z-index: 25;
+    cursor: crosshair;
+    display: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: transform 0.15s;
+}
+.handle:hover {
+    transform: scale(1.4);
+    box-shadow: 0 0 8px #f97316, 0 2px 6px rgba(0,0,0,0.5);
+}
+.handle-left { display: none !important; }
+.handle-right { right: -4px; }
+
+.task-bar.selected-task .handle-right, .task-bar:hover .handle-right { display: block; }
+
+/* 4 GAM MÀU CHUẨN 3D GLASS TUBE WITH HIGH-CONTRAST BLACK TEXT */
+
+/* 1. XANH BĂNG CYAN/BLUE (ICE BLUE GLASS TUBE) - Status Completed */
+.status-completed { 
+    background-color: rgba(56, 189, 248, 0.88) !important; 
+    background-image: linear-gradient(180deg, rgba(224, 242, 254, 0.95) 0%, rgba(125, 211, 252, 0.88) 35%, rgba(56, 189, 248, 0.9) 75%, rgba(2, 132, 199, 0.92) 100%) !important;
+    color: #000000 !important; 
+    border: 1.5px solid rgba(224, 242, 254, 0.9) !important; 
+    box-shadow: 0 6px 16px rgba(56, 189, 248, 0.55), inset 0 2px 2px rgba(255, 255, 255, 0.95), inset 0 -2.5px 4px rgba(0, 0, 0, 0.45) !important;
+    text-shadow: none !important;
+}
+.status-completed::before { content: "✓ "; color: #000000; font-weight: 900; margin-right: 3px; position: relative; z-index: 10; }
+
+/* 2. XANH LÁ NEON (EMERALD JADE GLASS TUBE) - Status Working */
+.status-working { 
+    background-color: rgba(52, 211, 153, 0.88) !important; 
+    background-image: linear-gradient(180deg, rgba(209, 250, 229, 0.95) 0%, rgba(110, 231, 183, 0.88) 35%, rgba(52, 211, 153, 0.9) 75%, rgba(5, 150, 105, 0.92) 100%) !important;
+    color: #000000 !important; 
+    border: 1.5px solid rgba(209, 250, 229, 0.9) !important; 
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.55), inset 0 2px 2px rgba(255, 255, 255, 0.95), inset 0 -2.5px 4px rgba(0, 0, 0, 0.45) !important;
+    font-weight: 800 !important;
+    text-shadow: none !important;
+}
+
+/* 3. VÀNG HỔ PHÁCH (AMBER GOLD GLASS TUBE) - Status Pending */
+.status-pending { 
+    background-color: rgba(251, 191, 36, 0.88) !important; 
+    background-image: linear-gradient(180deg, rgba(254, 240, 138, 0.95) 0%, rgba(253, 224, 71, 0.88) 35%, rgba(251, 191, 36, 0.9) 75%, rgba(217, 119, 6, 0.92) 100%) !important;
+    color: #000000 !important; 
+    border: 1.5px solid rgba(254, 240, 138, 0.9) !important; 
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.55), inset 0 2px 2px rgba(255, 255, 255, 0.95), inset 0 -2.5px 4px rgba(0, 0, 0, 0.45) !important;
+    font-weight: 800 !important;
+    text-shadow: none !important;
+}
+
+/* 4. ĐỎ RUBY SÁNG (RUBY GLASS TUBE) - Status Overdue */
+.status-overdue { 
+    background-color: rgba(248, 113, 113, 0.9) !important; 
+    background-image: linear-gradient(180deg, rgba(254, 226, 226, 0.95) 0%, rgba(252, 165, 165, 0.9) 35%, rgba(248, 113, 113, 0.92) 75%, rgba(220, 38, 38, 0.95) 100%) !important;
+    color: #000000 !important; 
+    border: 1.5px solid rgba(254, 202, 202, 0.95) !important; 
+    box-shadow: 0 6px 18px rgba(239, 68, 68, 0.65), inset 0 2px 2px rgba(255, 255, 255, 0.95), inset 0 -2.5px 4px rgba(0, 0, 0, 0.45) !important;
+    text-shadow: none !important;
+}
+
+/* 3D Glassmorphic Modals */
+.modal, .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(5px);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+}
+.modal-card {
+    background: white;
+    padding: 22px;
+    border-radius: 12px;
+    width: 520px;
+    max-width: 92%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 20px 35px -5px rgba(0, 0, 0, 0.45),
+        0 10px 15px -5px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.form-control { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
+
+.dept-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    background: #f8fafc;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+/* Vault Card Layout (archive.html) */
+.vault-header {
+    background: #1e293b;
+    color: white;
+    padding: 15px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.vault-banner {
+    background: #f59e0b;
+    color: #1e293b;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.vault-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    padding: 25px;
+    overflow-y: auto;
+}
+.vault-card {
+    background: #1e293b;
+    color: white;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.vault-card h4 { font-size: 16px; color: #38bdf8; margin-bottom: 8px; }
+.vault-card p { font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+.vault-card-footer {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #334155;
+    padding-top: 12px;
+}
+
+/* TODAY PROGRESS BADGE (Dark Blue % above task bar on Today line) */
+.today-progress-badge {
+    position: absolute;
+    top: -19px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #1e3a8a;
+    background: #dbeafe;
+    border: 1px solid #2563eb;
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 24;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* TASK ATTACHMENT BADGES */
+.task-attachment-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    margin-left: 5px;
+    background: rgba(255,255,255,0.8);
+    color: #1e293b;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid #cbd5e1;
+}
+
+/* EXPANDED MEDIA VIEWER MODAL */
+.modal-card.expanded-viewer {
+    width: 960px;
+    max-width: 95vw;
+}
+.modal-body-split {
+    display: flex;
+    gap: 15px;
+}
+.modal-form-col {
+    flex: 1;
+}
+.modal-viewer-col {
+    width: 440px;
+    border-left: 1px solid #cbd5e1;
+    padding-left: 15px;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 12px;
+}
+.viewer-display-area {
+    flex: 1;
+    min-height: 280px;
+    max-height: 380px;
+    background: #0f172a;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+    border: 1px solid #334155;
+}
+.viewer-display-area img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+}
+.viewer-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    background: #e2e8f0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+/* RESPONSIVE LAYOUT ADJUSTMENTS FOR MOBILE & TABLETS */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-w: 220px;
+        --task-col-w: 260px;
+        --day-w: 42px;
+    }
+    .top-bar {
+        height: auto;
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .actions {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-w: 100%;
+        --task-col-w: 170px;
+        --day-w: 36px;
+        --row-h: 38px;
+        --dept-header-h: 32px;
+    }
+    .app-container {
+        flex-direction: column;
+    }
+    .mobile-sidebar-toggle-btn {
+        display: inline-flex !important;
+    }
+    .project-sidebar {
+        width: 100%;
+        min-width: 100%;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        border-right: none;
+        border-bottom: none;
+        z-index: 40;
+    }
+    .project-sidebar.mobile-expanded {
+        max-height: 250px;
+        overflow-y: auto;
+        border-bottom: 2px solid var(--primary);
+    }
+    .top-account-bar {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 4px 8px;
+        gap: 4px;
+        font-size: 11px;
+    }
+    .brand-title span {
+        display: none;
+    }
+    .brand-title img {
+        height: 18px;
+    }
+    .account-selector {
+        gap: 6px;
+    }
+    .account-selector select {
+        font-size: 10px;
+        padding: 1px 4px;
+    }
+    .ai-status-pill #ai-status-text {
+        display: none;
+    }
+    .top-bar {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 4px 6px;
+        gap: 4px;
+    }
+    .top-bar h3 {
+        font-size: 12px !important;
+    }
+    .date-range-picker {
+        padding: 2px 4px;
+        font-size: 10px;
+    }
+    .date-range-picker input {
+        font-size: 10px;
+        padding: 1px 3px;
+    }
+    .actions {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 3px;
+        flex-wrap: wrap;
+    }
+    .btn {
+        padding: 3px 6px;
+        font-size: 10px;
+        border-radius: 4px;
+    }
+    .gantt-wrapper {
+        margin: 4px 2px;
+        height: calc(100vh - 90px);
+        flex: 1;
+    }
+    .modal-card {
+        width: 96vw;
+        padding: 12px;
+    }
+    .modal-body-split {
+        flex-direction: column;
+    }
+    .modal-viewer-col {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid #cbd5e1;
+        padding-left: 0;
+        padding-top: 10px;
+        margin-top: 10px;
+    }
+}
+
+/* TODAY LINE PROGRESS BADGE (Floating % Text directly above task bar) */
+.today-progress-badge {
+    position: absolute;
+    top: -18px !important;
+    right: auto !important;
+    transform: none !important;
+    background: #1e293b !important;
+    color: #ffffff !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    padding: 1px 6px !important;
+    border-radius: 4px !important;
+    z-index: 24 !important;
+    pointer-events: none !important;
+    white-space: nowrap !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    border: 1px solid #3b82f6 !important;
+}
+
+/* COLLAPSIBLE SIDEBAR & ACCORDION STYLES */
+.sidebar-toggle-btn {
+    background: transparent;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+.sidebar-toggle-btn:hover {
+    background: #334155;
+    color: white;
+}
+
+.project-sidebar.collapsed {
+    width: 54px !important;
+    min-width: 54px !important;
+}
+.project-sidebar.collapsed .sidebar-title span#sidebar-main-title,
+.project-sidebar.collapsed .section-title span:not(.section-icon),
+.project-sidebar.collapsed .accordion-arrow,
+.project-sidebar.collapsed .project-item span:not(.project-icon),
+.project-sidebar.collapsed .project-status-tag,
+.project-sidebar.collapsed .vault-link span:not(.vault-icon),
+.project-sidebar.collapsed #btn-create-proj-text {
+    display: none !important;
+}
+.project-sidebar.collapsed .sidebar-title {
+    justify-content: center;
+    padding: 10px 4px;
+}
+.project-sidebar.collapsed .section-title {
+    justify-content: center;
+    padding: 8px 0;
+}
+.project-sidebar.collapsed .project-item {
+    justify-content: center;
+    padding: 8px 0;
+}
+.project-sidebar.collapsed .vault-link {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.section-header-toggle {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    transition: background 0.15s;
+}
+.section-header-toggle:hover {
+    background: #1e293b;
+}
+.sidebar-section.accordion-closed .project-sublist {
+    display: none !important;
+}
+.sidebar-section.accordion-closed .accordion-arrow {
+    transform: rotate(-90deg);
+}
+.accordion-arrow {
+    font-size: 9px;
+    transition: transform 0.2s;
+    color: #94a3b8;
+}
+
+/* SETTINGS GEAR DROPDOWN MENU */
+.settings-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+.settings-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: #ffffff;
+/* USER SPECIFIED & MINIMALIST COMPONENT STYLES */
+/* 1. Header Bộ Phận - Darker & Distinct Colors */
+.task-group-header, .dept-title-cell, .dept-unified-row {
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  border-top: 1px solid #cbd5e1 !important;
+  border-bottom: 2px solid #94a3b8 !important;
+}
+
+.dept-construction { background-color: #ffedd5 !important; color: #9a3412 !important; border-left: 6px solid #ea580c !important; }
+.dept-designer { background-color: #dbeafe !important; color: #1e40af !important; border-left: 6px solid #2563eb !important; }
+.dept-planning { background-color: #dcfce7 !important; color: #166534 !important; border-left: 6px solid #16a34a !important; }
+.dept-factory { background-color: #f3e8ff !important; color: #6b21a8 !important; border-left: 6px solid #9333ea !important; }
+.dept-mep { background-color: #fce7f3 !important; color: #9d174d !important; border-left: 6px solid #db2777 !important; }
+.dept-storage { background-color: #fef9c3 !important; color: #854d0e !important; border-left: 6px solid #ca8a04 !important; }
+.dept-purchasing { background-color: #ccfbf1 !important; color: #115e59 !important; border-left: 6px solid #0d9488 !important; }
+.dept-accountant { background-color: #e2e8f0 !important; color: #1e293b !important; border-left: 6px solid #475569 !important; }
+
+/* Sidebar Project Typography & Capsule Owner Department Badges */
+.sidebar-proj-name {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #f8fafc !important;
+    display: block !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    line-height: 1.3 !important;
+}
+
+.dept-owner-pill {
+    font-size: 9px !important;
+    font-weight: 600 !important;
+    text-transform: lowercase !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+    color: #ffffff !important;
+    white-space: nowrap !important;
+    margin-left: 6px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}
+
+.dept-tag-construction { background: #ea580c !important; }
+.dept-tag-designer { background: #2563eb !important; }
+.dept-tag-planning { background: #16a34a !important; }
+.dept-tag-factory { background: #9333ea !important; }
+.dept-tag-mep { background: #db2777 !important; }
+.dept-tag-storage { background: #ca8a04 !important; }
+.dept-tag-purchasing { background: #0d9488 !important; }
+.dept-tag-accountant { background: #475569 !important; }
+
+/* 2. Đổi chữ % tiến độ sang màu trắng nổi bật */
+.gantt-progress-text {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 10px !important;
+  text-shadow: none !important;
+}
+
+/* 3. Tối ưu kích thước chữ danh sách Task cho gọn */
+.task-name-cell, .task-title-cell {
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+/* 4. Dropdown Menu Cài Đặt */
+.settings-dropdown, .settings-dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 6px;
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important;
+  z-index: 10000 !important;
+  min-width: 200px !important;
+  overflow: hidden;
+}
+.settings-dropdown-menu.show {
+    display: block !important;
+    animation: fadeInDropdown 0.15s ease-out;
+}
+    animation: fadeInDropdown 0.15s ease-out;
+}
+@keyframes fadeInDropdown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.settings-dropdown-item {
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #f8fafc !important;
+    cursor: pointer;
+    border-bottom: 1px solid #334155 !important;
+    transition: background 0.15s;
+}
+.settings-dropdown-item:last-child {
+    border-bottom: none !important;
+}
+.settings-dropdown-item:hover {
+    background: #334155 !important;
+}
+.settings-dropdown-item.danger {
+    color: #f87171 !important;
+}
+.settings-dropdown-item.danger:hover {
+    background: #450a0a !important;
+}
+
+/* Square Blue Action Icon Buttons (Image 2 style) */
+.btn-square-icon {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  background: #1e40af !important;
+  color: #ffffff !important;
+  border: 1px solid #1d4ed8 !important;
+  cursor: pointer !important;
+  transition: background 0.15s, transform 0.1s !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+.btn-square-icon:hover {
+  background: #2563eb !important;
+  transform: translateY(-1px) !important;
+}
+
+/* MEDIA VIEWER CANVAS-ONLY FULLSCREEN OVERLAY */
+.viewer-display-area.canvas-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    z-index: 999999 !important;
+    background: #090d16 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.viewer-display-area.canvas-fullscreen img {
+    max-width: 98vw !important;
+    max-height: 94vh !important;
+    object-fit: contain !important;
+}
+
+.viewer-display-area.canvas-fullscreen iframe {
+    width: 100vw !important;
+    height: 100vh !important;
+    border: none !important;
+}
+
+.fullscreen-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    z-index: 1000000;
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    display: none;
+}
+
+.viewer-display-area.canvas-fullscreen .fullscreen-close-btn {
+    display: block !important;
+}
+
+.viewer-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 23, 42, 0.75);
+    color: white;
+    border: 1px solid #475569;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    z-index: 10;
+    transition: 0.2s;
+}
+.viewer-nav-btn:hover {
+    background: #2563eb;
+    border-color: #3b82f6;
+}
+.viewer-nav-btn.prev { left: 10px; }
+.viewer-nav-btn.next { right: 10px; }
+
+.task-attachment-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: #e2e8f0;
+    color: #1e293b;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    margin-left: 6px;
+    border: 1px solid #cbd5e1;
+}
+
+/* ==========================================================================
+   MOBILE & HIGH-DPI DEVICE RESPONSIVE SUITE v8.0
+   Guarantees 90%-100% Gantt Chart vertical viewport on Full-HD/2K Smartphones
+   ========================================================================== */
+
+/* 1. Mobile Auto-Hide Header Animations */
+.app-header, .top-account-bar, .project-subheader, .top-bar {
+    transition: transform 0.25s ease, margin-top 0.25s ease, opacity 0.25s ease;
+}
+.app-header.mobile-header-hidden, .top-account-bar.mobile-header-hidden {
+    transform: translateY(-100%);
+    margin-top: -48px !important;
+    opacity: 0;
+    pointer-events: none;
+}
+.project-subheader.mobile-subheader-hidden, .top-bar.mobile-subheader-hidden {
+    transform: translateY(-100%);
+    margin-top: -30px !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Base Mobile Sidebar Backdrop & Close Button */
+#mobile-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 9998;
+}
+
+#mobile-sidebar-backdrop.show {
+    display: block !important;
+}
+
+.mobile-sidebar-close-edge-btn {
+    display: none;
+}
+
+/* 2. Generic Mobile & Touch Screen Base Styles (Portrait & Landscape) */
+@media screen and (max-width: 1024px), screen and (max-height: 650px), screen and (pointer: coarse) {
+    :root {
+        --sidebar-w: 240px;
+        --task-col-w: 140px;
+        --day-w: 38px;
+        --row-h: 30px;
+        --dept-header-h: 22px;
+    }
+
+    .app-header, .top-account-bar {
+        padding: 0 8px;
+        height: 32px !important;
+        min-height: 32px !important;
+    }
+
+    .brand span {
+        font-size: 11px !important;
+    }
+
+    .project-subheader, .top-bar {
+        padding: 2px 6px !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        min-height: 28px !important;
+        height: 28px !important;
+    }
+
+    .project-header-left {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    .project-title {
+        font-size: 11px !important;
+        max-width: 120px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        margin: 0 !important;
+    }
+
+    .project-badge-dept {
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+    }
+
+    .project-meta-info, #current-project-id {
+        display: none !important;
+    }
+
+    .project-toolbar, .actions {
+        gap: 3px !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .date-picker-box, .date-range-picker {
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+    }
+    .date-picker-box input, .date-range-picker input {
+        width: 52px !important;
+        font-size: 8px !important;
+    }
+
+    .btn-tool, .btn-square-icon {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+        font-size: 10px !important;
+    }
+
+    .mobile-sidebar-toggle-btn {
+        display: inline-flex !important;
+    }
+
+    .project-sidebar, .sidebar {
+        position: fixed;
+        left: -260px;
+        top: 32px;
+        bottom: 0;
+        z-index: 9999;
+        transition: left 0.25s ease-in-out;
+        box-shadow: 4px 0 12px rgba(0,0,0,0.3);
+    }
+
+    .project-sidebar.mobile-expanded, .sidebar.mobile-expanded {
+        left: 0 !important;
+    }
+
+    /* Floating Red Edge Close Button for Mobile Sidebar */
+    .mobile-sidebar-close-edge-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 10px;
+        right: -36px;
+        width: 36px;
+        height: 36px;
+        background: #ef4444;
+        color: #ffffff;
+        border: none;
+        border-radius: 0 8px 8px 0;
+        box-shadow: 4px 0 10px rgba(0,0,0,0.25);
+        cursor: pointer;
+        z-index: 10000;
+        transition: background 0.15s;
+    }
+    .mobile-sidebar-close-edge-btn:hover {
+        background: #dc2626;
+    }
+
+    /* Mobile Compact Sidebar Typography & Sizing */
+    .sidebar .menu-item {
+        font-size: 11.5px !important;
+        padding: 7px 10px !important;
+    }
+    .sidebar .sidebar-proj-name {
+        font-size: 11px !important;
+    }
+    .sidebar .section-title {
+        font-size: 9.5px !important;
+        padding: 6px 10px 2px !important;
+    }
+
+    .gantt-wrapper {
+        margin: 2px !important;
+        border-radius: 4px !important;
+    }
+
+    /* Gantt Header Date & Days Styling for Mobile */
+    .gantt-header, .gantt-task-head {
+        height: 26px !important;
+        font-size: 8.5px !important;
+    }
+
+    .day-cell {
+        font-size: 8px !important;
+        line-height: 1.1 !important;
+    }
+
+    .day-cell .day-name {
+        font-size: 7.5px !important;
+    }
+
+    .day-cell span {
+        font-size: 8px !important;
+    }
+
+    .task-title-cell, .task-name-cell {
+        font-size: 10px !important;
+        padding: 0 4px !important;
+    }
+
+    .task-pic-cell, .task-title-cell small {
+        font-size: 8.5px !important;
+        width: 45px !important;
+        min-width: 45px !important;
+        max-width: 45px !important;
+        padding: 0 2px !important;
+    }
+
+    /* Department Tag Name Header Styling for Mobile */
+    .dept-unified-row {
+        height: var(--dept-header-h) !important;
+    }
+
+    .dept-title-cell {
+        font-size: 9px !important;
+        padding: 0 6px !important;
+        gap: 4px !important;
+        letter-spacing: 0 !important;
+    }
+
+    .dept-title-cell .toggle-btn {
+        width: 14px !important;
+        height: 14px !important;
+        font-size: 9px !important;
+    }
+
+    .dept-owner-pill {
+        font-size: 8px !important;
+        padding: 1px 4px !important;
+    }
+
+    /* Task Capsule Bar & Badges fitting */
+    .gantt-unified-row {
+        height: var(--row-h) !important;
+    }
+
+    .task-bar {
+        height: 20px !important;
+        top: 5px !important;
+        border-radius: 10px !important;
+        font-size: 9px !important;
+        padding: 0 6px !important;
+        line-height: 20px !important;
+    }
+
+    .task-bar .handle {
+        top: 4px !important;
+        width: 10px !important;
+        height: 10px !important;
+    }
+
+    .today-progress-badge {
+        top: -15px !important;
+        font-size: 8px !important;
+        padding: 0 3px !important;
+        border-radius: 3px !important;
+    }
+
+    .task-attachment-icon {
+        font-size: 7.5px !important;
+        padding: 0 3px !important;
+        margin-left: 2px !important;
+        border-radius: 2px !important;
+    }
+
+    .gantt-body-scroll {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
+    }
+
+    /* Mobile Portrait Modal Card Fitting */
+    .modal {
+        padding: 6px !important;
+        align-items: flex-start !important;
+        overflow-y: auto !important;
+        z-index: 100000 !important;
+    }
+
+    .modal-card, .modal-card.expanded-viewer {
+        width: 96vw !important;
+        max-width: 96vw !important;
+        max-height: 94vh !important;
+        padding: 12px !important;
+        margin: 4px auto !important;
+        border-radius: 8px !important;
+        overflow-y: auto !important;
+    }
+
+    .modal-card h3 {
+        font-size: 14px !important;
+    }
+
+    .modal-body-split {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .modal-form-col {
+        width: 100% !important;
+    }
+
+    .modal-viewer-col {
+        width: 100% !important;
+        border-left: none !important;
+        border-top: 1px solid #cbd5e1 !important;
+        padding-left: 0 !important;
+        padding-top: 10px !important;
+        margin-top: 6px !important;
+    }
+
+    .viewer-display-area {
+        height: 180px !important;
+        min-height: 180px !important;
+    }
+
+    .form-group label {
+        font-size: 11px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .form-control {
+        padding: 5px 8px !important;
+        font-size: 11px !important;
+    }
+
+    .dept-checkbox-grid {
+        grid-template-columns: repeat(1, 1fr) !important;
+        font-size: 11px !important;
+        gap: 4px !important;
+        padding: 6px !important;
+    }
+}
+
+/* 3. ULTIMATE MOBILE LANDSCAPE MODE (HIGHEST PRIORITY - PHONES IN LANDSCAPE OR VIA JS) */
+@media screen and (orientation: landscape) and (max-height: 600px),
+       screen and (orientation: landscape) and (pointer: coarse),
+       body.is-mobile-landscape {
+    :root {
+        --sidebar-w: 180px !important;
+        --task-col-w: 135px !important;
+        --day-w: 34px !important;
+        --row-h: 24px !important;
+        --dept-header-h: 20px !important;
+    }
+
+    /* Hide Top Logo Header Completely on Mobile Landscape to Save 100% Vertical Height */
+    .app-header, .top-account-bar {
+        display: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Single Ultra-Thin Subheader Row (~5% Screen Height: 22px-24px) */
+    .project-subheader, .top-bar {
+        min-height: 24px !important;
+        height: 24px !important;
+        max-height: 24px !important;
+        padding: 1px 6px !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 4px !important;
+        box-shadow: none !important;
+        background: #f8fafc !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+    }
+
+    .project-header-left {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    .project-title {
+        font-size: 11px !important;
+        max-width: 110px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        margin: 0 !important;
+    }
+
+    .project-badge-dept {
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+    }
+
+    .project-meta-info, #current-project-id {
+        display: none !important;
+    }
+
+    .project-toolbar, .actions {
+        gap: 3px !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .date-picker-box, .date-range-picker {
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+        border-radius: 3px !important;
+        gap: 2px !important;
+    }
+
+    .date-picker-box input, .date-range-picker input {
+        width: 50px !important;
+        font-size: 8px !important;
+        padding: 0 1px !important;
+    }
+
+    .btn-tool, .btn-square-icon {
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        padding: 0 !important;
+        font-size: 10px !important;
+        border-radius: 3px !important;
+    }
+
+    .tool-divider {
+        height: 14px !important;
+        margin: 0 1px !important;
+    }
+
+    .gantt-wrapper {
+        margin: 1px !important;
+        flex: 1 !important;
+        height: calc(100vh - 26px) !important;
+    }
+
+    /* Compact Date & Day Headers on Mobile Landscape */
+    .gantt-header, .gantt-task-head {
+        height: 22px !important;
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+    }
+
+    .day-cell {
+        font-size: 7.5px !important;
+        line-height: 1.0 !important;
+    }
+
+    .day-cell .day-name {
+        font-size: 7px !important;
+    }
+
+    .day-cell span {
+        font-size: 7.5px !important;
+    }
+
+    .task-title-cell, .task-name-cell {
+        font-size: 9.5px !important;
+        padding: 0 4px !important;
+    }
+
+    .task-pic-cell, .task-title-cell small {
+        font-size: 8.5px !important;
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        padding: 0 2px !important;
+    }
+
+    /* Department Tag Name Header Styling for Landscape Mobile */
+    .dept-unified-row {
+        height: var(--dept-header-h) !important;
+    }
+
+    .dept-title-cell {
+        font-size: 8.5px !important;
+        padding: 0 4px !important;
+        gap: 3px !important;
+        letter-spacing: 0 !important;
+    }
+
+    .dept-title-cell .toggle-btn {
+        width: 12px !important;
+        height: 12px !important;
+        font-size: 8px !important;
+    }
+
+    .dept-owner-pill {
+        font-size: 7.5px !important;
+        padding: 1px 3px !important;
+    }
+
+    /* Task Capsule Bar & Badges fitting to 24px Landscape Row Height */
+    .gantt-unified-row {
+        height: var(--row-h) !important;
+    }
+
+    .task-bar {
+        height: 16px !important;
+        top: 4px !important;
+        border-radius: 8px !important;
+        font-size: 8.5px !important;
+        padding: 0 4px !important;
+        line-height: 16px !important;
+    }
+
+    .task-bar .handle {
+        top: 2px !important;
+        width: 8px !important;
+        height: 8px !important;
+    }
+
+    .today-progress-badge {
+        top: -14px !important;
+        font-size: 8px !important;
+        padding: 0 3px !important;
+        border-radius: 3px !important;
+    }
+
+    .task-attachment-icon {
+        font-size: 7.5px !important;
+        padding: 0 2px !important;
+        margin-left: 2px !important;
+    }
+
+    .gantt-body-scroll {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
+    }
+
+    /* MOBILE LANDSCAPE MODAL: 2-COLUMN SPLIT (FORM + VIEWER) FIT ON 1 SCREEN WITHOUT OUTER SCROLL */
+    .modal {
+        padding: 4px !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .modal-card, .modal-card.expanded-viewer {
+        width: 98vw !important;
+        max-width: 98vw !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        padding: 8px 12px !important;
+        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        overflow: hidden !important;
+        border-radius: 6px !important;
+    }
+
+    .modal-card h3 {
+        font-size: 13px !important;
+        margin-bottom: 4px !important;
+    }
+
+    .modal-body-split {
+        flex-direction: row !important;
+        gap: 10px !important;
+        flex: 1 !important;
+        overflow: hidden !important;
+    }
+
+    /* Column 1: Cột thông số (Form Column) */
+    .modal-form-col {
+        flex: 1 !important;
+        width: 50% !important;
+        overflow-y: auto !important;
+        padding-right: 6px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 3px !important;
+    }
+
+    /* Column 2: Cột view (Viewer Column) */
+    .modal-viewer-col {
+        flex: 1 !important;
+        width: 50% !important;
+        border-left: 1px solid #cbd5e1 !important;
+        border-top: none !important;
+        padding-left: 8px !important;
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        background: #f8fafc !important;
+        border-radius: 6px !important;
+    }
+
+    .viewer-display-area {
+        flex: 1 !important;
+        height: auto !important;
+        min-height: 90px !important;
+        max-height: none !important;
+    }
+
+    .form-group {
+        margin-bottom: 4px !important;
+    }
+
+    .form-group label {
+        font-size: 9.5px !important;
+        margin-bottom: 1px !important;
+    }
+
+    .form-control {
+        padding: 3px 6px !important;
+        font-size: 10px !important;
+        height: 24px !important;
+    }
+
+    textarea.form-control {
+        height: 38px !important;
+    }
+
+    .dept-checkbox-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        font-size: 9.5px !important;
+        gap: 3px !important;
+        padding: 4px !important;
+    }
+
+    /* Footer Buttons ALWAYS Visible on 1 Screen */
+    .modal-card > div:last-child {
+        margin-top: 4px !important;
+        padding-top: 4px !important;
+        border-top: 1px solid #cbd5e1 !important;
+        flex-shrink: 0 !important;
+    }
+
+    .modal-card > div:last-child .btn {
+        padding: 3px 10px !important;
+        font-size: 11px !important;
+    }
+}
+
+/* PRINT PDF STYLING FOR GANTT CHART */
+@media print {
+    @page {
+        size: landscape;
+        margin: 8mm;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    .app-header,
+    .sidebar,
+    .project-sidebar,
+    .project-toolbar,
+    .date-picker-box,
+    .action-icon-group,
+    .collapse-btn,
+    .mobile-sidebar-toggle-btn,
+    .modal,
+    #today-marker,
+    .fullscreen-close-btn {
+        display: none !important;
+    }
+
+    .app-container, .main-wrapper, .workspace {
+        height: auto !important;
+        overflow: visible !important;
+        width: 100% !important;
+        background: #fff !important;
+    }
+
+    .project-subheader {
+        border-bottom: 2px solid #000 !important;
+        box-shadow: none !important;
+        padding: 5px 0 !important;
+    }
+
+    .gantt-wrapper {
+        margin: 0 !important;
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .gantt-body-scroll, .gantt-days-head-scroll {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    .gantt-task-head, .task-title-cell, .dept-title-cell {
+        position: static !important;
+        box-shadow: none !important;
+    }
+}
+
+/* ==========================================
+   APP SPLASH SCREEN (PROFESSIONAL ANIMATED)
+   ========================================== */
+#app-splash {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0f172a;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+
+#app-splash.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+}
+
+.splash-logo-wrapper {
+    margin-bottom: 20px;
+    animation: splashZoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.splash-logo-img {
+    width: 64px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.4));
+}
+
+.splash-title {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 1.5px;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    animation: splashFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+}
+
+.splash-tagline {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #38bdf8;
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+    text-transform: uppercase;
+    animation: splashFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+}
+
+.splash-progress-track {
+    width: 220px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    animation: splashFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s backwards;
+}
+
+.splash-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+    animation: splashProgressFill 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.splash-footer {
+    position: absolute;
+    bottom: 28px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 11px;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    animation: splashFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards;
+}
+
+@keyframes splashZoomIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes splashFadeUp {
+    0% {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes splashProgressFill {
+    0% {
+        width: 0%;
+    }
+    50% {
+        width: 65%;
+    }
+    100% {
+        width: 100%;
+    }
+}
+
+/* ==========================================================================
+   UI THEME STYLES (3D GLASS, 2D MINIMAL FLAT, 3D CYBER GLOW)
+   100% COSMETIC - ZERO IMPACT ON DATA / DATABASE / CALCULATION LOGIC
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   MODE 2: 2D MINIMAL FLAT (FLAT & CLEAN STYLE)
+   -------------------------------------------------------------------------- */
+body.theme-2d-flat .task-bar {
+    background-image: none !important;
+    backdrop-filter: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+    border-radius: 4px !important;
+    border-width: 1px !important;
+}
+
+body.theme-2d-flat .status-completed {
+    background-color: #38bdf8 !important;
+    color: #000000 !important;
+    border-color: #0284c7 !important;
+}
+
+body.theme-2d-flat .status-working {
+    background-color: #34d399 !important;
+    color: #000000 !important;
+    border-color: #059669 !important;
+}
+
+body.theme-2d-flat .status-pending {
+    background-color: #fbbf24 !important;
+    color: #000000 !important;
+    border-color: #d97706 !important;
+}
+
+body.theme-2d-flat .status-overdue {
+    background-color: #f87171 !important;
+    color: #000000 !important;
+    border-color: #dc2626 !important;
+}
+
+body.theme-2d-flat .sidebar {
+    box-shadow: 1px 0 0 #1e293b !important;
+}
+
+body.theme-2d-flat .menu-item {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-top: none !important;
+    border-radius: 4px !important;
+    margin: 1px 6px !important;
+}
+
+body.theme-2d-flat .menu-item:hover {
+    background: #1e293b !important;
+    color: #ffffff !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+body.theme-2d-flat .menu-item.active {
+    background: #1e293b !important;
+    color: #38bdf8 !important;
+    border-left: 3px solid #38bdf8 !important;
+    box-shadow: none !important;
+}
+
+body.theme-2d-flat .btn {
+    background-image: none !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+    border-bottom: none !important;
+    border-radius: 4px !important;
+}
+
+body.theme-2d-flat .btn:hover {
+    transform: none !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
+}
+
+body.theme-2d-flat .dept-title-cell {
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body.theme-2d-flat .header, body.theme-2d-flat .top-bar {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+}
+
+/* --------------------------------------------------------------------------
+   MODE 3: 3D LIQUID CAPSULE (CYBER LIQUID 3D CAPSULE - RED, BLUE, GREEN, YELLOW)
+   -------------------------------------------------------------------------- */
+body.theme-3d-liquid .task-bar {
+    border-radius: 14px !important;
+    padding: 0 14px !important;
+    border-width: 1.5px !important;
+    backdrop-filter: blur(5px) !important;
+    background-image: linear-gradient(
+        180deg, 
+        rgba(255, 255, 255, 0.85) 0%, 
+        rgba(255, 255, 255, 0.35) 28%, 
+        rgba(255, 255, 255, 0.05) 55%, 
+        rgba(0, 0, 0, 0.2) 78%,
+        rgba(0, 0, 0, 0.5) 100%
+    ) !important;
+}
+
+body.theme-3d-liquid .task-bar span {
+    color: #000000 !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.2px;
+    text-shadow: none !important;
+    position: relative;
+    z-index: 10;
+}
+
+/* 1. Sapphire Blue Liquid Tube (Completed) */
+body.theme-3d-liquid .status-completed {
+    background-color: #0284c7 !important;
+    background-image: linear-gradient(180deg, #e0f2fe 0%, #38bdf8 28%, #0284c7 70%, #0369a1 100%) !important;
+    border-color: #e0f2fe !important;
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.6), inset 0 2px 3px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.5) !important;
+}
+
+/* 2. Emerald Jade Liquid Tube (Working) */
+body.theme-3d-liquid .status-working {
+    background-color: #059669 !important;
+    background-image: linear-gradient(180deg, #d1fae5 0%, #34d399 28%, #059669 70%, #047857 100%) !important;
+    border-color: #d1fae5 !important;
+    box-shadow: 0 6px 18px rgba(5, 150, 105, 0.6), inset 0 2px 3px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.5) !important;
+}
+
+/* 3. Amber Gold Liquid Tube (Pending) */
+body.theme-3d-liquid .status-pending {
+    background-color: #d97706 !important;
+    background-image: linear-gradient(180deg, #fef08a 0%, #fbbf24 28%, #d97706 70%, #b45309 100%) !important;
+    border-color: #fef08a !important;
+    box-shadow: 0 6px 18px rgba(217, 119, 6, 0.6), inset 0 2px 3px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.5) !important;
+}
+
+/* 4. Crimson Ruby Liquid Tube (Overdue) */
+body.theme-3d-liquid .status-overdue {
+    background-color: #dc2626 !important;
+    background-image: linear-gradient(180deg, #fca5a5 0%, #f87171 28%, #dc2626 70%, #991b1b 100%) !important;
+    border-color: #fca5a5 !important;
+    box-shadow: 0 6px 18px rgba(220, 38, 38, 0.7), inset 0 2px 3px rgba(255,255,255,0.95), inset 0 -3px 5px rgba(0,0,0,0.5) !important;
+}
+
+body.theme-3d-liquid .sidebar {
+    background: #090d16 !important;
+    box-shadow: 4px 0 20px rgba(56, 189, 248, 0.15) !important;
+    border-right: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   MODE 4: 2D CLASSIC ORIGINAL (ORIGINAL LEGACY 2D VIEW)
+   -------------------------------------------------------------------------- */
+body.theme-2d-classic .task-bar {
+    background-image: none !important;
+    backdrop-filter: none !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    height: 26px !important;
+    top: 9px !important;
+}
+
+body.theme-2d-classic .task-bar span:not(.task-attachment-icon) {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+}
+
+body.theme-2d-classic .status-completed {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+}
+
+body.theme-2d-classic .status-working {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+}
+
+body.theme-2d-classic .status-pending {
+    background-color: #ca8a04 !important;
+    color: #ffffff !important;
+}
+
+body.theme-2d-classic .status-overdue {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+body.theme-2d-classic .sidebar {
+    background: #0f172a !important;
+    box-shadow: 1px 0 0 #1e293b !important;
+}
+
+body.theme-2d-classic .menu-item {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-top: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 10px 16px !important;
+}
+
+body.theme-2d-classic .menu-item:hover {
+    background: #1e293b !important;
+    color: #ffffff !important;
+    transform: none !important;
+}
+
+body.theme-2d-classic .menu-item.active {
+    background: #1e293b !important;
+    color: #38bdf8 !important;
+    border-left: 3px solid #38bdf8 !important;
+}
+
+body.theme-2d-classic .btn {
+    background-image: none !important;
+    box-shadow: none !important;
+    border-bottom: none !important;
+    border-radius: 4px !important;
+}
+
+body.theme-2d-classic .dept-title-cell {
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+/* HIGH-SPECIFICITY SOLID BLACK ATTACHMENT BADGE FOR ALL THEMES */
+.task-bar span.task-attachment-icon,
+body.theme-2d-classic .task-bar span.task-attachment-icon,
+body.theme-pill-capsule .task-bar span.task-attachment-icon,
+body.theme-3d-glass .task-bar span.task-attachment-icon,
+body.theme-3d-liquid .task-bar span.task-attachment-icon {
+    color: #000000 !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    padding: 1px 6px !important;
+    font-weight: 900 !important;
+    font-size: 10.5px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    z-index: 20 !important;
+}
+
+/* HIGH-SPECIFICITY SOLID BLACK D2D MIRROR BADGES ACROSS ALL THEMES */
+.mirror-dept-badge,
+.task-title-cell .mirror-dept-badge,
+.task-bar span.task-bar-mirror-badge,
+body.theme-2d-flat .task-bar span.task-bar-mirror-badge,
+body.theme-2d-classic .task-bar span.task-bar-mirror-badge,
+body.theme-3d-liquid .task-bar span.task-bar-mirror-badge,
+body.theme-3d-glass .task-bar span.task-bar-mirror-badge,
+body.theme-pill-capsule .task-bar span.task-bar-mirror-badge {
+    color: #000000 !important; /* Luôn là chữ đen rõ nét theo yêu cầu của user, không bị trắng chữ trên nền tối */
+    font-weight: 800 !important;
+    text-shadow: none !important;
+}
+
+.mirror-dept-badge {
+    font-size: 9px !important;
+    padding: 1px 4px !important;
+    border-radius: 3px !important;
+    background: #e0f2fe !important;
+    border: 1px solid #7dd3fc !important;
+    margin-right: 4px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.2px !important;
+    flex-shrink: 0 !important;
+}
+
+.task-bar span.task-bar-mirror-badge {
+    font-size: 8.5px !important;
+    padding: 1px 4px !important;
+    border-radius: 3px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(0, 0, 0, 0.3) !important;
+    margin-right: 3px !important;
+    line-height: 1.1 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.2px !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+
+
+/* --------------------------------------------------------------------------
+   MODE 5: 2D/3D PILL CAPSULE (EXACT MATCH FOR USER UPLOADED SCREENSHOT)
+   -------------------------------------------------------------------------- */
+body.theme-pill-capsule .task-bar {
+    border-radius: 14px !important;
+    height: 27px !important;
+    top: 8px !important;
+    padding: 0 14px !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12) !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+}
+
+/* 1. Dark Navy Blue Pill (Completed - ✓ Lót sàn thảm, rèm) */
+body.theme-pill-capsule .status-completed {
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 3px 8px rgba(30, 58, 138, 0.35) !important;
+}
+body.theme-pill-capsule .status-completed span {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+}
+body.theme-pill-capsule .status-completed::before {
+    content: "✓ ";
+    color: #4ade80;
+    font-weight: 900;
+    margin-right: 3px;
+    position: relative;
+    z-index: 10;
+}
+
+/* 2. Soft Mint Emerald Green Pill (Working - Sản xuất bàn nhân viên, Kéo dây điện chính) */
+body.theme-pill-capsule .status-working {
+    background-color: #86efac !important;
+    color: #064e3b !important;
+    border-color: #4ade80 !important;
+    box-shadow: 0 2px 6px rgba(74, 222, 128, 0.3) !important;
+}
+body.theme-pill-capsule .status-working span {
+    color: #064e3b !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+}
+
+/* 3. Soft Amber Yellow Pill (Pending) */
+body.theme-pill-capsule .status-pending {
+    background-color: #fef08a !important;
+    color: #713f12 !important;
+    border-color: #fde047 !important;
+    box-shadow: 0 2px 6px rgba(253, 224, 71, 0.3) !important;
+}
+body.theme-pill-capsule .status-pending span {
+    color: #713f12 !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+}
+
+/* 4. Soft Coral Red Pill (Overdue - Mua đèn chiếu sáng) */
+body.theme-pill-capsule .status-overdue {
+    background-color: #fca5a5 !important;
+    color: #7f1d1d !important;
+    border-color: #f87171 !important;
+    box-shadow: 0 2px 6px rgba(248, 113, 113, 0.35) !important;
+}
+body.theme-pill-capsule .status-overdue span {
+    color: #7f1d1d !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+}
+
+/* Rounded White Attachment Badge (📎 1, 📎 2 in screenshot) */
+body.theme-pill-capsule .task-attachment-icon {
+    background: #ffffff !important;
+    color: #334155 !important;
+    border-radius: 4px !important;
+    padding: 1px 6px !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    margin-left: 6px !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Red Circle Alert Badge (!) floating at top right edge */
+body.theme-pill-capsule .alert-dot-predecessor {
+    position: absolute !important;
+    top: -4px !important;
+    right: -4px !important;
+    width: 16px !important;
+    height: 16px !important;
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 50% !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.5) !important;
+    z-index: 100 !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   INDUSTRIAL DEEP-SPACE 3D CHART BACKGROUND
+   (Applied to 3D Crystal Tube, 3D Liquid Capsule, and 2D Classic Modes)
+   -------------------------------------------------------------------------- */
+body.theme-3d-glass .gantt-body-scroll,
+body.theme-3d-liquid .gantt-body-scroll,
+body.theme-2d-classic .gantt-body-scroll,
+body.theme-3d-glass #gantt-unified-container,
+body.theme-3d-liquid #gantt-unified-container,
+body.theme-2d-classic #gantt-unified-container {
+    background: linear-gradient(180deg, #0b0f19 0%, #0f172a 100%) !important;
+}
+
+body.theme-3d-glass .gantt-unified-row,
+body.theme-3d-liquid .gantt-unified-row,
+body.theme-2d-classic .gantt-unified-row {
+    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.theme-3d-glass .gantt-unified-row:hover,
+body.theme-3d-liquid .gantt-unified-row:hover,
+body.theme-2d-classic .gantt-unified-row:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+body.theme-3d-glass .day-cell,
+body.theme-3d-liquid .day-cell,
+body.theme-2d-classic .day-cell {
+    border-right-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.theme-3d-glass .day-cell.is-weekend,
+body.theme-3d-liquid .day-cell.is-weekend,
+body.theme-2d-classic .day-cell.is-weekend {
+    background-color: rgba(239, 68, 68, 0.14) !important;
+    color: #fca5a5 !important;
+}
+
+body.theme-3d-glass .task-title-cell,
+body.theme-3d-liquid .task-title-cell,
+body.theme-2d-classic .task-title-cell {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-right: 1px solid #1e293b !important;
+    box-shadow: 3px 0 8px rgba(0, 0, 0, 0.35) !important;
+}
+
+body.theme-3d-glass .task-title-cell span:not(.mirror-dept-badge),
+body.theme-3d-liquid .task-title-cell span:not(.mirror-dept-badge),
+body.theme-2d-classic .task-title-cell span:not(.mirror-dept-badge) {
+    color: #f8fafc !important;
+    font-weight: 700 !important;
+}
+
+body.theme-3d-glass .task-title-cell small,
+body.theme-3d-liquid .task-title-cell small,
+body.theme-2d-classic .task-title-cell small {
+    color: #94a3b8 !important;
+    border-left-color: #1e293b !important;
+}
+
+body.theme-3d-glass .gantt-header,
+body.theme-3d-liquid .gantt-header,
+body.theme-2d-classic .gantt-header,
+body.theme-3d-glass .gantt-task-head,
+body.theme-3d-liquid .gantt-task-head,
+body.theme-2d-classic .gantt-task-head {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+    color: #38bdf8 !important;
+    border-bottom: 2px solid #334155 !important;
+}
+
+
+/* ==========================================================================
+   MOBILE RESPONSIVE OVERRIDES FOR ALL UI THEME MODES
+   ENSURES TASK BARS NEVER OVERFLOW ROW HEIGHT ON MOBILE PORTRAIT OR LANDSCAPE
+   ========================================================================== */
+
+/* 1. Mobile Portrait Override (Max-Width 1024px or Mobile Mode) */
+@media screen and (max-width: 1024px), screen and (max-height: 650px), screen and (pointer: coarse), body.is-mobile-mode {
+    body .task-bar,
+    body.theme-3d-glass .task-bar,
+    body.theme-2d-flat .task-bar,
+    body.theme-3d-liquid .task-bar,
+    body.theme-2d-classic .task-bar,
+    body.theme-pill-capsule .task-bar {
+        height: 20px !important;
+        top: 5px !important;
+        border-radius: 10px !important;
+        font-size: 9px !important;
+        padding: 0 6px !important;
+        line-height: 20px !important;
+    }
+
+    body .task-bar .handle,
+    body.theme-3d-glass .task-bar .handle,
+    body.theme-2d-flat .task-bar .handle,
+    body.theme-3d-liquid .task-bar .handle,
+    body.theme-2d-classic .task-bar .handle,
+    body.theme-pill-capsule .task-bar .handle {
+        top: 4px !important;
+        width: 10px !important;
+        height: 10px !important;
+    }
+
+    body .alert-dot-predecessor,
+    body.theme-3d-glass .alert-dot-predecessor,
+    body.theme-2d-flat .alert-dot-predecessor,
+    body.theme-3d-liquid .alert-dot-predecessor,
+    body.theme-2d-classic .alert-dot-predecessor,
+    body.theme-pill-capsule .alert-dot-predecessor {
+        top: -5px !important;
+        right: -4px !important;
+        width: 14px !important;
+        height: 14px !important;
+        font-size: 9.5px !important;
+    }
+}
+
+/* 2. Mobile Landscape Override (Max-Height 600px or Landscape Mobile Mode) */
+@media screen and (orientation: landscape) and (max-height: 600px),
+       screen and (orientation: landscape) and (pointer: coarse),
+       body.is-mobile-landscape {
+    body .task-bar,
+    body.theme-3d-glass .task-bar,
+    body.theme-2d-flat .task-bar,
+    body.theme-3d-liquid .task-bar,
+    body.theme-2d-classic .task-bar,
+    body.theme-pill-capsule .task-bar {
+        height: 16px !important;
+        top: 4px !important;
+        border-radius: 8px !important;
+        font-size: 8.5px !important;
+        padding: 0 4px !important;
+        line-height: 16px !important;
+    }
+
+    body .task-bar .handle,
+    body.theme-3d-glass .task-bar .handle,
+    body.theme-2d-flat .task-bar .handle,
+    body.theme-3d-liquid .task-bar .handle,
+    body.theme-2d-classic .task-bar .handle,
+    body.theme-pill-capsule .task-bar .handle {
+        top: 3px !important;
+        width: 8px !important;
+        height: 8px !important;
+    }
+
+    body .alert-dot-predecessor,
+    body.theme-3d-glass .alert-dot-predecessor,
+    body.theme-2d-flat .alert-dot-predecessor,
+    body.theme-3d-liquid .alert-dot-predecessor,
+    body.theme-2d-classic .alert-dot-predecessor,
+    body.theme-pill-capsule .alert-dot-predecessor {
+        top: -4px !important;
+        right: -4px !important;
+        width: 12px !important;
+        height: 12px !important;
+        font-size: 8.5px !important;
+    }
+}
+
+/* SIDEBAR DEPARTMENT ACCORDION FOLDERS */
+.sidebar-dept-folder {
+    margin: 2px 4px;
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+.sidebar-dept-header {
+    padding: 7px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #cbd5e1;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+.sidebar-dept-header:hover {
+    background: rgba(56, 189, 248, 0.15);
+    color: #ffffff;
+}
+.sidebar-dept-header.open {
+    background: rgba(2, 132, 199, 0.25);
+    color: #38bdf8;
+    font-weight: 700;
+}
+.sidebar-dept-sublist {
+    background: rgba(9, 14, 26, 0.85);
+    padding: 2px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.btn-dup-proj:hover {
+    color: #38bdf8 !important;
+    transform: scale(1.15);
+}
+.task-drag-handle {
+    cursor: grab;
+    user-select: none;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    color: #94a3b8;
+}
+.task-drag-handle:hover {
+    opacity: 1;
+    color: #0284c7;
+}
+
+/* Tag Summary Bar Styles (Light Grey, Z-Index Below Today Line) */
+.tag-summary-bar {
+    position: absolute;
+    top: 9px;
+    height: 14px;
+    background: #cbd5e1;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: all 0.15s ease-in-out;
+}
+.tag-summary-bar:hover {
+    background: #94a3b8;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    transform: scaleY(1.1);
+}
+
+/* Compact Tag Action Buttons */
+.btn-delete-tag-compact {
+    transition: transform 0.15s, background 0.15s;
+}
+.btn-delete-tag-compact:hover {
+    background: #dc2626 !important;
+    transform: scale(1.15);
+}
+
+.btn-edit-tag {
+    transition: transform 0.15s, color 0.15s;
+}
+.btn-edit-tag:hover {
+    color: #0284c7 !important;
+    transform: scale(1.15);
+}
+
+/* Yellow Square Tag Button */
+.btn-tag-square {
+    background: #f59e0b !important;
+    color: #1e293b !important;
+    border-radius: 6px !important;
+    border: 1px solid #d97706 !important;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3) !important;
+}
+.btn-tag-square:hover {
+    background: #d97706 !important;
+    color: #ffffff !important;
+}
+
+/* ================= ISOLATED DROPDOWN TOP LAYER ELEVATION ================= */
+.project-subheader, .top-bar {
+    position: relative !important;
+    z-index: 10000 !important;
+}
+.settings-dropdown-wrapper {
+    position: relative !important;
+    z-index: 10001 !important;
+}
+#settings-dropdown-menu.settings-dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    margin-top: 6px !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25) !important;
+    z-index: 999999 !important;
+    min-width: 230px !important;
+    overflow: hidden !important;
+}
+#settings-dropdown-menu .settings-dropdown-item {
+    padding: 8px 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    cursor: pointer !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+#settings-dropdown-menu .settings-dropdown-item:last-child {
+    border-bottom: none !important;
+}
+#settings-dropdown-menu .settings-dropdown-item:hover {
+    background: #f1f5f9 !important;
+    color: #0284c7 !important;
+}
+#settings-dropdown-menu .settings-dropdown-item.danger {
+    color: #dc2626 !important;
+}
+#settings-dropdown-menu .settings-dropdown-item.danger:hover {
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+}
+
+/* ==========================================================================
+   D2D MIRROR DEPARTMENT BADGE - SOLID BLACK TEXT ON ALL THEMES & SKINS
+   ========================================================================== */
+.task-title-cell span.mirror-dept-badge,
+body.theme-3d-glass .task-title-cell span.mirror-dept-badge,
+body.theme-3d-liquid .task-title-cell span.mirror-dept-badge,
+body.theme-2d-classic .task-title-cell span.mirror-dept-badge,
+body.theme-2d-flat .task-title-cell span.mirror-dept-badge,
+body.theme-pill-capsule .task-title-cell span.mirror-dept-badge,
+span.mirror-dept-badge {
+    color: #000000 !important; /* Chữ luôn là màu đen rõ nét 100% trên cả nền sáng và nền tối */
+    background: #bae6fd !important; /* Nền xanh nhạt sáng tương phản cao */
+    border: 1.5px solid #0284c7 !important;
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    padding: 1px 4.5px !important;
+    border-radius: 4px !important;
+    margin-right: 4px !important;
+    line-height: 1.1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+    flex-shrink: 0 !important;
+    text-shadow: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+/* ==========================================================================
+   QUANTUM 2-WAY SYNC (RỐI LƯỢNG TỬ) BUTTONS & BADGES
+   ========================================================================== */
+.btn-quantum-sync {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #4338ca !important;
+    padding: 2px 7px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15) !important;
+}
+.btn-quantum-sync:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 6px rgba(79, 70, 229, 0.3) !important;
+}
+.btn-quantum-synced {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #047857 !important;
+    padding: 2px 7px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15) !important;
+}
+.btn-quantum-synced:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 6px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* ==========================================================================
+   LTP PROGRESS HUB SAAS v9.0 — CUSTOM SKIN VARIABLES, QUICK FILTERS & MODALS
+   ========================================================================== */
+:root {
+    --skin-primary: #0284c7;
+    --skin-header-bg: #0f172a;
+    --skin-sidebar-bg: #0f172a;
+    --skin-workspace-bg: #f1f5f9;
+}
+
+.app-header {
+    background: var(--skin-header-bg, #0f172a) !important;
+}
+
+.sidebar {
+    background: var(--skin-sidebar-bg, #0f172a) !important;
+}
+
+.workspace {
+    background: var(--skin-workspace-bg, #f1f5f9) !important;
+}
+
+.btn-primary {
+    background: var(--skin-primary, #0284c7) !important;
+    border-color: var(--skin-primary, #0284c7) !important;
+}
+
+/* 1-CLICK QUICK FILTER PILLS (MINIMALIST ARCHITECTURAL SEGMENTED CONTROL) */
+.quick-filter-pills {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+    height: 30px;
+    box-sizing: border-box;
+}
+
+.qfilter-pill {
+    border: 1px solid transparent;
+    background: transparent;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+}
+
+.qfilter-pill:hover {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.qfilter-pill.active {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: #cbd5e1;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+/* MINIMALIST ARCHITECTURAL BUTTON SYSTEM (NO GAUDY GRADIENTS, NO EMOJIS) */
+.ltp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.ltp-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.ltp-btn-dark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.ltp-btn-dark:hover {
+    background: #1e293b;
+    border-color: #64748b;
+    color: #ffffff;
+}
+
+.ltp-btn-solid {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #0f172a;
+    background: #0f172a;
+    color: #ffffff;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+    white-space: nowrap;
+}
+
+.ltp-btn-solid:hover {
+    background: #1e293b;
+    border-color: #1e293b;
+}
+
+.ltp-btn-danger-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #fecaca;
+    background: #ffffff;
+    color: #dc2626;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ltp-btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+    color: #b91c1c;
+}
+
+.ltp-ico {
+    width: 14px;
+    height: 14px;
+    stroke-width: 1.75;
+    flex-shrink: 0;
+}
+
+/* MODERN SMOOTH MODAL OPTIMIZATION */
+.modal {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-card {
+    border-radius: 14px !important;
+    box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.45) !important;
+    border: 1px solid rgba(203, 213, 225, 0.85) !important;
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+.modal-card.expanded-viewer {
+    max-width: 1060px !important;
+    width: 95vw !important;
+}
+
+@media screen and (max-width: 768px) {
+    .hide-on-mobile {
+        display: none !important;
+    }
+    .quick-filter-pills {
+        order: -1;
+        width: 100%;
+        justify-content: space-between;
+    }
+    .qfilter-pill {
+        flex: 1;
+        text-align: center;
+        padding: 4px 4px;
+        font-size: 10px;
+    }
+}
+

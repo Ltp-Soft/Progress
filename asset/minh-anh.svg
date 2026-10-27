@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#eff6ff"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="suit" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Circle Backdrop -->
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="96" stroke="#3b82f6" stroke-width="2" stroke-opacity="0.3"/>
+
+  <!-- Shoulders & Uniform -->
+  <path d="M42 200C42 165 65 145 100 145C135 145 158 165 158 200H42Z" fill="url(#suit)"/>
+  <!-- White Inner Shirt Collar -->
+  <path d="M82 145L100 172L118 145C118 145 108 148 100 148C92 148 82 145 82 145Z" fill="#ffffff"/>
+
+  <!-- Neck -->
+  <rect x="88" y="122" width="24" height="26" rx="6" fill="#fde68a"/>
+
+  <!-- Head / Face -->
+  <ellipse cx="100" cy="95" rx="34" ry="40" fill="#fef3c7"/>
+
+  <!-- Hair -->
+  <path d="M66 95C62 55 75 42 100 42C125 42 138 55 134 95C142 130 138 148 138 148C138 148 130 115 130 102C130 75 125 58 100 58C75 58 70 75 70 102C70 115 62 148 62 148C62 148 58 130 66 95Z" fill="url(#hair)"/>
+  <path d="M72 75C80 62 95 62 112 66C122 69 130 76 130 82C124 74 112 70 98 70C86 70 76 74 72 75Z" fill="#312e81"/>
+
+  <!-- Eyes with sparkle -->
+  <ellipse cx="88" cy="94" rx="4" ry="5.5" fill="#1e1b4b"/>
+  <circle cx="89.5" cy="92.5" r="1.5" fill="#ffffff"/>
+  <ellipse cx="112" cy="94" rx="4" ry="5.5" fill="#1e1b4b"/>
+  <circle cx="113.5" cy="92.5" r="1.5" fill="#ffffff"/>
+
+  <!-- Eyebrows -->
+  <path d="M82 85C86 82 92 82 95 85" stroke="#312e81" stroke-width="2" stroke-linecap="round"/>
+  <path d="M105 85C108 82 114 82 118 85" stroke="#312e81" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Cheeks Blush -->
+  <circle cx="82" cy="102" r="5" fill="#fb7185" fill-opacity="0.5"/>
+  <circle cx="118" cy="102" r="5" fill="#fb7185" fill-opacity="0.5"/>
+
+  <!-- Gentle Smile -->
+  <path d="M93 110C96 114 104 114 107 110" stroke="#e11d48" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Customer Support Headset -->
+  <path d="M64 92C64 68 78 52 100 52C122 52 136 68 136 92" stroke="#64748b" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <rect x="60" y="86" width="7" height="18" rx="3.5" fill="#0284c7"/>
+  <rect x="133" y="86" width="7" height="18" rx="3.5" fill="#0284c7"/>
+  <path d="M136 98C136 115 125 124 114 122" stroke="#64748b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <circle cx="113" cy="122" r="3.5" fill="#0284c7"/>
+</svg>

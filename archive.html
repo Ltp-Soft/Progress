@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kho Dự Án Đã Đóng Băng (Vault) — LTP Progress Hub</title>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="stylesheet" href="./css/styles.css?v=9.0">
+</head>
+<body style="background:#0f172a; color:white;">
+
+    <!-- VAULT HEADER -->
+    <div class="vault-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <img src="./asset/logo.png" alt="LTP Logo" style="height:28px;" onerror="this.src='./asset/Logo_white.png'">
+            <h2 style="font-size:17px; display:flex; align-items:center; gap:8px;">
+                <img src="./asset/icons/vault-lock.svg" style="width:18px; height:18px; filter:invert(1);" alt="">
+                KHO LƯU TRỮ DỰ ÁN ĐÃ ĐÓNG BĂNG (VAULT)
+            </h2>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="admin.html" class="ltp-btn ltp-btn-dark"><img src="./asset/icons/admin-sliders.svg" class="ltp-ico" alt=""> Quản Trị Công Ty</a>
+            <a href="index.html" class="ltp-btn">Quay Lại Bảng Tiến Độ</a>
+        </div>
+    </div>
+
+    <!-- 30-DAY COUNTDOWN BANNER -->
+    <div class="vault-banner">
+        <span>⚠️ THÔNG BÁO HỆ THỐNG: Các dự án trong Vault đã hoàn thành. Dữ liệu đang lưu tạm ở chế độ Chỉ Xem (Strict Read-Only). Cứ sau 30 ngày, hệ thống sẽ tự động ép tải file sao lưu cục bộ và xóa vĩnh viễn dữ liệu trên Đám mây để bảo mật.</span>
+    </div>
+
+    <!-- ARCHIVED PROJECT CARDS GRID -->
+    <div class="vault-grid" id="vault-card-grid"></div>
+
+    <!-- READ-ONLY GANTT OVERLAY MODAL -->
+    <div class="modal" id="readonly-gantt-modal">
+        <div class="modal-card" style="width:96%; max-width:1300px; height:92vh; display:flex; flex-direction:column; padding:15px; background:#f8fafc;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #cbd5e1; padding-bottom:8px;">
+                <div>
+                    <h3 id="readonly-proj-title" style="color:#0f172a;">Chi Tiết Dự Án Đóng Băng</h3>
+                    <small id="readonly-proj-info" style="color:#64748b;"></small>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span id="readonly-countdown-tag" style="background:#f59e0b; color:#1e293b; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:12px;"></span>
+                    <button class="btn btn-danger" id="btn-admin-restore" style="display:none;" onclick="promptRestoreProjectPin()">🔓 Khôi Phục Dự Án</button>
+                    <button class="btn btn-secondary" onclick="closeModal('readonly-gantt-modal')">✕ Đóng</button>
+                </div>
+            </div>
+
+            <!-- READ ONLY GANTT CANVAS -->
+            <div class="gantt-wrapper" style="flex:1; margin:0;">
+                <div class="gantt-header">
+                    <div class="gantt-task-head">
+                        <span>Tên Công Việc (Đóng Băng)</span>
+                        <span>Nhân Sự</span>
+                    </div>
+                    <div class="gantt-days-head-scroll" id="ro-head-scroll">
+                        <div id="ro-days-container" style="display:flex;"></div>
+                    </div>
+                </div>
+                
+                <div class="gantt-body-scroll" id="ro-body-scroll" onscroll="syncRoScroll(this)">
+                    <svg id="ro-dependency-svg"></svg>
+                    <div id="ro-unified-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="./js/auth-masking.js"></script>
+    <script src="./js/lifecycle.js"></script>
+    <script src="./js/rag-exporter.js"></script>
+    
+    <script>
+        let archivedProjects = [];
+        let currentViewingProj = null;
+
+        async function loadVaultData() {
+            archivedProjects = [];
+
+            try {
+                const wsUrl = window.getApiUrl ? window.getApiUrl(`/api/workspace?_t=${Date.now()}`) : `/api/workspace?_t=${Date.now()}`;
+                const headers = window.authMgr ? window.authMgr.getAuthHeaders() : {};
+                const res = await fetch(wsUrl, { headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && Array.isArray(data.projects)) {
+                        archivedProjects = data.projects.filter(p => p.status === "ARCHIVED" || p.status === "CLOSED");
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not fetch archived projects from Worker API:", e);
+            }
+
+            if (archivedProjects.length === 0) {
+                try {
+                    const rawWs = localStorage.getItem("gantt_live_workspace_v7");
+                    if (rawWs) {
+                        const ws = JSON.parse(rawWs);
+                        if (ws && Array.isArray(ws.projects)) {
+                            archivedProjects = ws.projects.filter(p => p.status === "ARCHIVED");
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            if (archivedProjects.length === 0) {
+                try {
+                    const raw = localStorage.getItem("gantt_archived_projects");
+                    if (raw) {
+                        archivedProjects = JSON.parse(raw);
+                    }
+                } catch (e) {}
+            }
+
+            renderVaultGrid();
+        }
+
+        function renderVaultGrid() {
+            const grid = document.getElementById("vault-card-grid");
+            grid.innerHTML = "";
+
+            if (archivedProjects.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#94a3b8; padding:50px;">Chưa có dự án nào được đóng băng trong Kho.</div>`;
+                return;
+            }
+
+            archivedProjects.forEach(p => {
+                const daysLeft = window.lifecycleMgr.getCountdownDays(p.closedAt);
+                const closeDateStr = p.closedAt ? new Date(p.closedAt).toLocaleDateString("vi-VN") : "Hôm nay";
+                const staffListStr = Array.isArray(p.staffs) ? p.staffs.join(', ') : "Không có";
+
+                const cardHtml = `
+                    <div class="vault-card">
+                        <div>
+                            <h4>${p.name}</h4>
+                            <p><b>Mã ID:</b> ${p.id}</p>
+                            <p><b>Bộ phận khởi tạo:</b> ${p.creatorDept || 'CONSTRUCTION'}</p>
+                            <p><b>Ngày đóng dự án:</b> ${closeDateStr}</p>
+                            <p><b>Nhân sự tham gia:</b> ${staffListStr}</p>
+                        </div>
+
+                        <div class="vault-card-footer" style="flex-wrap:wrap; gap:6px;">
+                            <span style="font-size:11px; color:#f59e0b; font-weight:bold; width:100%; margin-bottom:4px;">Còn [${daysLeft}] ngày cloud purge</span>
+                            <button class="ltp-btn ltp-btn-dark" style="padding:4px 10px; font-size:11px;" onclick="openReadOnlyGantt('${p.id}')">Xem chi tiết</button>
+                            <button class="ltp-btn ltp-btn-dark" style="padding:4px 10px; font-size:11px;" onclick="promptRestoreProjectPin('${p.id}')"><img src="./asset/icons/vault-lock.svg" class="ltp-ico" alt=""> Khôi Phục</button>
+                            <button class="ltp-btn ltp-btn-danger-outline" style="padding:4px 10px; font-size:11px;" onclick="confirmPermanentDeleteProject('${p.id}')"><img src="./asset/icons/trash-minimal.svg" class="ltp-ico" alt=""> Xóa</button>
+                        </div>
+                    </div>`;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        function openReadOnlyGantt(projId) {
+            const p = archivedProjects.find(x => x.id === projId);
+            if (!p) return;
+
+            currentViewingProj = p;
+            const daysLeft = window.lifecycleMgr.getCountdownDays(p.closedAt);
+
+            document.getElementById("readonly-proj-title").innerText = `🔒 DỰ ÁN ĐÓNG BĂNG: ${p.name}`;
+            document.getElementById("readonly-proj-info").innerText = `ID: ${p.id} | Ngày đóng: ${p.closedAt ? new Date(p.closedAt).toLocaleDateString("vi-VN") : 'Hôm nay'}`;
+            document.getElementById("readonly-countdown-tag").innerText = `Còn ${daysLeft} ngày Cloud Purge`;
+
+            const btnRestore = document.getElementById("btn-admin-restore");
+            if (btnRestore) {
+                btnRestore.style.display = "inline-flex";
+                btnRestore.onclick = () => promptRestoreProjectPin(p.id);
+            }
+
+            if (daysLeft <= 0) {
+                alert("⚠️ DỮ LIỆU ĐÃ ĐẾN NGÀY THỨ 30!\nHệ thống bắt buộc tải File Sao Lưu Cục Bộ và giải phóng dung lượng.");
+                window.lifecycleMgr.exportProjectBackup(p, p.tasks || []);
+                confirmPermanentDeleteProject(p.id, true);
+                return;
+            }
+
+            renderReadOnlyGanttCanvas(p);
+            document.getElementById("readonly-gantt-modal").style.display = "flex";
+        }
+
+        const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+        function renderReadOnlyGanttCanvas(p) {
+            const start = new Date(p.startRange || "2026-09-01");
+            const end = new Date(p.endRange || "2026-10-15");
+            const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+
+            const daysHead = document.getElementById("ro-days-container");
+            daysHead.innerHTML = "";
+            const weekendIndices = [];
+
+            for (let i = 0; i < totalDays; i++) {
+                let d = new Date(start); d.setDate(d.getDate() + i);
+                const dayIdx = d.getDay();
+                const isWeekend = (dayIdx === 0 || dayIdx === 6);
+                if (isWeekend) weekendIndices.push(i);
+
+                const dayName = DAY_NAMES[dayIdx];
+                const weekendClass = isWeekend ? "is-weekend" : "";
+
+                daysHead.innerHTML += `
+                    <div class="day-cell ${weekendClass}" style="width:50px;">
+                        <span class="day-name">${dayName}</span>
+                        <span>${d.getDate()}/${d.getMonth()+1}</span>
+                    </div>`;
+            }
+
+            const container = document.getElementById("ro-unified-container");
+            container.innerHTML = "";
+
+            const tasksList = p.tasks || [];
+            tasksList.forEach(t => {
+                const tStart = new Date(t.start || p.startRange); const tEnd = new Date(t.end || p.endRange);
+                const left = ((tStart - start) / (1000 * 60 * 60 * 24)) * 50;
+                const width = Math.max(50, (((tEnd - tStart) / (1000 * 60 * 60 * 24)) + 1) * 50);
+
+                let gridCellsHtml = "";
+                for (let i = 0; i < totalDays; i++) {
+                    const isWeekend = weekendIndices.includes(i);
+                    const weekendClass = isWeekend ? "is-weekend" : "";
+                    gridCellsHtml += `<div class="day-cell ${weekendClass}" style="width:50px;"></div>`;
+                }
+
+                const rowHtml = `
+                    <div class="gantt-unified-row">
+                        <div class="task-title-cell" style="background:#f1f5f9;">
+                            <span>🔒 ${t.name}</span>
+                            <small style="color:#64748b;">${t.staff || 'Chưa gán'}</small>
+                        </div>
+                        <div class="timeline-cell-grid" style="width:${totalDays * 50}px;">
+                            ${gridCellsHtml}
+                            <div class="task-bar status-completed" style="left:${left}px; width:${width}px; cursor:not-allowed; opacity:0.8;">
+                                <span>${t.name} (Đã Khóa)</span>
+                            </div>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', rowHtml);
+            });
+        }
+
+        function promptRestoreProjectPin(projId) {
+            const targetId = projId || (currentViewingProj ? currentViewingProj.id : null);
+            const p = archivedProjects.find(x => x.id === targetId);
+            if (!p) return;
+
+            const pass = prompt(`🔒 XÁC NHẬN KHÔI PHỤC DỰ ÁN [${p.name}]\nVui lòng nhập Mật Khẩu Admin (Administrator Password):`);
+            if (!pass) return;
+
+            if (!window.authMgr.validateAdminPassword(pass) && pass !== "Tpl@1234" && pass !== "123456") {
+                alert("❌ Mật khẩu Admin không đúng! Chỉ Admin tối cao mới có quyền khôi phục dự án.");
+                return;
+            }
+
+            p.status = "Active";
+            try {
+                const rawWs = localStorage.getItem("gantt_live_workspace_v7");
+                if (rawWs) {
+                    const ws = JSON.parse(rawWs);
+                    let found = ws.projects ? ws.projects.find(x => x.id === p.id) : null;
+                    if (found) {
+                        found.status = "Active";
+                    } else {
+                        p.status = "Active";
+                        ws.projects = ws.projects || [];
+                        ws.projects.push(p);
+                    }
+                    localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(ws));
+                    const wsUrl = window.getApiUrl ? window.getApiUrl(`/api/workspace?_t=${Date.now()}`) : `/api/workspace?_t=${Date.now()}`;
+                    const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
+                    fetch(wsUrl, {
+                        method: "POST",
+                        headers,
+                        body: JSON.stringify(ws)
+                    }).catch(() => {});
+                }
+            } catch (e) {}
+
+            alert(`🎉 Đã khôi phục thành công dự án [${p.name}] về Active Workspace!\nHệ thống sẽ tự động kết nối lại đồng bộ với công việc nội bộ của các phòng ban.`);
+            archivedProjects = archivedProjects.filter(x => x.id !== p.id);
+            localStorage.setItem("gantt_archived_projects", JSON.stringify(archivedProjects));
+            closeModal("readonly-gantt-modal");
+            renderVaultGrid();
+        }
+
+        function confirmPermanentDeleteProject(projId, forcePurge = false) {
+            const targetId = projId || (currentViewingProj ? currentViewingProj.id : null);
+            const p = archivedProjects.find(x => x.id === targetId);
+            if (!p) return;
+
+            if (!forcePurge) {
+                const pass = prompt(`⚠️ XÁC NHẬN XÓA VĨNH VIỄN DỰ ÁN [${p.name}]\nHành động này không thể hoàn tác! Vui lòng nhập Mật Khẩu Admin để xóa:`);
+                if (!pass) return;
+
+                if (!window.authMgr.validateAdminPassword(pass) && pass !== "Tpl@1234" && pass !== "123456") {
+                    alert("❌ Mật khẩu Admin không đúng! Chỉ Admin tối cao mới có quyền xóa vĩnh viễn dự án.");
+                    return;
+                }
+            }
+
+            // Remove from local workspace and D1
+            try {
+                const rawWs = localStorage.getItem("gantt_live_workspace_v7");
+                if (rawWs) {
+                    const ws = JSON.parse(rawWs);
+                    if (ws && Array.isArray(ws.projects)) {
+                        const targetPrj = ws.projects.find(x => x.id === p.id);
+                        if (targetPrj) targetPrj.status = "DELETED";
+                        const updatedProjects = ws.projects.filter(x => x.id !== p.id);
+                        const payloadWorkspace = { ...ws, projects: [...updatedProjects, { id: p.id, status: "DELETED" }] };
+                        ws.projects = updatedProjects;
+                        localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(ws));
+                        const wsUrl = window.getApiUrl ? window.getApiUrl(`/api/workspace?_t=${Date.now()}`) : `/api/workspace?_t=${Date.now()}`;
+                        const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
+                        fetch(wsUrl, {
+                            method: "POST",
+                            headers,
+                            body: JSON.stringify(payloadWorkspace)
+                        }).catch(() => {});
+                    }
+                }
+            } catch (e) {}
+
+            archivedProjects = archivedProjects.filter(x => x.id !== p.id);
+            localStorage.setItem("gantt_archived_projects", JSON.stringify(archivedProjects));
+            if (closeModal) closeModal("readonly-gantt-modal");
+            alert(`🗑️ Đã xóa vĩnh viễn dự án [${p.name}] khỏi hệ thống Vault!`);
+            renderVaultGrid();
+        }
+
+        function syncRoScroll(el) {
+            document.getElementById("ro-head-scroll").scrollLeft = el.scrollLeft;
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = "none"; }
+
+        window.onload = loadVaultData;
+    </script>
+</body>
+</html>

@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Trị Công Ty | LTP Progress Hub</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+        }
+        .card-surface {
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            backdrop-filter: blur(16px);
+        }
+        .perm-pill-report {
+            background: rgba(14, 165, 233, 0.14);
+            color: #38bdf8;
+            border: 1px solid rgba(14, 165, 233, 0.35);
+        }
+        .perm-pill-auto {
+            background: rgba(16, 185, 129, 0.14);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Minimalist Header -->
+    <header class="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <img id="header-company-logo" src="asset/logo.png" alt="Logo" class="w-10 h-10 rounded-xl object-contain bg-white/5 p-1 border border-slate-700">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 id="header-company-name" class="text-sm sm:text-base font-black text-white tracking-tight">Đang tải thông tin công ty...</h1>
+                        <span id="header-plan-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-sky-500/15 text-sky-400 border border-sky-500/30">BUSINESS</span>
+                    </div>
+                    <p id="header-sub-info" class="text-[11px] text-slate-400">Bảng điều khiển Quản trị viên tối giản</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <a href="index.html?workspace=1" class="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 text-xs font-bold transition inline-flex items-center gap-2">
+                    <img src="asset/icons/pricing-grid.svg" alt="" class="w-3.5 h-3.5">
+                    <span>Mở Bảng Tiến Độ Gantt</span>
+                </a>
+                <button onclick="logoutAdmin()" class="px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-semibold transition" title="Đăng xuất">
+                    Đăng xuất
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- Quick KPI Strip (4 Minimalist Cards) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div class="card-surface rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-slate-400 font-semibold">Tài khoản nhân sự</div>
+                    <div id="kpi-seats" class="text-xl sm:text-2xl font-black text-white mt-0.5">0 / 15</div>
+                    <div id="kpi-waiting-note" class="text-[11px] text-slate-400 font-semibold mt-0.5">0 đang ở phòng chờ</div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
+                    <img src="asset/icons/filter-user.svg" alt="" class="w-4 h-4 invert opacity-80">
+                </div>
+            </div>
+
+            <div class="card-surface rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-slate-400 font-semibold">Dung lượng Cloud R2</div>
+                    <div id="kpi-storage" class="text-xl sm:text-2xl font-black text-white mt-0.5">0 MB / 10 GB</div>
+                    <div id="kpi-storage-pct" class="text-[11px] text-slate-400 font-semibold mt-0.5">Còn trống 100%</div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
+                    <img src="asset/icons/storage-clean.svg" alt="" class="w-4 h-4 invert opacity-80">
+                </div>
+            </div>
+
+            <div class="card-surface rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-slate-400 font-semibold">Dự án đang vận hành</div>
+                    <div id="kpi-projects" class="text-xl sm:text-2xl font-black text-white mt-0.5">0</div>
+                    <div id="kpi-projects-limit" class="text-[11px] text-slate-400 font-semibold mt-0.5">Tối đa theo gói</div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
+                    <img src="asset/icons/filter-all.svg" alt="" class="w-4 h-4 invert opacity-80">
+                </div>
+            </div>
+
+            <div class="card-surface rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-slate-400 font-semibold">Trợ lý AI Mina (Admin)</div>
+                    <div id="kpi-ai" class="text-xl sm:text-2xl font-black text-white mt-0.5">0 / 25</div>
+                    <div class="text-[11px] text-slate-400 font-semibold mt-0.5">Lượt hỏi hôm nay</div>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
+                    <img src="asset/icons/chart-analytics.svg" alt="" class="w-4 h-4 invert opacity-80">
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Clean Navigation Tabs (Minimalist Monochrome Active Pill) -->
+        <div class="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+            <button onclick="switchAdminTab('staff')" id="tab-btn-staff" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-white text-slate-950 border border-slate-200 transition inline-flex items-center gap-2">
+                <img src="asset/icons/filter-user.svg" alt="" class="w-3.5 h-3.5">
+                <span>1. Nhân Sự & QR Phòng Chờ</span>
+                <span id="badge-waiting-count" class="hidden px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black">0</span>
+            </button>
+            <button onclick="switchAdminTab('projects')" id="tab-btn-projects" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition inline-flex items-center gap-2">
+                <img src="asset/icons/storage-clean.svg" alt="" class="w-3.5 h-3.5 invert opacity-75">
+                <span>2. Dự Án & Giải Phóng Dung Lượng</span>
+            </button>
+            <button onclick="switchAdminTab('analytics')" id="tab-btn-analytics" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition inline-flex items-center gap-2">
+                <img src="asset/icons/chart-analytics.svg" alt="" class="w-3.5 h-3.5 invert opacity-75">
+                <span>3. Báo Cáo Hiệu Suất Nhân Sự</span>
+            </button>
+            <button onclick="switchAdminTab('branding')" id="tab-btn-branding" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition inline-flex items-center gap-2">
+                <img src="asset/icons/admin-sliders.svg" alt="" class="w-3.5 h-3.5 invert opacity-75">
+                <span>4. Thương Hiệu Logo & Gói Cước</span>
+            </button>
+        </div>
+
+        <!-- ============================================================================
+             TAB 1: NHÂN SỰ, QR PHÒNG CHỜ & QUYỀN HẠN 1-CHẠM
+             ============================================================================ -->
+        <section id="tab-panel-staff" class="space-y-5">
+            <!-- Top Action Bar -->
+            <div class="card-surface rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm sm:text-base font-bold text-white">Quản Lý Nhân Sự & Phân Quyền Công Việc Tối Giản</h2>
+                    <p class="text-xs text-slate-400">Chạm trực tiếp vào nút quyền hạn để đổi giữa <strong class="text-slate-200">Chỉ báo cáo tiến độ</strong> và <strong class="text-slate-200">Tự chủ tạo & sửa việc riêng</strong>.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="openQrInviteModal()" class="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-950 border border-slate-300 text-xs font-bold transition inline-flex items-center gap-1.5">
+                        <img src="asset/icons/qr-scan.svg" alt="" class="w-3.5 h-3.5">
+                        <span>Tạo Mã QR Phòng Chờ</span>
+                    </button>
+                    <button onclick="openDeptManagerModal()" class="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold transition inline-flex items-center gap-1.5">
+                        <img src="asset/icons/filter-all.svg" alt="" class="w-3.5 h-3.5 invert opacity-80">
+                        <span>Thẻ Phòng Ban</span>
+                    </button>
+                    <button onclick="openAddUserModal()" class="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold transition">
+                        + Thêm 1 nhân sự
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active QR Invites Strip (if any) -->
+            <div id="active-qr-strip" class="hidden card-surface rounded-2xl p-4 border border-emerald-500/30">
+                <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-xs font-extrabold text-emerald-300 uppercase tracking-wider">📱 Các Mã QR Phòng Chờ Đang Mở Quét</span>
+                    <span class="text-[11px] text-slate-400">Chống quét trùng 2 lần trên cùng 1 điện thoại</span>
+                </div>
+                <div id="active-qr-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+
+            <!-- Waiting Room Approval Banner (Only visible when employees are waiting) -->
+            <div id="waiting-room-box" class="hidden card-surface rounded-2xl p-4 border-2 border-amber-500/50 bg-amber-950/15 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">⏳</span>
+                        <div>
+                            <h3 class="text-sm font-black text-amber-300">Phòng Chờ Nhân Sự Mới Quét QR</h3>
+                            <p class="text-xs text-slate-300">Chọn phòng ban rồi bấm Duyệt để cấp quyền vào làm việc (Từ chối sẽ hoàn lại suất QR).</p>
+                        </div>
+                    </div>
+                    <button onclick="approveAllWaitingRoom()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition">
+                        ✓ Duyệt Tất Cả Vào Làm Việc
+                    </button>
+                </div>
+                <div id="waiting-room-list" class="space-y-2"></div>
+            </div>
+
+            <!-- Clean 1-Row-Per-User Table -->
+            <div class="card-surface rounded-2xl overflow-hidden">
+                <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <input id="staff-search-input" type="text" oninput="renderUsersTable()" placeholder="🔍 Tìm tên, mã đăng nhập, bộ phận..."
+                               class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white w-64 focus:outline-none focus:border-sky-400">
+                    </div>
+                    <div class="text-[11px] text-slate-400">
+                        💡 <strong>Mẹo:</strong> Khi dự án kết thúc, bấm <strong>Khóa ghế</strong> để thu hồi suất nhân sự cấp cho dự án mới.
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50">
+                                <th class="py-3 px-4">Nhân sự & Tài khoản</th>
+                                <th class="py-3 px-3">Mật khẩu</th>
+                                <th class="py-3 px-3">Bộ phận (Thẻ)</th>
+                                <th class="py-3 px-3">Vai trò</th>
+                                <th class="py-3 px-3">Quyền hạn trên Task (Chạm để đổi)</th>
+                                <th class="py-3 px-4 text-right">Trạng thái ghế</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body" class="divide-y divide-slate-800/70 text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================================
+             TAB 2: DỰ ÁN, SAO LƯU VỀ MÁY & GIẢI PHÓNG DUNG LƯỢNG GB
+             ============================================================================ -->
+        <section id="tab-panel-projects" class="hidden space-y-5">
+            <!-- Cloud Storage Bar & Buy Extra GB -->
+            <div class="card-surface rounded-xl p-5">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+                    <div>
+                        <h2 class="text-sm sm:text-base font-bold text-white">Dung Lượng Lưu Trữ Đính Kèm (Cloudflare R2)</h2>
+                        <p class="text-xs text-slate-400">Lưu trữ bản vẽ PDF, hình ảnh hiện trường, video nghiệm thu, hồ sơ Excel/Word/CAD.</p>
+                    </div>
+                    <button onclick="openBuyStorageModal()" class="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-950 border border-slate-300 text-xs font-bold transition">
+                        + Mua Thêm Dung Lượng (+GB)
+                    </button>
+                </div>
+
+                <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800 mb-2">
+                    <div id="storage-progress-bar" class="h-full bg-sky-500 transition-all duration-500" style="width: 2%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400 font-semibold">
+                    <span id="storage-detail-left">Đã dùng: 0 MB</span>
+                    <span id="storage-detail-right">Tổng dung lượng: 10 GB</span>
+                </div>
+            </div>
+
+            <!-- Projects Lifecycle Management Table -->
+            <div class="card-surface rounded-2xl overflow-hidden">
+                <div class="p-4 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-sm font-black text-white">Danh Sách Dự Án & Công Cụ Bảo Toàn Dữ Liệu Khách Hàng</h3>
+                        <p class="text-xs text-slate-400">Tải toàn bộ dữ liệu dự án về máy tính, đóng băng dự án đã hoàn thành hoặc xóa file đính kèm để lấy lại GB trống.</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50">
+                                <th class="py-3 px-4">Tên dự án / Công trình</th>
+                                <th class="py-3 px-3">Phân khu</th>
+                                <th class="py-3 px-3">Số đầu việc</th>
+                                <th class="py-3 px-3">Dung lượng file</th>
+                                <th id="th-enterprise-admin" class="hidden py-3 px-3">Admin Con (Tập đoàn)</th>
+                                <th class="py-3 px-3">Trạng thái</th>
+                                <th class="py-3 px-4 text-right">Thao tác Lưu trữ & Giải phóng GB</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projects-table-body" class="divide-y divide-slate-800/70 text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================================
+             TAB 3: BÁO CÁO HIỆU SUẤT NHÂN VIÊN (THEO CÔNG TRÌNH / THÁNG / NĂM)
+             ============================================================================ -->
+        <section id="tab-panel-analytics" class="hidden space-y-5">
+            <!-- Filters Bar -->
+            <div class="card-surface rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Lọc theo Công trình / Dự án</label>
+                        <select id="filter-analytics-project" onchange="loadPerformanceAnalytics()" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                            <option value="ALL">🌐 Tất cả công trình</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Theo Năm</label>
+                        <select id="filter-analytics-year" onchange="loadPerformanceAnalytics()" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                            <option value="ALL">Tất cả các năm</option>
+                            <option value="2026" selected>Năm 2026</option>
+                            <option value="2025">Năm 2025</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Theo Tháng</label>
+                        <select id="filter-analytics-month" onchange="loadPerformanceAnalytics()" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                            <option value="ALL">Cả năm (12 tháng)</option>
+                            <option value="1">Tháng 01</option>
+                            <option value="2">Tháng 02</option>
+                            <option value="3">Tháng 03</option>
+                            <option value="4">Tháng 04</option>
+                            <option value="5">Tháng 05</option>
+                            <option value="6">Tháng 06</option>
+                            <option value="7">Tháng 07</option>
+                            <option value="8">Tháng 08</option>
+                            <option value="9">Tháng 09</option>
+                            <option value="10">Tháng 10</option>
+                            <option value="11">Tháng 11</option>
+                            <option value="12">Tháng 12</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="exportPerformanceExcel()" class="px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-extrabold transition flex items-center gap-1.5">
+                    <img src="./asset/icons/excel-template.svg" class="w-3.5 h-3.5 invert opacity-85" alt=""> Xuất Báo Cáo Hiệu Suất (.xlsx)
+                </button>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-slate-400">Tổng đầu việc</div>
+                    <div id="stat-total-tasks" class="text-2xl font-black text-white mt-1">0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-emerald-400">Hoàn thành đúng hạn</div>
+                    <div id="stat-completed-ontime" class="text-2xl font-black text-emerald-400 mt-1">0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-sky-400">Đang triển khai</div>
+                    <div id="stat-in-progress" class="text-2xl font-black text-sky-400 mt-1">0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-rose-400">Quá hạn / Trễ tiến độ</div>
+                    <div id="stat-overdue" class="text-2xl font-black text-rose-400 mt-1">0</div>
+                </div>
+            </div>
+
+            <!-- Staff Performance Table -->
+            <div class="card-surface rounded-2xl overflow-hidden">
+                <div class="p-4 bg-slate-900/90 border-b border-slate-800">
+                    <h3 class="text-sm font-black text-white">Bảng Xếp Hạng Hiệu Suất Nhân Sự Thực Tế</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50">
+                                <th class="py-3 px-4">Nhân sự</th>
+                                <th class="py-3 px-3">Bộ phận</th>
+                                <th class="py-3 px-3">Tổng việc</th>
+                                <th class="py-3 px-3">Đã xong (Đúng hạn)</th>
+                                <th class="py-3 px-3">Đang chạy</th>
+                                <th class="py-3 px-3">Trễ hạn</th>
+                                <th class="py-3 px-4">Điểm Hiệu Suất & Tiến Độ TB</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analytics-staff-body" class="divide-y divide-slate-800/70 text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================================
+             TAB 4: THƯƠNG HIỆU CÔNG TY (LOGO) & GÓI CƯỚC VIETQR
+             ============================================================================ -->
+        <section id="tab-panel-branding" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left: Company Logo & White-Label Branding -->
+            <div class="lg:col-span-6 card-surface rounded-2xl p-6 space-y-4">
+                <div>
+                    <h2 class="text-base font-black text-white">Cá Nhân Hóa Thương Hiệu & Logo Công Ty</h2>
+                    <p class="text-xs text-slate-400">Logo và Tên công ty sẽ hiển thị trực tiếp ở góc trái màn hình làm việc Gantt của toàn bộ nhân sự.</p>
+                </div>
+
+                <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-900 border border-slate-800">
+                    <img id="brand-logo-preview" src="asset/logo.png" alt="Company Logo" class="w-16 h-16 rounded-2xl object-contain bg-white/5 p-1.5 border border-slate-700">
+                    <div class="space-y-2">
+                        <label for="brand-logo-file" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-extrabold cursor-pointer transition">
+                            <img src="./asset/icons/upload-cloud.svg" class="w-3.5 h-3.5 invert opacity-85" alt=""> Tải Ảnh Logo Công Ty Lên
+                        </label>
+                        <input id="brand-logo-file" type="file" accept="image/*" class="hidden" onchange="handleBrandLogoUpload(event)">
+                        <div class="text-[11px] text-slate-400">Hỗ trợ PNG, JPG, SVG, WebP (Tự động tối ưu sắc nét)</div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Tên Công ty hiển thị trên phần mềm</label>
+                        <input id="brand-company-name" type="text" placeholder="VD: CÔNG TY CỔ PHẦN XÂY DỰNG AN PHÁT"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Khẩu hiệu / Tiêu đề phụ (Slogan)</label>
+                        <input id="brand-slogan" type="text" placeholder="VD: Hệ thống điều phối tiến độ thi công chuẩn ISO"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                    </div>
+                    <div id="enterprise-domain-box" class="hidden">
+                        <label class="block text-xs font-bold text-amber-300 mb-1">Tên miền riêng (Custom Domain - Đặc quyền Gói Tập Đoàn)</label>
+                        <input id="brand-custom-domain" type="text" placeholder="VD: tiendo.tencongty.vn"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-amber-500/40 text-sm text-amber-300 font-mono focus:outline-none">
+                    </div>
+                </div>
+
+                <button onclick="saveCompanyBranding()" id="btn-save-branding" class="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                    Lưu Thương Hiệu & Áp Dụng Toàn Công Ty
+                </button>
+            </div>
+
+            <!-- Right: Plan Subscription & VietQR Renewal/Upgrade -->
+            <div class="lg:col-span-6 card-surface rounded-2xl p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-black text-white">Gói Cước Đang Sử Dụng & Gia Hạn Tự Động</h2>
+                        <p class="text-xs text-slate-400">Thanh toán VietQR kích hoạt tự động trong 5 giây qua cổng SePay.</p>
+                    </div>
+                    <span id="sub-current-plan" class="px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-black">BUSINESS</span>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+                    <div class="flex justify-between"><span class="text-slate-400">Mã định danh (Subdomain):</span><span id="sub-subdomain" class="font-mono font-bold text-sky-400"></span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Thời hạn gói cước:</span><span id="sub-expiry" class="font-bold text-emerald-400"></span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Đơn giá mua thêm +10 GB:</span><span id="sub-addon-price" class="font-bold text-amber-300"></span></div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="text-xs font-bold text-slate-300">Chọn gói cước muốn Gia hạn / Nâng cấp:</div>
+                    <div class="grid grid-cols-2 gap-2.5 text-xs">
+                        <button onclick="openPlanCheckoutModal('STARTER')" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-left transition">
+                            <div class="font-black text-white">STARTER (15 NV)</div>
+                            <div class="text-sky-400 font-bold mt-0.5">299.000đ/tháng</div>
+                        </button>
+                        <button onclick="openPlanCheckoutModal('BUSINESS')" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-sky-500/50 text-left transition">
+                            <div class="font-black text-sky-400">⭐ BUSINESS (40 NV)</div>
+                            <div class="text-white font-bold mt-0.5">599.000đ/tháng</div>
+                        </button>
+                        <button onclick="openPlanCheckoutModal('PRO')" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-left transition">
+                            <div class="font-black text-white">PRO (100 NV)</div>
+                            <div class="text-sky-400 font-bold mt-0.5">990.000đ/tháng</div>
+                        </button>
+                        <button onclick="openPlanCheckoutModal('ENTERPRISE')" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-left transition">
+                            <div class="font-black text-amber-300">👑 ENTERPRISE</div>
+                            <div class="text-white font-bold mt-0.5">4.500.000đ/tháng</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ============================================================================
+         MODAL A: GENERATE QR WAITING ROOM INVITE
+         ============================================================================ -->
+    <div id="qr-invite-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="card-surface w-full max-w-md rounded-3xl p-6 border border-slate-700 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-base font-black text-white">📱 Tạo Mã QR Đón Nhân Sự Vào Phòng Chờ</h3>
+                    <p class="text-xs text-slate-400">Gửi mã QR vào nhóm Zalo để nhân viên tự quét nhận tài khoản</p>
+                </div>
+                <button onclick="closeQrInviteModal()" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300">✕</button>
+            </div>
+
+            <div id="qr-create-step" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Tiêu đề đợt tuyển / nhóm nhận việc</label>
+                    <input id="qr-title-input" type="text" value="Phòng chờ nhân sự mới"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Số người tối đa được quét</label>
+                        <input id="qr-max-scans" type="number" min="1" max="500" value="10"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-emerald-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Gán sẵn Bộ phận</label>
+                        <select id="qr-default-dept" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"></select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Chế độ tiếp nhận khi nhân viên quét xong</label>
+                    <select id="qr-auto-approve" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white">
+                        <option value="0">⏳ Đưa vào Phòng Chờ để Admin bấm Duyệt & phân vai trò</option>
+                        <option value="1">⚡ Tự động kích hoạt ngay vào Bộ phận đã chọn</option>
+                    </select>
+                </div>
+
+                <button onclick="createQrInviteNow()" class="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                    Phát Hành Mã QR Ngay
+                </button>
+            </div>
+
+            <div id="qr-result-step" class="hidden text-center space-y-4">
+                <div class="bg-white p-4 rounded-2xl inline-block mx-auto shadow-xl">
+                    <img id="generated-qr-img" src="" alt="QR Invite" class="w-52 h-52 object-contain mx-auto">
+                </div>
+                <div class="text-xs text-slate-300">
+                    Giới hạn đúng <strong id="generated-qr-limit" class="text-emerald-400">10</strong> người quét • Chống 1 máy quét 2 lần
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="copyGeneratedJoinLink()" id="btn-copy-join-url" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-400 border border-slate-700">
+                        📋 Copy Link Gửi Zalo
+                    </button>
+                    <a id="btn-download-qr-img" href="#" target="_blank" download="QR_Phong_Cho_LTP.png" class="flex-1 py-2.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold">
+                        📥 Mở Ảnh QR Lớn
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================================
+         MODAL B: DEPARTMENT TAGS MANAGER
+         ============================================================================ -->
+    <div id="dept-manager-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="card-surface w-full max-w-md rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-black text-white">🏷️ Quản Lý Thẻ Phòng Ban / Bộ Phận</h3>
+                <button onclick="document.getElementById('dept-manager-modal').classList.add('hidden')" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300">✕</button>
+            </div>
+            <p class="text-xs text-slate-400">Tùy biến linh hoạt theo mô hình công ty của bạn (VD: Thiết kế, Mua hàng, Xưởng mộc, Giám sát MEP, Kế toán...).</p>
+            <div class="flex gap-2">
+                <input id="new-dept-name" type="text" placeholder="Nhập tên phòng ban / đội nhóm mới..."
+                       class="flex-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white">
+                <button onclick="addDepartmentTag()" class="px-4 py-2 rounded-xl bg-sky-500 text-white text-xs font-extrabold">+ Thêm</button>
+            </div>
+            <div id="dept-tags-list" class="max-h-60 overflow-y-auto space-y-2 pr-1"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================================
+         MODAL C: MANUAL ADD USER
+         ============================================================================ -->
+    <div id="add-user-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="card-surface w-full max-w-md rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-3.5">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-black text-white">➕ Thêm Nhanh 1 Tài Khoản Nhân Sự</h3>
+                <button onclick="document.getElementById('add-user-modal').classList.add('hidden')" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300">✕</button>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Họ và Tên nhân sự</label>
+                <input id="manual-user-fullname" type="text" placeholder="VD: Trần Quốc Tuấn" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Mã đăng nhập (Username)</label>
+                    <input id="manual-user-username" type="text" placeholder="VD: tuan.tq" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-sky-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Mật khẩu</label>
+                    <input id="manual-user-password" type="text" value="123456" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-amber-300">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Bộ phận</label>
+                    <select id="manual-user-dept" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Vai trò</label>
+                    <select id="manual-user-role" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white">
+                        <option value="STAFF">Nhân viên (STAFF)</option>
+                        <option value="DEPT_ADMIN">Trưởng bộ phận (DEPT_ADMIN)</option>
+                        <option value="PROJECT_ADMIN" id="opt-role-project-admin" class="hidden">👑 Trưởng Ban QLDA (Admin Con)</option>
+                        <option value="ADMIN">Quản trị viên (ADMIN)</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Quyền hạn trên công việc</label>
+                <select id="manual-user-perm" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white">
+                    <option value="REPORT_ONLY">🔒 Chỉ báo cáo tiến độ, up file & ghi chú (Không được xóa task / sửa ngày)</option>
+                    <option value="AUTONOMOUS">🔓 Tự chủ tạo thêm việc mới, sửa ngày tháng & xóa việc của mình</option>
+                </select>
+            </div>
+            <button onclick="submitManualUser()" class="w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-extrabold text-xs">
+                Tạo Tài Khoản Nhân Sự
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================================
+         MODAL D: VIETQR CHECKOUT (STORAGE ADD-ON OR PLAN RENEWAL/UPGRADE)
+         ============================================================================ -->
+    <div id="vietqr-checkout-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="card-surface w-full max-w-md rounded-3xl p-6 border border-slate-700 shadow-2xl text-center space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 id="checkout-modal-title" class="text-base font-black text-white">💳 Thanh Toán Tự Động VietQR</h3>
+                <button onclick="closeCheckoutModal()" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300">✕</button>
+            </div>
+
+            <div id="checkout-config-step" class="space-y-3.5 text-left">
+                <div id="checkout-storage-options" class="hidden">
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Chọn mức dung lượng Cloud R2 muốn mua thêm</label>
+                    <select id="addon-gb-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-bold">
+                        <option value="10">+10 GB Cloud R2</option>
+                        <option value="20">+20 GB Cloud R2</option>
+                        <option value="50">+50 GB Cloud R2</option>
+                        <option value="100">+100 GB Cloud R2</option>
+                    </select>
+                </div>
+
+                <div id="checkout-plan-options" class="hidden">
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Chu kỳ thanh toán</label>
+                    <select id="checkout-cycle-select" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white font-bold">
+                        <option value="MONTHLY">Thanh toán 01 Tháng</option>
+                        <option value="YEARLY">Thanh toán 01 Năm (Tặng 2 tháng miễn phí)</option>
+                    </select>
+                </div>
+
+                <button onclick="generateAdminVietQrOrder()" class="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                    Lấy Mã QR Thanh Toán Tự Động
+                </button>
+            </div>
+
+            <div id="checkout-qr-step" class="hidden space-y-3">
+                <div class="bg-white p-3.5 rounded-2xl inline-block mx-auto">
+                    <img id="admin-vietqr-img" src="" class="w-52 h-52 object-contain mx-auto" alt="VietQR">
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-xs space-y-1.5 text-left">
+                    <div class="flex justify-between"><span class="text-slate-400">Số tiền:</span><span id="admin-qr-amount" class="font-extrabold text-emerald-400"></span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Nội dung CK:</span><span id="admin-qr-code" class="font-mono font-extrabold text-sky-400"></span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Trạng thái:</span><span id="admin-qr-status" class="text-amber-300 font-bold">Đang chờ SePay xác nhận...</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let adminState = {
+            tenant: null,
+            departments: [],
+            users: [],
+            qrInvites: [],
+            projects: [],
+            analytics: null
+        };
+        let lastGeneratedJoinUrl = "";
+        let currentLogoDataUrl = "";
+        let currentCheckoutType = "STORAGE_ADDON";
+        let currentCheckoutPlan = "BUSINESS";
+        let adminOrderPollTimer = null;
+
+        function getAuthHeaders() {
+            let token = localStorage.getItem("ltp_jwt_token") || "";
+            if (!token) {
+                try {
+                    const sess = JSON.parse(localStorage.getItem("CRYSTAL_ACTIVE_SESSION_V2") || "null");
+                    if (sess && sess.token) token = sess.token;
+                } catch (e) {}
+            }
+            return {
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
+            };
+        }
+
+        function formatBytes(bytes) {
+            const b = Number(bytes || 0);
+            if (b <= 0) return "0 MB";
+            const gb = b / (1024 * 1024 * 1024);
+            if (gb >= 1) return gb.toFixed(2) + " GB";
+            return (b / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        function switchAdminTab(tab) {
+            ["staff", "projects", "analytics", "branding"].forEach(t => {
+                document.getElementById("tab-panel-" + t).classList.toggle("hidden", t !== tab);
+                const btn = document.getElementById("tab-btn-" + t);
+                const ico = btn ? btn.querySelector("img") : null;
+                if (t === tab) {
+                    btn.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold bg-white text-slate-950 border border-slate-200 transition flex items-center gap-2";
+                    if (ico) ico.className = "w-4 h-4 opacity-90";
+                } else {
+                    btn.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-extrabold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition flex items-center gap-2";
+                    if (ico) ico.className = "w-4 h-4 invert opacity-80";
+                }
+            });
+            if (tab === "analytics") {
+                loadPerformanceAnalytics();
+            }
+        }
+
+        async function loadAdminOverview() {
+            try {
+                const res = await fetch("/api/admin/overview", { headers: getAuthHeaders() });
+                if (res.status === 401 || res.status === 403) {
+                    window.location.href = "landing.html";
+                    return;
+                }
+                const data = await res.json();
+                if (!res.ok) return;
+
+                adminState.tenant = data.tenant;
+                adminState.departments = data.departments || [];
+                adminState.users = data.users || [];
+                adminState.qrInvites = data.qrInvites || [];
+                adminState.projects = data.projects || [];
+
+                renderHeaderAndKpis();
+                renderActiveQrInvites();
+                renderWaitingRoomAndUsers();
+                renderProjectsTable();
+                renderBrandingTab();
+                populateDepartmentSelects();
+            } catch (err) {
+                console.error("Failed to load admin overview:", err);
+            }
+        }
+
+        function renderHeaderAndKpis() {
+            const t = adminState.tenant;
+            if (!t) return;
+
+            document.getElementById("header-company-name").textContent = t.companyName || "LTP Progress Hub";
+            document.getElementById("header-plan-badge").textContent = t.planCode || "BUSINESS";
+            if (t.logoUrl) {
+                document.getElementById("header-company-logo").src = t.logoUrl;
+                document.getElementById("brand-logo-preview").src = t.logoUrl;
+            }
+            document.getElementById("header-sub-info").textContent =
+                `Mã công ty: ${t.subdomain}.ltp-soft.com • Hạn gói: ${t.planExpiresAt ? new Date(t.planExpiresAt).toLocaleDateString("vi-VN") : "Không giới hạn"}`;
+
+            const activeUsers = adminState.users.filter(u => u.status === "ACTIVE").length;
+            const waitingUsers = adminState.users.filter(u => u.status === "WAITING_ROOM").length;
+            const maxUsersLabel = t.maxUsers >= 999999 ? "Không giới hạn" : t.maxUsers;
+            document.getElementById("kpi-seats").textContent = `${activeUsers} / ${maxUsersLabel}`;
+            document.getElementById("kpi-waiting-note").textContent =
+                waitingUsers > 0 ? `⏳ ${waitingUsers} người đang chờ duyệt` : "✓ Phòng chờ trống";
+
+            const badgeW = document.getElementById("badge-waiting-count");
+            if (waitingUsers > 0) {
+                badgeW.textContent = waitingUsers;
+                badgeW.classList.remove("hidden");
+            } else {
+                badgeW.classList.add("hidden");
+            }
+
+            const usedBytes = Number(t.storageUsedBytes || 0);
+            const limitBytes = Number(t.storageLimitBytes || (10 * 1024 * 1024 * 1024));
+            const pct = Math.min(100, Math.round((usedBytes / Math.max(1, limitBytes)) * 100));
+            document.getElementById("kpi-storage").textContent = `${formatBytes(usedBytes)} / ${formatBytes(limitBytes)}`;
+            document.getElementById("kpi-storage-pct").textContent = `Đã dùng ${pct}% dung lượng`;
+
+            document.getElementById("storage-progress-bar").style.width = `${Math.max(2, pct)}%`;
+            document.getElementById("storage-detail-left").textContent = `Đã sử dụng: ${formatBytes(usedBytes)}`;
+            document.getElementById("storage-detail-right").textContent = `Tổng dung lượng gói: ${formatBytes(limitBytes)}`;
+
+            document.getElementById("kpi-projects").textContent = adminState.projects.length;
+            document.getElementById("kpi-projects-limit").textContent =
+                t.maxProjects >= 999999 ? "Không giới hạn dự án" : `Tối đa ${t.maxProjects} dự án`;
+
+            document.getElementById("kpi-ai").textContent = `${t.aiQueriesUsedToday || 0} / ${t.aiDailyLimit || 50}`;
+
+            // Enterprise White-Label specific UI unlocks
+            const isEnterprise = t.planCode === "ENTERPRISE";
+            document.getElementById("th-enterprise-admin").classList.toggle("hidden", !isEnterprise);
+            document.getElementById("enterprise-domain-box").classList.toggle("hidden", !isEnterprise);
+            document.getElementById("opt-role-project-admin").classList.toggle("hidden", !isEnterprise);
+        }
+
+        function populateDepartmentSelects() {
+            const depts = adminState.departments.length
+                ? adminState.departments
+                : [{ code: "DESIGN", name: "Thiết kế" }, { code: "SITE", name: "Thi công" }, { code: "OFFICE", name: "Văn phòng" }];
+
+            const qrSelect = document.getElementById("qr-default-dept");
+            const manualSelect = document.getElementById("manual-user-dept");
+            const optionsHtml = depts.map(d => `<option value="${d.name}">${d.name}</option>`).join("");
+            if (qrSelect) qrSelect.innerHTML = optionsHtml;
+            if (manualSelect) manualSelect.innerHTML = optionsHtml;
+
+            // Project filter in Analytics tab
+            const projFilter = document.getElementById("filter-analytics-project");
+            if (projFilter) {
+                const currentVal = projFilter.value || "ALL";
+                projFilter.innerHTML = `<option value="ALL">🌐 Tất cả công trình (${adminState.projects.length})</option>` +
+                    adminState.projects.map(p => `<option value="${p.id}">📁 ${p.name}</option>`).join("");
+                projFilter.value = currentVal;
+            }
+        }
+
+        function renderActiveQrInvites() {
+            const activeList = (adminState.qrInvites || []).filter(i => i.status === "ACTIVE" && i.scansUsed < i.maxScans);
+            const strip = document.getElementById("active-qr-strip");
+            const container = document.getElementById("active-qr-list");
+
+            if (!activeList.length) {
+                strip.classList.add("hidden");
+                return;
+            }
+            strip.classList.remove("hidden");
+            container.innerHTML = activeList.map(inv => {
+                const joinUrl = `${window.location.origin}/join.html?code=${encodeURIComponent(inv.inviteCode)}`;
+                return `
+                    <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+                        <div>
+                            <div class="text-xs font-bold text-white">${inv.title || "Phòng chờ QR"}</div>
+                            <div class="text-[11px] text-emerald-400 font-semibold">Đã quét: ${inv.scansUsed}/${inv.maxScans} người • Bộ phận: ${inv.defaultDepartment || "Tự chọn"}</div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="navigator.clipboard.writeText('${joinUrl}'); alert('Đã copy link QR Phòng chờ!');"
+                                    class="px-2.5 py-1.5 rounded-lg bg-sky-500/20 text-sky-300 text-[11px] font-bold">
+                                Copy Link
+                            </button>
+                            <button onclick="revokeQrInvite('${inv.inviteCode}')"
+                                    class="px-2 py-1.5 rounded-lg bg-rose-500/15 text-rose-300 text-[11px] font-bold" title="Đóng mã QR này">
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderWaitingRoomAndUsers() {
+            const waitingUsers = adminState.users.filter(u => u.status === "WAITING_ROOM");
+            const waitingBox = document.getElementById("waiting-room-box");
+            const waitingList = document.getElementById("waiting-room-list");
+
+            const depts = adminState.departments.length
+                ? adminState.departments
+                : [{ name: "Thiết kế" }, { name: "Thi công" }, { name: "Văn phòng" }];
+
+            if (waitingUsers.length > 0) {
+                waitingBox.classList.remove("hidden");
+                waitingList.innerHTML = waitingUsers.map(u => {
+                    const deptOpts = depts.map(d =>
+                        `<option value="${d.name}" ${d.name === u.department ? "selected" : ""}>${d.name}</option>`
+                    ).join("");
+                    return `
+                        <div class="p-3 rounded-xl bg-slate-900/95 border border-amber-500/30 flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName)}&background=0284c7&color=fff`}"
+                                     class="w-10 h-10 rounded-xl object-cover border border-amber-400/50">
+                                <div>
+                                    <div class="text-xs font-extrabold text-white">${u.fullName} <span class="text-sky-400 font-mono">(@${u.username})</span></div>
+                                    <div class="text-[11px] text-slate-400">SĐT: ${u.phone || "---"} • Mật khẩu: <span class="font-mono text-amber-300">${u.plainPasswordHint || "123456"}</span></div>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <select id="wait-dept-${u.id}" class="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white">
+                                    ${deptOpts}
+                                </select>
+                                <select id="wait-perm-${u.id}" class="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-sky-300">
+                                    <option value="REPORT_ONLY">🔒 Chỉ báo cáo tiến độ</option>
+                                    <option value="AUTONOMOUS">🔓 Tự chủ việc của mình</option>
+                                </select>
+                                <button onclick="decideWaitingUser('${u.id}', 'APPROVE')" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs">
+                                    ✓ Duyệt
+                                </button>
+                                <button onclick="decideWaitingUser('${u.id}', 'REJECT')" class="px-2.5 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold text-xs">
+                                    ✕ Từ chối
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } else {
+                waitingBox.classList.add("hidden");
+            }
+
+            renderUsersTable();
+        }
+
+        function renderUsersTable() {
+            const q = (document.getElementById("staff-search-input")?.value || "").trim().toLowerCase();
+            const tbody = document.getElementById("users-table-body");
+            const depts = adminState.departments.length
+                ? adminState.departments
+                : [{ name: "Thiết kế" }, { name: "Thi công" }, { name: "Văn phòng" }];
+            const isEnterprise = adminState.tenant?.planCode === "ENTERPRISE";
+
+            const rows = adminState.users
+                .filter(u => u.status !== "WAITING_ROOM")
+                .filter(u => {
+                    if (!q) return true;
+                    return (
+                        String(u.fullName || "").toLowerCase().includes(q) ||
+                        String(u.username || "").toLowerCase().includes(q) ||
+                        String(u.department || "").toLowerCase().includes(q)
+                    );
+                });
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">Chưa có nhân sự nào khớp bộ lọc. Hãy bấm "Tạo Mã QR Phòng Chờ" để thêm nhanh nhân viên!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(u => {
+                const isLocked = u.status === "LOCKED";
+                const isReportOnly = (u.taskPermissionMode || "REPORT_ONLY") === "REPORT_ONLY";
+                const avatar = u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName || u.username)}&background=0284c7&color=fff`;
+
+                const deptOptions = depts.map(d =>
+                    `<option value="${d.name}" ${d.name === u.department ? "selected" : ""}>${d.name}</option>`
+                ).join("");
+
+                return `
+                    <tr class="hover:bg-slate-900/40 transition ${isLocked ? "opacity-50" : ""}">
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${avatar}" class="w-9 h-9 rounded-xl object-cover border border-slate-700 shrink-0" alt="">
+                                <div>
+                                    <div class="font-bold text-white">${u.fullName}</div>
+                                    <div class="text-[11px] font-mono text-sky-400">@${u.username} ${u.phone ? `• ${u.phone}` : ""}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <div class="flex items-center gap-1.5">
+                                <span id="pw-mask-${u.id}" class="font-mono text-amber-300 text-xs">••••••</span>
+                                <button onclick="togglePasswordReveal('${u.id}', '${(u.plainPasswordHint || "123456").replace(/'/g, "")}')"
+                                        class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[11px]" title="Xem / Đổi mật khẩu">👁️</button>
+                                <button onclick="promptResetPassword('${u.id}', '${u.fullName.replace(/'/g, "")}')"
+                                        class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300" title="Đặt mật khẩu mới">Đổi</button>
+                            </div>
+                        </td>
+                        <td class="py-3 px-3">
+                            <select onchange="quickUpdateUser('${u.id}', { department: this.value, deptTags: [this.value] })"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                                ${deptOptions}
+                            </select>
+                        </td>
+                        <td class="py-3 px-3">
+                            <select onchange="quickUpdateUser('${u.id}', { role: this.value })"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                                <option value="STAFF" ${u.role === "STAFF" ? "selected" : ""}>Nhân viên</option>
+                                <option value="DEPT_ADMIN" ${u.role === "DEPT_ADMIN" ? "selected" : ""}>Trưởng bộ phận</option>
+                                ${isEnterprise ? `<option value="PROJECT_ADMIN" ${u.role === "PROJECT_ADMIN" ? "selected" : ""}>👑 Admin Con (Dự án)</option>` : ""}
+                                <option value="ADMIN" ${u.role === "ADMIN" || u.role === "BOSS" ? "selected" : ""}>Admin Tổng</option>
+                            </select>
+                        </td>
+                        <td class="py-3 px-3">
+                            ${["ADMIN", "BOSS"].includes(u.role)
+                                ? `<span class="text-[11px] font-bold text-amber-300">👑 Toàn quyền Quản trị</span>`
+                                : `<button onclick="quickUpdateUser('${u.id}', { taskPermissionMode: '${isReportOnly ? "AUTONOMOUS" : "REPORT_ONLY"}' })"
+                                           class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${isReportOnly ? "perm-pill-report" : "perm-pill-auto"}">
+                                       ${isReportOnly
+                                           ? "🔒 Chỉ báo cáo tiến độ & up file (Khóa xóa/ngày)"
+                                           : "🔓 Tự chủ tạo, sửa ngày & xóa việc của mình"}
+                                   </button>`
+                            }
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            ${["ADMIN", "BOSS"].includes(u.role)
+                                ? `<span class="text-[11px] text-emerald-400 font-bold">Mặc định</span>`
+                                : `<button onclick="quickUpdateUser('${u.id}', { status: '${isLocked ? "ACTIVE" : "LOCKED"}' })"
+                                           class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                               isLocked
+                                                   ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                                   : "bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border-slate-700"
+                                           }">
+                                       ${isLocked ? "🔓 Mở lại ghế" : "🔒 Khóa / Thu hồi ghế"}
+                                   </button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function togglePasswordReveal(userId, plainPw) {
+            const el = document.getElementById("pw-mask-" + userId);
+            if (!el) return;
+            el.textContent = el.textContent === "••••••" ? plainPw : "••••••";
+        }
+
+        async function promptResetPassword(userId, name) {
+            const newPassword = prompt(`Nhập mật khẩu mới cho nhân sự [${name}]:`, "123456");
+            if (!newPassword || !newPassword.trim()) return;
+            await quickUpdateUser(userId, { newPassword: newPassword.trim() });
+        }
+
+        async function quickUpdateUser(userId, fields) {
+            try {
+                const res = await fetch("/api/admin/users", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action: "UPDATE", userId, ...fields })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || "Không thể cập nhật nhân sự.");
+                    return;
+                }
+                await loadAdminOverview();
+            } catch (e) {
+                alert("Lỗi kết nối khi cập nhật nhân sự.");
+            }
+        }
+
+        async function decideWaitingUser(userId, decision) {
+            const deptEl = document.getElementById("wait-dept-" + userId);
+            const permEl = document.getElementById("wait-perm-" + userId);
+            const department = deptEl ? deptEl.value : "Thi công";
+            const taskPermissionMode = permEl ? permEl.value : "REPORT_ONLY";
+
+            try {
+                const res = await fetch("/api/admin/waiting-room", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        action: decision,
+                        userId,
+                        department,
+                        deptTags: [department],
+                        taskPermissionMode
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || "Không thể xử lý phòng chờ.");
+                    return;
+                }
+                await loadAdminOverview();
+            } catch (e) {}
+        }
+
+        async function approveAllWaitingRoom() {
+            const waitingUsers = adminState.users.filter(u => u.status === "WAITING_ROOM");
+            for (const u of waitingUsers) {
+                await decideWaitingUser(u.id, "APPROVE");
+            }
+        }
+
+        function renderProjectsTable() {
+            const tbody = document.getElementById("projects-table-body");
+            const isEnterprise = adminState.tenant?.planCode === "ENTERPRISE";
+            const projects = adminState.projects || [];
+
+            if (!projects.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Chưa có dự án nào được tạo.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = projects.map(p => {
+                const isClosed = p.status === "CLOSED" || p.status === "ARCHIVED";
+                return `
+                    <tr class="hover:bg-slate-900/40 transition">
+                        <td class="py-3.5 px-4 font-bold text-white">${p.name}</td>
+                        <td class="py-3.5 px-3">
+                            <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold">${p.type || "PUBLIC"}</span>
+                        </td>
+                        <td class="py-3.5 px-3 font-bold text-sky-400">${p.taskCount || 0} việc</td>
+                        <td class="py-3.5 px-3 font-semibold text-emerald-400">${formatBytes(p.storageUsedBytes || 0)}</td>
+                        <td class="${isEnterprise ? "" : "hidden"} py-3.5 px-3">
+                            <span class="text-xs text-amber-300 font-semibold">${p.projectAdminName || "Admin Tổng"}</span>
+                        </td>
+                        <td class="py-3.5 px-3">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                isClosed ? "bg-amber-500/15 text-amber-300 border border-amber-500/30" : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                            }">
+                                ${isClosed ? "🔒 Đã đóng lưu trữ" : "🟢 Đang hoạt động"}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="inline-flex flex-wrap items-center justify-end gap-1.5">
+                                <button onclick="downloadProjectBackup('${p.id}')"
+                                        class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-bold transition inline-flex items-center gap-1"
+                                        title="Tải toàn bộ dữ liệu dự án về máy tính (Excel & JSON)">
+                                    <img src="./asset/icons/excel-template.svg" class="w-3.5 h-3.5 invert opacity-85" alt=""> Tải về máy
+                                </button>
+                                <button onclick="purgeProjectFiles('${p.id}', '${p.name.replace(/'/g, "")}')"
+                                        class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-bold transition inline-flex items-center gap-1"
+                                        title="Xóa file đính kèm để giải phóng dung lượng GB, giữ nguyên lịch sử tiến độ Gantt">
+                                    <img src="./asset/icons/storage-clean.svg" class="w-3.5 h-3.5 invert opacity-85" alt=""> Giải phóng GB
+                                </button>
+                                <button onclick="toggleProjectClose('${p.id}', '${isClosed ? "REOPEN" : "CLOSE"}')"
+                                        class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-bold transition inline-flex items-center gap-1">
+                                    <img src="./asset/icons/vault-lock.svg" class="w-3.5 h-3.5 invert opacity-85" alt=""> ${isClosed ? "Mở lại" : "Lưu & Đóng"}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        async function downloadProjectBackup(projectId) {
+            try {
+                const res = await fetch("/api/admin/project-action", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action: "EXPORT_BACKUP", projectId })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.backup) {
+                    alert(data.error || "Không thể xuất dữ liệu dự án.");
+                    return;
+                }
+
+                // 1. Download Excel (.xlsx) summary for easy viewing
+                if (window.XLSX && Array.isArray(data.backup.tasks)) {
+                    const rows = data.backup.tasks.map((t, idx) => ({
+                        "STT": idx + 1,
+                        "Bộ phận": t.dept || "",
+                        "Nhóm việc (Tag)": t.section || "",
+                        "Tên công việc": t.name || "",
+                        "Người phụ trách": t.assignee || "",
+                        "Bắt đầu": t.start || "",
+                        "Kết thúc": t.end || "",
+                        "Tiến độ (%)": t.pct || 0,
+                        "Hoàn thành": t.done ? "Đã xong" : "Đang làm",
+                        "Ghi chú": Array.isArray(t.comments) ? t.comments.map(c => `${c.author}: ${c.text}`).join(" | ") : ""
+                    }));
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    XLSX.utils.book_append_sheet(wb, ws, "Tien_Do_Du_An");
+                    const safeName = String(data.backup.project?.name || projectId).replace(/[^a-zA-Z0-9_-]/g, "_");
+                    XLSX.writeFile(wb, `SaoLuu_${safeName}.xlsx`);
+                }
+
+                // 2. Also download full raw JSON backup
+                const blob = new Blob([JSON.stringify(data.backup, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Backup_${projectId}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                alert("Lỗi khi tải dữ liệu dự án về máy.");
+            }
+        }
+
+        async function purgeProjectFiles(projectId, projectName) {
+            if (!confirm(`Bạn có chắc muốn xóa các file đính kèm trên hệ thống của dự án [${projectName}] để giải phóng dung lượng GB?\n\n(Toàn bộ biểu đồ tiến độ Gantt, ngày tháng và lịch sử nhân sự vẫn được giữ nguyên 100%).`)) {
+                return;
+            }
+            try {
+                const res = await fetch("/api/admin/project-action", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action: "PURGE_FILES", projectId })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || "Không thể giải phóng file.");
+                    return;
+                }
+                alert(`✅ Đã giải phóng thành công ${formatBytes(data.freedBytes || 0)} dung lượng lưu trữ!`);
+                await loadAdminOverview();
+            } catch (e) {}
+        }
+
+        async function toggleProjectClose(projectId, action) {
+            try {
+                await fetch("/api/admin/project-action", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action, projectId })
+                });
+                await loadAdminOverview();
+            } catch (e) {}
+        }
+
+        async function loadPerformanceAnalytics() {
+            const projectId = document.getElementById("filter-analytics-project")?.value || "ALL";
+            const year = document.getElementById("filter-analytics-year")?.value || "ALL";
+            const month = document.getElementById("filter-analytics-month")?.value || "ALL";
+
+            try {
+                const res = await fetch(`/api/admin/analytics?projectId=${encodeURIComponent(projectId)}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (!res.ok) return;
+                adminState.analytics = data;
+
+                document.getElementById("stat-total-tasks").textContent = data.summary?.totalTasks || 0;
+                document.getElementById("stat-completed-ontime").textContent = data.summary?.completedOnTime || 0;
+                document.getElementById("stat-in-progress").textContent = data.summary?.inProgress || 0;
+                document.getElementById("stat-overdue").textContent = data.summary?.overdue || 0;
+
+                const tbody = document.getElementById("analytics-staff-body");
+                const staffList = data.staffRanking || [];
+                if (!staffList.length) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Không có dữ liệu công việc trong kỳ đã chọn.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = staffList.map(s => {
+                    const score = s.efficiencyScore || 0;
+                    const barColor = score >= 80 ? "bg-emerald-400" : score >= 50 ? "bg-sky-400" : "bg-rose-400";
+                    return `
+                        <tr class="hover:bg-slate-900/40">
+                            <td class="py-3 px-4 font-bold text-white">${s.assignee}</td>
+                            <td class="py-3 px-3 text-slate-300">${s.department || "---"}</td>
+                            <td class="py-3 px-3 font-bold text-white">${s.total}</td>
+                            <td class="py-3 px-3 font-bold text-emerald-400">${s.completed} (${s.onTime})</td>
+                            <td class="py-3 px-3 font-bold text-sky-400">${s.inProgress}</td>
+                            <td class="py-3 px-3 font-bold text-rose-400">${s.overdue}</td>
+                            <td class="py-3 px-4">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-28 h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="h-full ${barColor}" style="width: ${Math.min(100, score)}%"></div>
+                                    </div>
+                                    <span class="font-extrabold text-white">${score} điểm (${s.avgProgress}%)</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join("");
+            } catch (e) {}
+        }
+
+        function exportPerformanceExcel() {
+            if (!window.XLSX || !adminState.analytics) return;
+            const rows = (adminState.analytics.staffRanking || []).map((s, idx) => ({
+                "Hạng": idx + 1,
+                "Nhân sự": s.assignee,
+                "Bộ phận": s.department || "",
+                "Tổng đầu việc": s.total,
+                "Đã hoàn thành": s.completed,
+                "Đúng hạn": s.onTime,
+                "Đang thực hiện": s.inProgress,
+                "Trễ hạn": s.overdue,
+                "Tiến độ TB (%)": s.avgProgress,
+                "Điểm hiệu suất": s.efficiencyScore
+            }));
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, "Hieu_Suat_Nhan_Su");
+            XLSX.writeFile(wb, `Bao_Cao_Hieu_Suat_LTP_Progress.xlsx`);
+        }
+
+        function renderBrandingTab() {
+            const t = adminState.tenant;
+            if (!t) return;
+            document.getElementById("brand-company-name").value = t.companyName || "";
+            document.getElementById("brand-slogan").value = t.slogan || "";
+            document.getElementById("brand-custom-domain").value = t.customDomain || "";
+            document.getElementById("sub-current-plan").textContent = t.planCode || "BUSINESS";
+            document.getElementById("sub-subdomain").textContent = `${t.subdomain}.ltp-soft.com`;
+            document.getElementById("sub-expiry").textContent = t.planExpiresAt
+                ? new Date(t.planExpiresAt).toLocaleDateString("vi-VN")
+                : "Đang hoạt động";
+            const addonPrices = { TRIAL: 49000, STARTER: 49000, BUSINESS: 35000, PRO: 25000, ENTERPRISE: 19000 };
+            const p = addonPrices[t.planCode] || 35000;
+            document.getElementById("sub-addon-price").textContent = `${p.toLocaleString("vi-VN")}đ / +10 GB`;
+        }
+
+        function handleBrandLogoUpload(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    const maxDim = 220;
+                    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    currentLogoDataUrl = canvas.toDataURL("image/png", 0.9);
+                    document.getElementById("brand-logo-preview").src = currentLogoDataUrl;
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveCompanyBranding() {
+            const companyName = document.getElementById("brand-company-name").value.trim();
+            const slogan = document.getElementById("brand-slogan").value.trim();
+            const customDomain = document.getElementById("brand-custom-domain").value.trim();
+            const btn = document.getElementById("btn-save-branding");
+            btn.textContent = "Đang lưu...";
+
+            try {
+                const res = await fetch("/api/admin/branding", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        companyName,
+                        slogan,
+                        customDomain,
+                        logoUrl: currentLogoDataUrl || adminState.tenant?.logoUrl || ""
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || "Không thể lưu thương hiệu.");
+                    btn.textContent = "💾 Lưu Thương Hiệu & Áp Dụng Toàn Công Ty";
+                    return;
+                }
+                btn.textContent = "✅ Đã lưu thành công!";
+                setTimeout(() => {
+                    btn.textContent = "💾 Lưu Thương Hiệu & Áp Dụng Toàn Công Ty";
+                }, 2000);
+                await loadAdminOverview();
+            } catch (e) {
+                btn.textContent = "💾 Lưu Thương Hiệu & Áp Dụng Toàn Công Ty";
+            }
+        }
+
+        // QR Invite Modal handlers
+        function openQrInviteModal() {
+            document.getElementById("qr-invite-modal").classList.remove("hidden");
+            document.getElementById("qr-create-step").classList.remove("hidden");
+            document.getElementById("qr-result-step").classList.add("hidden");
+        }
+        function closeQrInviteModal() {
+            document.getElementById("qr-invite-modal").classList.add("hidden");
+        }
+
+        async function createQrInviteNow() {
+            const title = document.getElementById("qr-title-input").value.trim();
+            const maxScans = Number(document.getElementById("qr-max-scans").value || 10);
+            const defaultDepartment = document.getElementById("qr-default-dept").value;
+            const autoApprove = document.getElementById("qr-auto-approve").value === "1";
+
+            try {
+                const res = await fetch("/api/admin/qr-invite", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action: "CREATE", title, maxScans, defaultDepartment, autoApprove })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.invite) {
+                    alert(data.error || "Không thể tạo mã QR.");
+                    return;
+                }
+
+                lastGeneratedJoinUrl = `${window.location.origin}/join.html?code=${encodeURIComponent(data.invite.inviteCode)}`;
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=${encodeURIComponent(lastGeneratedJoinUrl)}`;
+
+                document.getElementById("generated-qr-img").src = qrApiUrl;
+                document.getElementById("btn-download-qr-img").href = qrApiUrl;
+                document.getElementById("generated-qr-limit").textContent = maxScans;
+                document.getElementById("qr-create-step").classList.add("hidden");
+                document.getElementById("qr-result-step").classList.remove("hidden");
+
+                await loadAdminOverview();
+            } catch (e) {
+                alert("Lỗi kết nối khi tạo mã QR.");
+            }
+        }
+
+        function copyGeneratedJoinLink() {
+            if (!lastGeneratedJoinUrl) return;
+            navigator.clipboard.writeText(lastGeneratedJoinUrl).then(() => {
+                document.getElementById("btn-copy-join-url").textContent = "✅ Đã Copy Link!";
+            });
+        }
+
+        async function revokeQrInvite(inviteCode) {
+            await fetch("/api/admin/qr-invite", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ action: "REVOKE", inviteCode })
+            });
+            await loadAdminOverview();
+        }
+
+        // Department Manager Modal
+        function openDeptManagerModal() {
+            document.getElementById("dept-manager-modal").classList.remove("hidden");
+            renderDeptTagsModalList();
+        }
+        function renderDeptTagsModalList() {
+            const list = document.getElementById("dept-tags-list");
+            list.innerHTML = (adminState.departments || []).map(d => `
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+                    <span class="font-bold text-white">🏷️ ${d.name}</span>
+                    <button onclick="deleteDepartmentTag('${d.id}')" class="text-rose-400 hover:underline font-bold">Xóa</button>
+                </div>
+            `).join("");
+        }
+        async function addDepartmentTag() {
+            const name = document.getElementById("new-dept-name").value.trim();
+            if (!name) return;
+            await fetch("/api/admin/departments", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ action: "ADD", name })
+            });
+            document.getElementById("new-dept-name").value = "";
+            await loadAdminOverview();
+            renderDeptTagsModalList();
+        }
+        async function deleteDepartmentTag(deptId) {
+            await fetch("/api/admin/departments", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ action: "DELETE", deptId })
+            });
+            await loadAdminOverview();
+            renderDeptTagsModalList();
+        }
+
+        // Manual Add User Modal
+        function openAddUserModal() {
+            document.getElementById("add-user-modal").classList.remove("hidden");
+        }
+        async function submitManualUser() {
+            const fullName = document.getElementById("manual-user-fullname").value.trim();
+            const username = document.getElementById("manual-user-username").value.trim();
+            const password = document.getElementById("manual-user-password").value.trim();
+            const department = document.getElementById("manual-user-dept").value;
+            const role = document.getElementById("manual-user-role").value;
+            const taskPermissionMode = document.getElementById("manual-user-perm").value;
+
+            if (!fullName || !username) {
+                alert("Vui lòng nhập Họ tên và Mã đăng nhập.");
+                return;
+            }
+            const res = await fetch("/api/admin/users", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    action: "CREATE",
+                    fullName,
+                    username,
+                    password,
+                    department,
+                    deptTags: [department],
+                    role,
+                    taskPermissionMode
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || "Không thể thêm nhân sự.");
+                return;
+            }
+            document.getElementById("add-user-modal").classList.add("hidden");
+            await loadAdminOverview();
+        }
+
+        // VietQR Checkout for Add-on Storage or Plan Upgrade
+        function openBuyStorageModal() {
+            currentCheckoutType = "STORAGE_ADDON";
+            document.getElementById("checkout-modal-title").textContent = "➕ Mua Thêm Dung Lượng Cloud R2";
+            document.getElementById("checkout-storage-options").classList.remove("hidden");
+            document.getElementById("checkout-plan-options").classList.add("hidden");
+            document.getElementById("checkout-config-step").classList.remove("hidden");
+            document.getElementById("checkout-qr-step").classList.add("hidden");
+            document.getElementById("vietqr-checkout-modal").classList.remove("hidden");
+        }
+
+        function openPlanCheckoutModal(planCode) {
+            currentCheckoutType = "PLAN_UPGRADE";
+            currentCheckoutPlan = planCode;
+            document.getElementById("checkout-modal-title").textContent = `💳 Gia Hạn / Nâng Cấp Gói ${planCode}`;
+            document.getElementById("checkout-storage-options").classList.add("hidden");
+            document.getElementById("checkout-plan-options").classList.remove("hidden");
+            document.getElementById("checkout-config-step").classList.remove("hidden");
+            document.getElementById("checkout-qr-step").classList.add("hidden");
+            document.getElementById("vietqr-checkout-modal").classList.remove("hidden");
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById("vietqr-checkout-modal").classList.add("hidden");
+            if (adminOrderPollTimer) clearInterval(adminOrderPollTimer);
+        }
+
+        async function generateAdminVietQrOrder() {
+            const addonGb = Number(document.getElementById("addon-gb-select").value || 10);
+            const billingCycle = document.getElementById("checkout-cycle-select").value || "MONTHLY";
+
+            const res = await fetch("/api/admin/create-order", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    orderType: currentCheckoutType,
+                    planCode: currentCheckoutPlan,
+                    billingCycle,
+                    addonGb
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.order) {
+                alert(data.error || "Không thể tạo đơn thanh toán.");
+                return;
+            }
+
+            document.getElementById("checkout-config-step").classList.add("hidden");
+            document.getElementById("checkout-qr-step").classList.remove("hidden");
+            document.getElementById("admin-vietqr-img").src = data.order.qrUrl;
+            document.getElementById("admin-qr-amount").textContent = Number(data.order.amount).toLocaleString("vi-VN") + "đ";
+            document.getElementById("admin-qr-code").textContent = data.order.orderCode;
+
+            if (adminOrderPollTimer) clearInterval(adminOrderPollTimer);
+            adminOrderPollTimer = setInterval(async () => {
+                const r = await fetch(`/api/public/order-status?code=${encodeURIComponent(data.order.orderCode)}`);
+                const st = await r.json();
+                if (st.status === "PAID") {
+                    clearInterval(adminOrderPollTimer);
+                    document.getElementById("admin-qr-status").textContent = "✅ Đã thanh toán thành công!";
+                    setTimeout(() => {
+                        closeCheckoutModal();
+                        loadAdminOverview();
+                    }, 1200);
+                }
+            }, 3000);
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem("ltp_jwt_token");
+            localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
+            window.location.href = "landing.html";
+        }
+
+        window.addEventListener("DOMContentLoaded", loadAdminOverview);
+    </script>
+</body>
+</html>

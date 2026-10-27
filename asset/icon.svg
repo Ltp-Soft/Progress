@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="45%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="checkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- App Squircle Background: Royal Blue Gradient with Soft Bevel -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#bgGrad)"/>
+  <!-- Inner Crisp White Rim -->
+  <rect x="22" y="22" width="468" height="468" rx="106" stroke="#ffffff" stroke-opacity="0.25" stroke-width="6"/>
+
+  <!-- QR Outer Bracket Corners (Crisp White & Blue) -->
+  <!-- Top-Left Corner -->
+  <rect x="96" y="96" width="112" height="112" rx="26" fill="#ffffff"/>
+  <rect x="120" y="120" width="64" height="64" rx="15" fill="#2563eb"/>
+  <rect x="136" y="136" width="32" height="32" rx="7" fill="#ffffff"/>
+
+  <!-- Top-Right Corner -->
+  <rect x="304" y="96" width="112" height="112" rx="26" fill="#ffffff"/>
+  <rect x="328" y="120" width="64" height="64" rx="15" fill="#2563eb"/>
+  <rect x="344" y="136" width="32" height="32" rx="7" fill="#ffffff"/>
+
+  <!-- Bottom-Left Corner -->
+  <rect x="96" y="304" width="112" height="112" rx="26" fill="#ffffff"/>
+  <rect x="120" y="328" width="64" height="64" rx="15" fill="#2563eb"/>
+  <rect x="136" y="344" width="32" height="32" rx="7" fill="#ffffff"/>
+
+  <!-- Center-Connected QR Tech Modules -->
+  <rect x="236" y="96" width="40" height="40" rx="12" fill="#ffffff"/>
+  <rect x="236" y="156" width="40" height="40" rx="12" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="96" y="236" width="40" height="40" rx="12" fill="#ffffff"/>
+  <rect x="156" y="236" width="40" height="40" rx="12" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="236" y="236" width="40" height="40" rx="12" fill="#ffffff"/>
+  <rect x="304" y="236" width="40" height="40" rx="12" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="236" y="376" width="40" height="40" rx="12" fill="#ffffff" fill-opacity="0.95"/>
+
+  <!-- Central Smart Check-in Badge (Badge tròn kiểm tra công xanh ngọc nổi bật) -->
+  <circle cx="348" cy="348" r="88" fill="#ffffff" filter="url(#shadow)"/>
+  <circle cx="348" cy="348" r="74" fill="url(#checkGrad)"/>
+  <!-- Checkmark Vector -->
+  <path d="M316 348L338 370L382 324" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

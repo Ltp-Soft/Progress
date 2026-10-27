@@ -1,0 +1,27 @@
+{
+  "name": "schedule_manager_webapp",
+  "version": "6.0.0",
+  "description": "Enterprise Schedule Manager WebApp - Cloudflare D1 Mock with SQLite & Express",
+  "main": "app.js",
+  "scripts": {
+    "dev": "node app.js",
+    "start": "node app.js",
+    "py": "python server.py"
+  },
+  "keywords": [
+    "gantt",
+    "mep",
+    "schedule",
+    "n8n",
+    "d1",
+    "sqlite"
+  ],
+  "author": "Google Antigravity Team",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}

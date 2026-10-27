@@ -1,0 +1,21 @@
+# Chặn danh sách tài khoản và file nháp bảo mật nội bộ
+account list.csv
+scratch_requestechnical.txt
+link github.txt
+test_multilang.pdf
+
+# Chặn server giả lập local và file database thô dưới máy
+server.py
+app.js
+schedule_d1.sqlite
+workspace_store.json
+uploads/
+.wrangler/
+node_modules/
+
+# Chặn các file rác tự sinh của hệ điều hành máy tính
+.DS_Store
+Thumbs.db
+*.log
+__pycache__/
+*.pyc

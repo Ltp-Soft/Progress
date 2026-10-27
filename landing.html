@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTP Progress Hub | Nền Tảng Quản Trị Tiến Độ Thi Công & Điều Phối Dự Án Thông Minh</title>
+    <meta name="description" content="Giải pháp SaaS quản lý tiến độ dự án Gantt Chart trực quan, đồng bộ đa phòng ban Live Sync, tiếp nhận nhân sự bằng QR Phòng Chờ và trợ lý AI Mina từ LTP SOFT.">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="asset/logo.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #020617;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .hero-glow {
+            background: radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.22) 0%, rgba(59, 130, 246, 0.08) 40%, rgba(2, 6, 23, 0) 75%);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+        }
+        .gantt-preview-bar {
+            animation: pulseSlide 4s ease-in-out infinite alternate;
+        }
+        @keyframes pulseSlide {
+            0% { transform: translateX(0px); }
+            100% { transform: translateX(6px); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- Top Ecosystem Bar -->
+    <div class="bg-slate-900/90 border-b border-slate-800/80 text-xs py-2 px-4">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-4">
+                <span class="text-slate-400 font-medium">Hệ sinh thái Quản trị Doanh nghiệp <strong class="text-sky-400">LTP SOFT</strong>:</span>
+                <a href="https://ltp-soft.com" target="_blank" class="text-slate-300 hover:text-sky-400 transition font-medium flex items-center gap-1">
+                    <span>📍 Chấm Công GPS & Nhân Sự</span>
+                </a>
+                <span class="text-slate-700">|</span>
+                <span class="text-sky-400 font-bold flex items-center gap-1">
+                    <span>📊 LTP Progress Hub (Quản Trị Tiến Độ Dự Án)</span>
+                </span>
+            </div>
+            <div class="flex items-center gap-4 text-slate-400">
+                <span>Hotline / Zalo Hỗ Trợ 24/7: <a href="https://zalo.me/0559595945" target="_blank" class="text-emerald-400 font-bold hover:underline">0559.595.945</a></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sticky Navigation -->
+    <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-xl border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 py-3.5 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 group">
+                <img src="asset/logo.png" alt="LTP Soft Logo" class="h-10 w-10 rounded-xl object-contain bg-white/5 p-1 border border-slate-700/80 group-hover:border-sky-400 transition">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg font-black tracking-tight text-white">LTP PROGRESS</span>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30">SaaS Cloud</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 font-medium">Điều phối tiến độ công trình & doanh nghiệp</div>
+                </div>
+            </a>
+
+            <nav class="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-300">
+                <a href="#features" class="hover:text-sky-400 transition">Tính năng cốt lõi</a>
+                <a href="#qr-onboarding" class="hover:text-sky-400 transition">QR Phòng chờ</a>
+                <a href="#pricing" class="hover:text-sky-400 transition">Bảng giá & Gói cước</a>
+                <a href="#enterprise" class="hover:text-amber-400 transition text-amber-300/90">Gói Tập Đoàn</a>
+            </nav>
+
+            <div class="flex items-center gap-2.5">
+                <button onclick="openWorkspaceLoginModal()" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs sm:text-sm font-bold transition">
+                    🔑 Đăng nhập Workspace
+                </button>
+                <button onclick="openRegisterModal('TRIAL')" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-sky-500/25 transition">
+                    Dùng thử 14 ngày
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="relative hero-glow pt-14 pb-20 sm:pt-20 sm:pb-28 border-b border-slate-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-4xl mx-auto">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-300 text-xs font-bold mb-6">
+                    <span>✨ Thiết kế Tối Giản • Ít Thao Tác • Không Rối Mắt Như Phần Mềm Cũ</span>
+                </div>
+                <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.12] mb-6">
+                    Kiểm Soát <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-500">100% Tiến Độ Dự Án</span> & Hiệu Suất Nhân Sự Trên Một Màn Hình
+                </h1>
+                <p class="text-base sm:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-9">
+                    Giải pháp chuyên biệt cho <strong>Tổng thầu Xây dựng, Nội thất, Kiến trúc & Doanh nghiệp dự án</strong>. Kết nối trực tiếp tiến độ Đấu thầu — Thi công — Nội bộ phòng ban, thêm nhân sự trong 5 giây bằng <strong>QR Phòng Chờ</strong> và phân tích điểm nghẽn tự động cùng <strong>Trợ lý AI Mina</strong>.
+                </p>
+
+                <div class="flex flex-wrap items-center justify-center gap-4 mb-12">
+                    <button onclick="openRegisterModal('TRIAL')" class="px-7 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-base shadow-xl shadow-sky-500/25 transition transform hover:-translate-y-0.5">
+                        🚀 Khởi tạo Không Gian Làm Việc Miễn Phí (14 Ngày)
+                    </button>
+                    <a href="#pricing" class="px-6 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-base transition">
+                        Xem bảng giá từ 299.000đ/tháng
+                    </a>
+                </div>
+
+                <!-- Interactive Visual Preview Mockup -->
+                <div class="glass-panel rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800 text-left">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b border-slate-800">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+                            <span class="ml-2 text-xs font-bold text-slate-300">LTP Progress Hub — Bảng Điều Phối Gantt & Hiệu Suất Thực Tế</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30">⚡ Live Sync Đa Phòng Ban</span>
+                            <span class="px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 font-bold border border-sky-500/30">🎨 Tuỳ Biến Màu Skin Công Ty</span>
+                            <span class="px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30">🤖 AI Mina Dành Cho Quản Lý</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                        <!-- Left Task Table Mock -->
+                        <div class="lg:col-span-5 bg-slate-900/90 rounded-2xl p-4 border border-slate-800/90 space-y-3">
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-400 pb-2 border-b border-slate-800">
+                                <span>HẠNG MỤC CÔNG TRÌNH</span>
+                                <span>PHỤ TRÁCH • TIẾN ĐỘ</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                                <div>
+                                    <div class="text-xs font-bold text-white">1. Hồ sơ thiết kế 3D & Bản vẽ kỹ thuật</div>
+                                    <div class="text-[11px] text-sky-400 font-medium">Bộ phận: Thiết kế • Đúng hạn</div>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-extrabold">100%</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                                <div>
+                                    <div class="text-xs font-bold text-white">2. Gia công nội thất tại xưởng & Kiểm định</div>
+                                    <div class="text-[11px] text-amber-300 font-medium">Bộ phận: Sản xuất • Đang chạy</div>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 text-xs font-extrabold">75%</span>
+                            </div>
+                            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                                <div>
+                                    <div class="text-xs font-bold text-white">3. Lắp đặt MEP & Nghiệm thu bàn giao</div>
+                                    <div class="text-[11px] text-purple-300 font-medium">Bộ phận: Thi công • Liên kết dây #2</div>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-extrabold">40%</span>
+                            </div>
+                        </div>
+
+                        <!-- Right Visual Timeline Bars -->
+                        <div class="lg:col-span-7 bg-slate-900/90 rounded-2xl p-4 border border-slate-800/90 flex flex-col justify-between">
+                            <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-400 pb-2 border-b border-slate-800">
+                                <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span class="text-rose-400">CN</span>
+                            </div>
+                            <div class="space-y-4 my-4">
+                                <div class="w-3/5 h-7 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center px-3 text-xs font-extrabold text-white shadow-md gantt-preview-bar">
+                                    ✓ Hoàn thành bản vẽ & duyệt mẫu (100%)
+                                </div>
+                                <div class="ml-12 w-3/5 h-7 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 flex items-center px-3 text-xs font-extrabold text-white shadow-md gantt-preview-bar">
+                                    ⚡ Sản xuất xưởng + Đính kèm 4 ảnh/video nghiệm thu (75%)
+                                </div>
+                                <div class="ml-24 w-2/3 h-7 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center px-3 text-xs font-extrabold text-white shadow-md gantt-preview-bar">
+                                    🔗 Lắp đặt công trình & Báo cáo hiện trường (40%)
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                                <span>🔒 Nhân viên báo cáo tiến độ & up file trong 1 chạm (không sợ xoá nhầm lịch trình)</span>
+                                <span class="text-sky-400 font-bold">Excel Template 2-Sheet có sẵn</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Differentiators Section -->
+    <section id="features" class="py-20 border-b border-slate-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <h2 class="text-2xl sm:text-4xl font-black text-white mb-4">Vì Sao Doanh Nghiệp Chọn LTP Progress Hub?</h2>
+                <p class="text-slate-400 text-sm sm:text-base">Triết lý thiết kế <strong>"Tối giản thao tác — Tối đa kiểm soát"</strong>: Nhân viên mở lên biết dùng ngay không cần đào tạo, Giám đốc nhìn 3 giây nắm trọn tiến độ toàn công ty.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div id="qr-onboarding" class="glass-panel rounded-3xl p-6 hover:border-sky-500/40 transition">
+                    <div class="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-2xl mb-4">📱</div>
+                    <h3 class="text-lg font-extrabold text-white mb-2">1. Quét QR Phòng Chờ & Chống Gian Lận Thiết Bị</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Admin không cần nhập tay từng nhân sự. Chỉ cần tạo <strong>1 mã QR giới hạn đúng số lượng (VD: 10 người)</strong> gửi lên nhóm Zalo. Nhân viên quét QR nhận ngay mã đăng nhập + ảnh đại diện. Cơ chế <strong>Khóa Vân Tay Phần Cứng 3 Lớp</strong> ngăn chặn tuyệt đối 1 điện thoại quét 2 lần tạo tài khoản ảo.
+                    </p>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 hover:border-emerald-500/40 transition">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl mb-4">🛡️</div>
+                    <h3 class="text-lg font-extrabold text-white mb-2">2. Kiểm Soát Quyền Hạn Nhân Viên 1 Chạm</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Khi giao việc, nhân viên được quyền tích nhận việc, kéo % hoàn thành, tải file/video báo cáo, ghi chú lên task liên kết dây nhưng <strong>không thể tự ý xóa task hay sửa ngày deadline đã ấn định</strong>. Hoặc Admin gạt nút cho phép nhân viên tự chủ tạo & sửa việc riêng chỉ với 1 cú click.
+                    </p>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 hover:border-amber-500/40 transition">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-2xl mb-4">📊</div>
+                    <h3 class="text-lg font-extrabold text-white mb-2">3. Chèn Hàng Loạt Từ Excel & Thống Kê Hiệu Suất</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Tải <strong>File Excel Mẫu 2 Sheet</strong> (tự động đính kèm danh sách Mã nhân viên & Thẻ phòng ban của công ty) để đẩy hàng trăm đầu việc lên biểu đồ Gantt trong 3 giây. Báo cáo thống kê hiệu suất nhân viên chi tiết theo <strong>Từng Công Trình, Theo Tháng, Theo Năm</strong>.
+                    </p>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 hover:border-purple-500/40 transition">
+                    <div class="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-2xl mb-4">🎨</div>
+                    <h3 class="text-lg font-extrabold text-white mb-2">4. Cá Nhân Hóa Thương Hiệu & Bảng Màu Tự Chọn</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Doanh nghiệp tự tải lên <strong>Logo công ty & Tên thương hiệu riêng</strong> hiển thị ngay trên thanh công cụ làm việc. Tích hợp <strong>Custom Color & Skin Studio</strong> cho phép chọn 8 bộ giao diện chuẩn hoặc tự pha màu theo nhận diện thương hiệu.
+                    </p>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 hover:border-cyan-500/40 transition">
+                    <div class="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-2xl mb-4">💾</div>
+                    <h3 class="text-lg font-extrabold text-white mb-2">5. Lưu Trữ Thông Minh & Giải Phóng Dung Lượng</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Công trình hoàn tất có nút <strong>Tải toàn bộ dữ liệu dự án về máy (Backup Excel/JSON)</strong>, nút <strong>Lưu đóng dự án</strong> và nút <strong>Xóa file đính kèm giải phóng GB Cloud</strong> mà vẫn giữ nguyên 100% lịch sử tiến độ và hiệu suất nhân sự.
+                    </p>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 hover:border-rose-500/40 transition">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-2xl mb-4">🤖</div>
+                    <h3 class="text-lg font-extrabold text-white mb-2">6. Trợ Lý AI Mina Độc Quyền Cho Quản Lý</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Trợ lý AI Mina chỉ mở riêng cho <strong>Admin & Trưởng bộ phận</strong> để hỏi nhanh tình trạng quá hạn, ai đang gánh nhiều việc nhất, điểm nghẽn dây chuyền nằm ở đâu bằng tiếng Việt, tiếng Anh hoặc tiếng Hàn tức thì.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-20 border-b border-slate-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-10">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold mb-3">
+                    🔥 Kích hoạt tự động 24/7 qua VietQR & SePay
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-black text-white mb-4">Bảng Giá Minh Bạch — Phù Hợp Mọi Quy Mô Công Ty</h2>
+                <p class="text-slate-400 text-sm sm:text-base mb-6">
+                    Tất cả các gói đều bao gồm đầy đủ tính năng Gantt, QR Phòng chờ, Phân quyền nhân viên, Báo cáo hiệu suất & Sao lưu dự án. <strong>Thanh toán theo năm tặng ngay 2 tháng (tiết kiệm 17%)!</strong>
+                </p>
+
+                <!-- Billing Cycle Switch -->
+                <div class="inline-flex items-center p-1.5 rounded-2xl bg-slate-900 border border-slate-800">
+                    <button id="tab-cycle-monthly" onclick="switchBillingCycle('MONTHLY')" class="px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-sky-500 text-white shadow transition">
+                        Thanh toán theo Tháng
+                    </button>
+                    <button id="tab-cycle-yearly" onclick="switchBillingCycle('YEARLY')" class="px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+                        <span>Thanh toán theo Năm</span>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px]">Tiết kiệm 2 tháng</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3 Main Plans Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-7 mb-12">
+                <!-- STARTER -->
+                <div class="glass-panel rounded-3xl p-7 flex flex-col justify-between border border-slate-800 hover:border-slate-700 transition">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xl font-black text-white">Gói STARTER</h3>
+                            <span class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-bold">Đội nhóm & Công ty nhỏ</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-5">Dành cho văn phòng thiết kế, đội thi công, nhà thầu phụ hoặc công ty quy mô vừa.</p>
+                        <div class="mb-6">
+                            <span id="price-starter" class="text-3xl sm:text-4xl font-black text-white">299.000đ</span>
+                            <span id="unit-starter" class="text-xs text-slate-400 font-semibold">/ tháng</span>
+                            <div id="sub-starter" class="text-xs text-sky-400 font-medium mt-1">Đóng theo năm: 2.990.000đ/năm</div>
+                        </div>
+
+                        <ul class="space-y-3 text-sm text-slate-200 mb-7">
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Tối đa <strong>15 tài khoản nhân sự</strong> đang mở</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Tối đa <strong>10 dự án</strong> hoạt động cùng lúc</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span><strong>10 GB Cloud R2</strong> (File tối đa 200MB/file)</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Mua thêm dung lượng: <strong>49.000đ / +10 GB</strong></span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>QR Phòng chờ nhân sự + Excel Template</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Trợ lý AI Mina cho Admin (25 lượt/ngày)</span></li>
+                        </ul>
+                    </div>
+
+                    <button onclick="openRegisterModal('STARTER')" class="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-sm border border-slate-700 transition">
+                        Đăng ký gói STARTER
+                    </button>
+                </div>
+
+                <!-- BUSINESS (POPULAR) -->
+                <div class="glass-panel rounded-3xl p-7 flex flex-col justify-between border-2 border-sky-500 relative shadow-2xl shadow-sky-500/15 transform lg:-translate-y-2">
+                    <div class="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white text-[11px] font-black uppercase tracking-wider shadow">
+                        ⭐ Phổ biến nhất
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xl font-black text-white">Gói BUSINESS</h3>
+                            <span class="px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 text-xs font-bold">Doanh nghiệp tiêu chuẩn</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-5">Lựa chọn tối ưu cho công ty xây dựng, nội thất, cơ điện MEP điều phối nhiều công trình.</p>
+                        <div class="mb-6">
+                            <span id="price-business" class="text-3xl sm:text-4xl font-black text-sky-400">599.000đ</span>
+                            <span id="unit-business" class="text-xs text-slate-300 font-semibold">/ tháng</span>
+                            <div id="sub-business" class="text-xs text-emerald-400 font-medium mt-1">Đóng theo năm: 5.990.000đ/năm (Tặng 2 tháng)</div>
+                        </div>
+
+                        <ul class="space-y-3 text-sm text-slate-100 mb-7">
+                            <li class="flex items-center gap-2.5"><span class="text-sky-400 font-bold">✓</span> <span>Tối đa <strong>40 tài khoản nhân sự</strong> đang mở</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-sky-400 font-bold">✓</span> <span><strong>Không giới hạn</strong> số lượng dự án</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-sky-400 font-bold">✓</span> <span><strong>35 GB Cloud R2</strong> (File tối đa 350MB/file)</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-sky-400 font-bold">✓</span> <span>Mua thêm dung lượng ưu đãi: <strong>35.000đ / +10 GB</strong></span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-sky-400 font-bold">✓</span> <span>Đầy đủ Live Sync 2 chiều + Phản chiếu D2D</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-sky-400 font-bold">✓</span> <span>Báo cáo hiệu suất theo Công trình / Tháng / Năm</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-sky-400 font-bold">✓</span> <span>Trợ lý AI Mina cho Admin (80 lượt/ngày)</span></li>
+                        </ul>
+                    </div>
+
+                    <button onclick="openRegisterModal('BUSINESS')" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 transition">
+                        Đăng ký gói BUSINESS ngay
+                    </button>
+                </div>
+
+                <!-- PRO -->
+                <div class="glass-panel rounded-3xl p-7 flex flex-col justify-between border border-slate-800 hover:border-slate-700 transition">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xl font-black text-white">Gói PRO</h3>
+                            <span class="px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-300 text-xs font-bold">Nhà thầu & Công ty lớn</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-5">Dành cho doanh nghiệp quy mô lớn vận hành đồng loạt nhiều phòng ban & ban chỉ huy công trường.</p>
+                        <div class="mb-6">
+                            <span id="price-pro" class="text-3xl sm:text-4xl font-black text-white">990.000đ</span>
+                            <span id="unit-pro" class="text-xs text-slate-400 font-semibold">/ tháng</span>
+                            <div id="sub-pro" class="text-xs text-sky-400 font-medium mt-1">Đóng theo năm: 9.900.000đ/năm</div>
+                        </div>
+
+                        <ul class="space-y-3 text-sm text-slate-200 mb-7">
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Tối đa <strong>100 tài khoản nhân sự</strong> đang mở</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span><strong>Không giới hạn</strong> số lượng dự án</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span><strong>80 GB Cloud R2</strong> (File tối đa 500MB/file)</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Mua thêm dung lượng giá sỉ: <strong>25.000đ / +10 GB</strong></span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Đổi màu giao diện & Gắn Logo công ty riêng</span></li>
+                            <li class="flex items-center gap-2.5"><span class="text-emerald-400 font-bold">✓</span> <span>Trợ lý AI Mina cho Admin (200 lượt/ngày)</span></li>
+                        </ul>
+                    </div>
+
+                    <button onclick="openRegisterModal('PRO')" class="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-sm border border-slate-700 transition">
+                        Đăng ký gói PRO
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dedicated Enterprise White-Label Banner -->
+            <div id="enterprise" class="glass-panel rounded-3xl p-7 sm:p-9 border-2 border-amber-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                    <div class="lg:col-span-8">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-extrabold mb-3">
+                            👑 GÓI TẬP ĐOÀN & TỔNG THẦU ĐỘC LẬP (ENTERPRISE WHITE-LABEL)
+                        </div>
+                        <h3 class="text-2xl sm:text-3xl font-black text-white mb-3">
+                            Không Giới Hạng Nhân Sự & Dự Án • Tên Miền Riêng • Cấp Quyền Trưởng Ban QLDA ("Admin Con")
+                        </h3>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-5">
+                            Thiết kế riêng cho Tổng thầu xây dựng & Tập đoàn có hàng chục công trình lớn. Cho phép <strong>tách biệt hoàn toàn thương hiệu (Custom Domain riêng VD: `tiendo.tencongty.vn`)</strong>, bổ nhiệm <strong>Trưởng Ban QLDA (`PROJECT_ADMIN`)</strong> tự tạo tài khoản và quản lý nhân sự riêng trong phạm vi dự án của mình, kèm hạn mức dung lượng cực khủng <strong>300 GB Cloud</strong> (mua thêm chỉ 19.000đ / +10GB).
+                        </p>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                                <div class="text-amber-400 font-extrabold">Nhân sự & Dự án</div>
+                                <div class="text-white font-bold mt-0.5">KHÔNG GIỚI HẠN</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                                <div class="text-amber-400 font-extrabold">Dung lượng sẵn có</div>
+                                <div class="text-white font-bold mt-0.5">300 GB Cloud R2</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                                <div class="text-amber-400 font-extrabold">Phân quyền Tập đoàn</div>
+                                <div class="text-white font-bold mt-0.5">Có Admin Con / Dự án</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                                <div class="text-amber-400 font-extrabold">Nhận diện riêng</div>
+                                <div class="text-white font-bold mt-0.5">Domain + Logo Riêng</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-4 bg-slate-950/85 rounded-2xl p-6 border border-amber-500/30 text-center">
+                        <div class="text-xs font-bold text-amber-300 uppercase tracking-wider mb-1">Trọn gói Tập đoàn</div>
+                        <div id="price-enterprise" class="text-3xl sm:text-4xl font-black text-white mb-1">4.500.000đ</div>
+                        <div id="unit-enterprise" class="text-xs text-slate-400 mb-4">/ tháng (Hoặc 45.000.000đ / năm)</div>
+                        <button onclick="openRegisterModal('ENTERPRISE')" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20 transition mb-2.5">
+                            ⚡ Đăng Ký Gói Tập Đoàn Ngay
+                        </button>
+                        <a href="https://zalo.me/0559595945" target="_blank" class="block w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-300 border border-slate-800 transition">
+                            💬 Tư vấn triển khai Domain riêng qua Zalo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer (Exact Legal Entity Info from ltp-soft.com) -->
+    <footer class="bg-slate-950 pt-14 pb-10 text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10 border-b border-slate-900">
+                <div class="md:col-span-6 space-y-2.5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <img src="asset/logo.png" alt="LTP Soft" class="h-9 w-9 rounded-xl bg-white/5 p-1 border border-slate-800">
+                        <div>
+                            <div class="text-sm font-black text-white">CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ LÊ TÀI PHÁT</div>
+                            <div class="text-[11px] text-sky-400 font-semibold">LE TAI PHAT TRADING SERVICE CO.,LTD</div>
+                        </div>
+                    </div>
+                    <p><strong>Mã số thuế:</strong> 0317654107</p>
+                    <p><strong>Địa chỉ trụ sở:</strong> 19 Đường 12, Khu phố 2, Phường Hiệp Bình, TP. Hồ Chí Minh, Việt Nam</p>
+                    <p><strong>Hotline / Zalo hỗ trợ:</strong> <a href="tel:0559595945" class="text-emerald-400 font-bold">0559.595.945</a> • <strong>Website:</strong> <a href="https://ltp-soft.com" class="text-sky-400 hover:underline">ltp-soft.com</a></p>
+                </div>
+
+                <div class="md:col-span-3 space-y-2">
+                    <div class="text-sm font-bold text-white mb-2">Hệ sinh thái LTP SOFT</div>
+                    <ul class="space-y-2">
+                        <li><a href="https://ltp-soft.com" target="_blank" class="hover:text-sky-400 transition">Chấm công GPS & Quản lý Nhân sự</a></li>
+                        <li><a href="#pricing" class="hover:text-sky-400 transition">Bảng giá LTP Progress Hub</a></li>
+                        <li><a href="javascript:void(0)" onclick="openWorkspaceLoginModal()" class="hover:text-sky-400 transition">Đăng nhập Không gian làm việc</a></li>
+                        <li><a href="admin.html" class="hover:text-sky-400 transition">Cổng Quản trị Admin Công ty</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-3 space-y-2">
+                    <div class="text-sm font-bold text-white mb-2">Chính sách & Pháp lý</div>
+                    <ul class="space-y-2">
+                        <li><a href="javascript:void(0)" onclick="openLegalModal('tos')" class="hover:text-sky-400 transition">Điều khoản sử dụng dịch vụ</a></li>
+                        <li><a href="javascript:void(0)" onclick="openLegalModal('privacy')" class="hover:text-sky-400 transition">Chính sách bảo mật (Nghị định 13/2023/NĐ-CP)</a></li>
+                        <li><a href="javascript:void(0)" onclick="openLegalModal('sla')" class="hover:text-sky-400 transition">Cam kết chất lượng & Sao lưu dữ liệu</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-6 flex flex-wrap items-center justify-between gap-4 text-[11px] text-slate-500">
+                <span>© 2026 CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ LÊ TÀI PHÁT. Bảo lưu mọi quyền.</span>
+                <span>Thanh toán tự động VietQR • Bảo mật chuẩn Cloudflare D1 & R2 Cloud</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ============================================================================
+         MODAL 1: REGISTRATION & VIETQR SEPAY AUTOMATED PAYMENT
+         ============================================================================ -->
+    <div id="register-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-panel w-full max-w-xl rounded-3xl border border-slate-700/80 shadow-2xl overflow-hidden my-8">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                    <h3 id="reg-modal-title" class="text-lg font-black text-white">Khởi Tạo Không Gian Làm Việc</h3>
+                    <p id="reg-modal-subtitle" class="text-xs text-sky-400 font-medium">Dùng thử miễn phí 14 ngày hoặc kích hoạt tự động qua VietQR</p>
+                </div>
+                <button onclick="closeRegisterModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            <!-- Step 1: Registration Form -->
+            <div id="reg-step-form" class="p-6 max-h-[82vh] overflow-y-auto space-y-4">
+                <!-- Plan Selector Pill -->
+                <div class="grid grid-cols-5 gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 text-center text-[11px] font-bold">
+                    <button type="button" onclick="selectModalPlan('TRIAL')" id="pill-plan-TRIAL" class="py-2 rounded-xl transition">Dùng thử 14N</button>
+                    <button type="button" onclick="selectModalPlan('STARTER')" id="pill-plan-STARTER" class="py-2 rounded-xl transition">Starter (15NV)</button>
+                    <button type="button" onclick="selectModalPlan('BUSINESS')" id="pill-plan-BUSINESS" class="py-2 rounded-xl transition">Business (40NV)</button>
+                    <button type="button" onclick="selectModalPlan('PRO')" id="pill-plan-PRO" class="py-2 rounded-xl transition">Pro (100NV)</button>
+                    <button type="button" onclick="selectModalPlan('ENTERPRISE')" id="pill-plan-ENTERPRISE" class="py-2 rounded-xl transition">Tập đoàn</button>
+                </div>
+
+                <!-- Fast Google Verification -->
+                <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="text-xs text-slate-300">
+                        <div class="font-bold text-white">Xác thực nhanh bằng Google (Khuyên dùng)</div>
+                        <div class="text-slate-400">Không cần chờ mã OTP Email, tự động điền thông tin Admin</div>
+                    </div>
+                    <div id="reg-google-btn"></div>
+                </div>
+
+                <form id="saas-register-form" onsubmit="submitRegistration(event)" class="space-y-3.5">
+                    <!-- Honeypot anti-bot -->
+                    <input type="text" id="reg-website-hp" class="hidden" tabindex="-1" autocomplete="off">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Tên Công ty / Đơn vị <span class="text-rose-400">*</span></label>
+                            <input id="reg-company" type="text" required placeholder="VD: Công ty Xây dựng An Phát"
+                                   oninput="autoSuggestSubdomain(this.value)"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Mã định danh Công ty (Subdomain) <span class="text-rose-400">*</span></label>
+                            <div class="flex items-center rounded-xl bg-slate-900 border border-slate-700 overflow-hidden focus-within:border-sky-400">
+                                <input id="reg-subdomain" type="text" required placeholder="anphat"
+                                       class="w-full px-3 py-2.5 bg-transparent text-sm text-sky-400 font-mono font-bold focus:outline-none">
+                                <span class="px-2.5 text-[11px] text-slate-500 font-mono shrink-0">.ltp-soft.com</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Họ tên Quản trị viên (Admin) <span class="text-rose-400">*</span></label>
+                            <input id="reg-fullname" type="text" required placeholder="Nguyễn Văn A"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Số điện thoại / Zalo <span class="text-rose-400">*</span></label>
+                            <input id="reg-phone" type="tel" required placeholder="0909123456"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                        </div>
+                    </div>
+
+                    <!-- Email + OTP -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Email nhận thông tin quản trị <span class="text-rose-400">*</span></label>
+                        <div class="flex gap-2">
+                            <input id="reg-email" type="email" required placeholder="admin@tencongty.com"
+                                   class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                            <button type="button" id="btn-send-otp" onclick="sendEmailOtp()"
+                                    class="px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-extrabold shrink-0 transition">
+                                📩 Gửi mã OTP
+                            </button>
+                        </div>
+                        <div id="google-verified-badge" class="hidden mt-1.5 text-xs text-emerald-400 font-bold">
+                            ✅ Đã xác thực chính chủ qua Google (Không cần nhập OTP)
+                        </div>
+                    </div>
+
+                    <div id="otp-input-row" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Mã xác thực OTP (6 số trong Email)</label>
+                            <input id="reg-otp" type="text" maxlength="6" placeholder="Nhập 6 chữ số OTP"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm font-mono text-amber-300 focus:outline-none focus:border-sky-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Mật khẩu Admin <span class="text-rose-400">*</span></label>
+                            <input id="reg-password" type="password" required minlength="6" placeholder="Tối thiểu 6 ký tự"
+                                   class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                        </div>
+                    </div>
+
+                    <!-- Paid Plan Billing Options -->
+                    <div id="paid-options-box" class="hidden p-3.5 rounded-2xl bg-slate-900/95 border border-sky-500/30 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-300">Chu kỳ thanh toán:</span>
+                            <div class="flex gap-2">
+                                <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer">
+                                    <input type="radio" name="reg-cycle" value="MONTHLY" checked onchange="updateModalPriceSummary()"> Theo Tháng
+                                </label>
+                                <label class="flex items-center gap-1.5 text-xs font-bold text-emerald-300 cursor-pointer">
+                                    <input type="radio" name="reg-cycle" value="YEARLY" onchange="updateModalPriceSummary()"> Theo Năm (-17%)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                            <span class="text-xs text-slate-400">Tổng thanh toán VietQR:</span>
+                            <span id="reg-total-amount" class="text-lg font-black text-sky-400">599.000đ</span>
+                        </div>
+                    </div>
+
+                    <!-- Anti-bot Math Check -->
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+                        <span class="text-slate-300 font-semibold">🤖 Xác thực chống Bot: <strong id="math-question" class="text-sky-400">3 + 5 = ?</strong></span>
+                        <input id="math-answer" type="number" required placeholder="Kết quả"
+                               class="w-24 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-center font-bold text-white">
+                    </div>
+
+                    <div id="reg-error-msg" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-medium"></div>
+
+                    <button id="btn-submit-register" type="submit"
+                            class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 transition">
+                        🚀 Hoàn Tất Khởi Tạo Không Gian Làm Việc
+                    </button>
+                </form>
+            </div>
+
+            <!-- Step 2: VietQR SePay Automated Payment Screen -->
+            <div id="reg-step-qr" class="hidden p-6 text-center space-y-4">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                    <span>Đang chờ hệ thống SePay xác nhận thanh toán tự động...</span>
+                </div>
+                <h4 class="text-base font-extrabold text-white">Quét Mã VietQR Để Kích Hoạt Ngay Lập Tức</h4>
+                <p class="text-xs text-slate-400 max-w-md mx-auto">
+                    Mở ứng dụng Ngân hàng bất kỳ quét mã QR bên dưới. Nội dung chuyển khoản <strong id="qr-order-code" class="text-sky-400 font-mono">PRG12345</strong> đã được điền tự động.
+                </p>
+
+                <div class="bg-white p-4 rounded-2xl inline-block mx-auto shadow-xl">
+                    <img id="vietqr-img" src="" alt="VietQR Payment" class="w-56 h-56 object-contain mx-auto">
+                </div>
+
+                <div class="bg-slate-900 rounded-2xl p-4 border border-slate-800 max-w-sm mx-auto text-left text-xs space-y-2">
+                    <div class="flex justify-between"><span class="text-slate-400">Số tiền:</span><span id="qr-amount-text" class="font-extrabold text-emerald-400 text-sm"></span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Nội dung CK bắt buộc:</span><span id="qr-code-text" class="font-mono font-extrabold text-sky-400 text-sm"></span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Trạng thái:</span><span id="qr-status-text" class="text-amber-300 font-bold">Chờ thanh toán (Tự động 5-10 giây)</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================================
+         MODAL 2: WORKSPACE FINDER / DIRECT LOGIN
+         ============================================================================ -->
+    <div id="login-finder-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl border border-slate-700/80 p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-black text-white">Đăng Nhập Không Gian Làm Việc</h3>
+                    <p class="text-xs text-slate-400">Dành cho Admin, Trưởng bộ phận và Nhân viên</p>
+                </div>
+                <button onclick="closeWorkspaceLoginModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            <form onsubmit="submitDirectWorkspaceLogin(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Mã công ty (Subdomain) <span class="text-slate-500 font-normal">(Bỏ trống nếu dùng mặc định)</span></label>
+                    <input id="login-subdomain" type="text" placeholder="VD: anphat (hoặc để trống)"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-sky-400 font-mono focus:outline-none focus:border-sky-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Tài khoản / Email / Mã nhân viên <span class="text-rose-400">*</span></label>
+                    <input id="login-username" type="text" required placeholder="VD: admin hoặc NV001"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Mật khẩu <span class="text-rose-400">*</span></label>
+                    <input id="login-password" type="password" required placeholder="••••••••"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
+                </div>
+
+                <div id="login-finder-error" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-medium"></div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                    <button type="submit" data-dest="workspace" class="py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-xs shadow-lg transition">
+                        📊 Vào Bảng Tiến Độ Gantt
+                    </button>
+                    <button type="submit" data-dest="admin" class="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-extrabold text-xs transition">
+                        ⚙️ Vào Trang Quản Trị Admin
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================================
+         MODAL 3: LEGAL TERMS & PRIVACY POLICY (DECREE 13/2023/NĐ-CP)
+         ============================================================================ -->
+    <div id="legal-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-2xl rounded-3xl border border-slate-700 p-6 shadow-2xl max-h-[82vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+                <h3 id="legal-title" class="text-base font-black text-white">Điều Khoản & Chính Sách Pháp Lý</h3>
+                <button onclick="document.getElementById('legal-modal').classList.add('hidden')" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300">✕</button>
+            </div>
+            <div id="legal-content" class="text-xs text-slate-300 leading-relaxed overflow-y-auto space-y-3 pr-2"></div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_CLIENT_ID = "383174442594-tfaqba8noaibh1sr24tpcj1nl3ckq851.apps.googleusercontent.com";
+        let currentBillingCycle = "MONTHLY";
+        let selectedPlanCode = "TRIAL";
+        let googleIdToken = "";
+        let mathA = 3, mathB = 5;
+        let orderPollTimer = null;
+
+        const PLAN_PRICES = {
+            STARTER: { MONTHLY: 299000, YEARLY: 2990000 },
+            BUSINESS: { MONTHLY: 599000, YEARLY: 5990000 },
+            PRO: { MONTHLY: 990000, YEARLY: 9900000 },
+            ENTERPRISE: { MONTHLY: 4500000, YEARLY: 45000000 }
+        };
+
+        function formatVND(n) {
+            return Number(n || 0).toLocaleString("vi-VN") + "đ";
+        }
+
+        function switchBillingCycle(cycle) {
+            currentBillingCycle = cycle;
+            const btnM = document.getElementById("tab-cycle-monthly");
+            const btnY = document.getElementById("tab-cycle-yearly");
+            if (cycle === "YEARLY") {
+                btnY.className = "px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-sky-500 text-white shadow transition flex items-center gap-1.5";
+                btnM.className = "px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-slate-300 hover:text-white transition";
+                document.getElementById("price-starter").textContent = "2.990.000đ";
+                document.getElementById("unit-starter").textContent = "/ năm";
+                document.getElementById("price-business").textContent = "5.990.000đ";
+                document.getElementById("unit-business").textContent = "/ năm";
+                document.getElementById("price-pro").textContent = "9.900.000đ";
+                document.getElementById("unit-pro").textContent = "/ năm";
+                document.getElementById("price-enterprise").textContent = "45.000.000đ";
+                document.getElementById("unit-enterprise").textContent = "/ năm (Tặng 2 tháng)";
+            } else {
+                btnM.className = "px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold bg-sky-500 text-white shadow transition";
+                btnY.className = "px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-slate-300 hover:text-white transition flex items-center gap-1.5";
+                document.getElementById("price-starter").textContent = "299.000đ";
+                document.getElementById("unit-starter").textContent = "/ tháng";
+                document.getElementById("price-business").textContent = "599.000đ";
+                document.getElementById("unit-business").textContent = "/ tháng";
+                document.getElementById("price-pro").textContent = "990.000đ";
+                document.getElementById("unit-pro").textContent = "/ tháng";
+                document.getElementById("price-enterprise").textContent = "4.500.000đ";
+                document.getElementById("unit-enterprise").textContent = "/ tháng";
+            }
+        }
+
+        function generateMathChallenge() {
+            mathA = Math.floor(Math.random() * 8) + 2;
+            mathB = Math.floor(Math.random() * 8) + 1;
+            document.getElementById("math-question").textContent = `${mathA} + ${mathB} = ?`;
+            document.getElementById("math-answer").value = "";
+        }
+
+        function selectModalPlan(plan) {
+            selectedPlanCode = plan;
+            ["TRIAL", "STARTER", "BUSINESS", "PRO", "ENTERPRISE"].forEach(p => {
+                const el = document.getElementById("pill-plan-" + p);
+                if (p === plan) {
+                    el.className = "py-2 rounded-xl bg-sky-500 text-white shadow transition";
+                } else {
+                    el.className = "py-2 rounded-xl text-slate-400 hover:text-white transition";
+                }
+            });
+
+            const paidBox = document.getElementById("paid-options-box");
+            if (plan === "TRIAL") {
+                paidBox.classList.add("hidden");
+                document.getElementById("btn-submit-register").textContent = "🚀 Khởi Tạo Dùng Thử 14 Ngày Miễn Phí";
+            } else {
+                paidBox.classList.remove("hidden");
+                updateModalPriceSummary();
+                document.getElementById("btn-submit-register").textContent = `💳 Tạo Đơn & Nhận Mã VietQR (${plan})`;
+            }
+        }
+
+        function updateModalPriceSummary() {
+            if (selectedPlanCode === "TRIAL") return;
+            const cycleEl = document.querySelector('input[name="reg-cycle"]:checked');
+            const cycle = cycleEl ? cycleEl.value : "MONTHLY";
+            const amount = PLAN_PRICES[selectedPlanCode]?.[cycle] || 0;
+            document.getElementById("reg-total-amount").textContent = formatVND(amount);
+        }
+
+        function autoSuggestSubdomain(val) {
+            const subInput = document.getElementById("reg-subdomain");
+            if (subInput.dataset.manual === "1") return;
+            const slug = String(val || "")
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/[đĐ]/g, "d")
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, "")
+                .slice(0, 20);
+            subInput.value = slug;
+        }
+
+        function openRegisterModal(plan = "TRIAL") {
+            document.getElementById("register-modal").classList.remove("hidden");
+            document.getElementById("reg-step-form").classList.remove("hidden");
+            document.getElementById("reg-step-qr").classList.add("hidden");
+            generateMathChallenge();
+            selectModalPlan(plan);
+            initRegGoogleButton();
+        }
+
+        function closeRegisterModal() {
+            document.getElementById("register-modal").classList.add("hidden");
+            if (orderPollTimer) clearInterval(orderPollTimer);
+        }
+
+        function initRegGoogleButton() {
+            if (!window.google || !window.google.accounts) {
+                setTimeout(initRegGoogleButton, 400);
+                return;
+            }
+            try {
+                window.google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: (resp) => {
+                        googleIdToken = resp.credential;
+                        const payload = JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+                        if (payload.email) document.getElementById("reg-email").value = payload.email;
+                        if (payload.name && !document.getElementById("reg-fullname").value) {
+                            document.getElementById("reg-fullname").value = payload.name;
+                        }
+                        document.getElementById("google-verified-badge").classList.remove("hidden");
+                        document.getElementById("btn-send-otp").classList.add("hidden");
+                    }
+                });
+                window.google.accounts.id.renderButton(
+                    document.getElementById("reg-google-btn"),
+                    { theme: "filled_blue", size: "medium", shape: "pill", text: "signup_with" }
+                );
+            } catch (e) {}
+        }
+
+        async function sendEmailOtp() {
+            const email = document.getElementById("reg-email").value.trim();
+            const companyName = document.getElementById("reg-company").value.trim();
+            const errBox = document.getElementById("reg-error-msg");
+            const btn = document.getElementById("btn-send-otp");
+
+            if (!email || !email.includes("@")) {
+                errBox.textContent = "Vui lòng nhập địa chỉ Email hợp lệ trước khi lấy mã OTP.";
+                errBox.classList.remove("hidden");
+                return;
+            }
+
+            errBox.classList.add("hidden");
+            btn.disabled = true;
+            btn.textContent = "Đang gửi...";
+
+            try {
+                const res = await fetch("/api/public/send-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, companyName, website: document.getElementById("reg-website-hp").value })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errBox.textContent = data.error || "Không thể gửi OTP.";
+                    errBox.classList.remove("hidden");
+                    btn.disabled = false;
+                    btn.textContent = "📩 Gửi mã OTP";
+                    return;
+                }
+                btn.textContent = "✅ Đã gửi vào Email";
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = "📩 Gửi lại OTP";
+                }, 30000);
+            } catch (e) {
+                errBox.textContent = "Lỗi kết nối mạng khi gửi OTP.";
+                errBox.classList.remove("hidden");
+                btn.disabled = false;
+                btn.textContent = "📩 Gửi mã OTP";
+            }
+        }
+
+        async function submitRegistration(e) {
+            e.preventDefault();
+            const errBox = document.getElementById("reg-error-msg");
+            const btn = document.getElementById("btn-submit-register");
+            errBox.classList.add("hidden");
+
+            const cycleEl = document.querySelector('input[name="reg-cycle"]:checked');
+            const billingCycle = cycleEl ? cycleEl.value : currentBillingCycle;
+
+            const payload = {
+                companyName: document.getElementById("reg-company").value.trim(),
+                subdomain: document.getElementById("reg-subdomain").value.trim().toLowerCase(),
+                fullName: document.getElementById("reg-fullname").value.trim(),
+                phone: document.getElementById("reg-phone").value.trim(),
+                email: document.getElementById("reg-email").value.trim().toLowerCase(),
+                otpCode: document.getElementById("reg-otp").value.trim(),
+                password: document.getElementById("reg-password").value,
+                planCode: selectedPlanCode,
+                billingCycle,
+                googleCredential: googleIdToken,
+                mathA,
+                mathB,
+                mathAnswer: Number(document.getElementById("math-answer").value),
+                website: document.getElementById("reg-website-hp").value
+            };
+
+            btn.disabled = true;
+            btn.textContent = "Đang xử lý...";
+
+            try {
+                const res = await fetch("/api/public/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errBox.textContent = data.error || "Đăng ký không thành công.";
+                    errBox.classList.remove("hidden");
+                    btn.disabled = false;
+                    selectModalPlan(selectedPlanCode);
+                    return;
+                }
+
+                // If Trial or 100% Free Coupon -> Auto-login directly into Admin Portal!
+                if (data.mode === "TRIAL" || data.mode === "PAID_FREE") {
+                    saveTenantAdminSession(data);
+                    window.location.href = "admin.html?welcome=1";
+                    return;
+                }
+
+                // If VIETQR payment required -> Show VietQR and start 3-second SePay polling
+                if (data.mode === "VIETQR" && data.order) {
+                    document.getElementById("reg-step-form").classList.add("hidden");
+                    document.getElementById("reg-step-qr").classList.remove("hidden");
+                    document.getElementById("vietqr-img").src = data.order.qrUrl;
+                    document.getElementById("qr-order-code").textContent = data.order.orderCode;
+                    document.getElementById("qr-code-text").textContent = data.order.orderCode;
+                    document.getElementById("qr-amount-text").textContent = formatVND(data.order.amount);
+
+                    startOrderPolling(data.order.orderCode);
+                }
+            } catch (err) {
+                errBox.textContent = "Lỗi kết nối máy chủ. Vui lòng thử lại.";
+                errBox.classList.remove("hidden");
+                btn.disabled = false;
+            }
+        }
+
+        function startOrderPolling(orderCode) {
+            if (orderPollTimer) clearInterval(orderPollTimer);
+            orderPollTimer = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/public/order-status?code=${encodeURIComponent(orderCode)}`);
+                    const data = await res.json();
+                    if (data.status === "PAID" && data.token) {
+                        clearInterval(orderPollTimer);
+                        document.getElementById("qr-status-text").textContent = "✅ Đã nhận thanh toán! Đang mở trang Quản trị...";
+                        saveTenantAdminSession(data);
+                        setTimeout(() => {
+                            window.location.href = "admin.html?welcome=1";
+                        }, 1000);
+                    }
+                } catch (e) {}
+            }, 3000);
+        }
+
+        function saveTenantAdminSession(data) {
+            if (!data.token) return;
+            localStorage.setItem("ltp_jwt_token", data.token);
+            localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                id: data.user?.username || "admin",
+                username: data.user?.username || "admin",
+                name: data.user?.fullName || "Admin",
+                role: data.user?.role || "ADMIN",
+                department: data.user?.department || "BOD",
+                deptTags: ["BOD"],
+                taskPermissionMode: "AUTONOMOUS",
+                tenant: data.tenant || null,
+                token: data.token,
+                loginTime: new Date().toISOString()
+            }));
+        }
+
+        function openWorkspaceLoginModal() {
+            document.getElementById("login-finder-modal").classList.remove("hidden");
+        }
+        function closeWorkspaceLoginModal() {
+            document.getElementById("login-finder-modal").classList.add("hidden");
+        }
+
+        async function submitDirectWorkspaceLogin(e) {
+            e.preventDefault();
+            const dest = e.submitter?.dataset?.dest || "workspace";
+            const subdomain = document.getElementById("login-subdomain").value.trim().toLowerCase();
+            const username = document.getElementById("login-username").value.trim();
+            const password = document.getElementById("login-password").value;
+            const errBox = document.getElementById("login-finder-error");
+            errBox.classList.add("hidden");
+
+            try {
+                const res = await fetch("/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ subdomain, username, password })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    errBox.textContent = data.error || "Sai tài khoản hoặc mật khẩu.";
+                    errBox.classList.remove("hidden");
+                    return;
+                }
+
+                localStorage.setItem("ltp_jwt_token", data.token);
+                localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                    id: data.user.username,
+                    username: data.user.username,
+                    name: data.user.fullName,
+                    role: data.user.role,
+                    department: data.user.department,
+                    deptTags: data.user.deptTags || [data.user.department],
+                    taskPermissionMode: data.user.taskPermissionMode || "REPORT_ONLY",
+                    avatarUrl: data.user.avatarUrl || "",
+                    tenant: data.tenant || null,
+                    token: data.token,
+                    loginTime: new Date().toISOString()
+                }));
+
+                if (dest === "admin" && ["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(data.user.role)) {
+                    window.location.href = "admin.html";
+                } else {
+                    window.location.href = "index.html?workspace=1";
+                }
+            } catch (err) {
+                errBox.textContent = "Lỗi kết nối máy chủ.";
+                errBox.classList.remove("hidden");
+            }
+        }
+
+        function openLegalModal(type) {
+            const modal = document.getElementById("legal-modal");
+            const title = document.getElementById("legal-title");
+            const content = document.getElementById("legal-content");
+            modal.classList.remove("hidden");
+
+            if (type === "tos") {
+                title.textContent = "Điều Khoản Sử Dụng Dịch Vụ — LTP Progress Hub";
+                content.innerHTML = `
+                    <p><strong>1. Đơn vị cung cấp dịch vụ:</strong> CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ LÊ TÀI PHÁT (MST: 0317654107), trụ sở tại 19 Đường 12, Khu phố 2, Phường Hiệp Bình, TP. Hồ Chí Minh.</p>
+                    <p><strong>2. Quyền sở hữu dữ liệu:</strong> Toàn bộ dữ liệu dự án, biểu đồ Gantt, tài liệu đính kèm và thông tin nhân sự thuộc quyền sở hữu tuyệt đối của Khách hàng (Tenant). Khách hàng có toàn quyền tải về máy (Backup Excel/JSON) bất cứ lúc nào.</p>
+                    <p><strong>3. Cơ chế thanh toán & gia hạn:</strong> Thanh toán qua VietQR được xử lý tự động 24/7 qua cổng SePay. Khi hết hạn gói cước, dữ liệu vẫn được bảo lưu nguyên vẹn để khách hàng tải về hoặc gia hạn tiếp.</p>
+                `;
+            } else if (type === "privacy") {
+                title.textContent = "Chính Sách Bảo Vệ Dữ Liệu Cá Nhân (Nghị định 13/2023/NĐ-CP)";
+                content.innerHTML = `
+                    <p><strong>1. Cam kết tuân thủ Nghị định 13/2023/NĐ-CP:</strong> LTP SOFT cam kết xử lý và bảo vệ dữ liệu cá nhân của người lao động và doanh nghiệp theo đúng quy định pháp luật Việt Nam.</p>
+                    <p><strong>2. Cô lập dữ liệu Đa Thuê Bao (Multi-Tenant Isolation):</strong> Dữ liệu của mỗi công ty được phân tách độc lập bằng mã định danh <code>tenant_id</code> trên hạ tầng Cloudflare D1 & R2 mã hóa.</p>
+                    <p><strong>3. Không chia sẻ cho bên thứ ba:</strong> Chúng tôi tuyệt đối không mua bán, trao đổi hoặc tiết lộ thông tin dự án, bản vẽ hay danh sách nhân sự của khách hàng cho bất kỳ bên thứ ba nào.</p>
+                `;
+            } else {
+                title.textContent = "Cam Kết Chất Lượng (SLA 99.9%) & An Toàn Lưu Trữ";
+                content.innerHTML = `
+                    <p><strong>1. Hạ tầng Edge Cloud toàn cầu:</strong> Vận hành trên mạng lưới Cloudflare Workers, D1 SQL và R2 Object Storage tốc độ cao, độ sẵn sàng 99.9%.</p>
+                    <p><strong>2. Chủ động giải phóng dung lượng:</strong> Công cụ quản trị cho phép tải trọn bộ dữ liệu dự án về máy tính và xóa file đính kèm cũ để tái sử dụng dung lượng GB trọn đời mà không làm mất lịch sử biểu đồ Gantt.</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

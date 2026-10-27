@@ -712,7 +712,7 @@ export default {
     // SEND 6-DIGIT EMAIL OTP (ANTI-SPAM + REGISTER / FORGOT PASSWORD)
     if (url.pathname === "/api/public/send-otp" && request.method === "POST") {
       try {
-        const { email, purpose = "REGISTER", mathAnswer, mathExpected, honeypot } = await request.json();
+        const { email, companyName, company_name, purpose = "REGISTER", mathAnswer, mathExpected, honeypot } = await request.json();
         if (honeypot) return jsonResp({ error: "Phát hiện bot spam!" }, 400);
         if (mathExpected !== undefined && Number(mathAnswer) !== Number(mathExpected)) {
           return jsonResp({ error: "Kết quả phép tính chống Bot không đúng!" }, 400);
@@ -720,6 +720,18 @@ export default {
         const cleanEmail = String(email || "").trim().toLowerCase();
         if (!cleanEmail || !cleanEmail.includes("@")) {
           return jsonResp({ error: "Vui lòng nhập địa chỉ Email hợp lệ!" }, 400);
+        }
+
+        const targetCompanyName = String(companyName || company_name || "").trim() || "Doanh Nghiệp";
+
+        // Anti-spam cooldown: Only 1 OTP per email every 60 seconds
+        const nowSec = Math.floor(Date.now() / 1000);
+        const recentOtp = await env.DB.prepare(
+          "SELECT created_at FROM email_otps WHERE email = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1"
+        ).bind(cleanEmail, nowSec - 60).first();
+        if (recentOtp) {
+          const waitSec = 60 - (nowSec - recentOtp.created_at);
+          return jsonResp({ error: `Vui lòng đợi ${waitSec > 0 ? waitSec : 15} giây trước khi yêu cầu gửi lại mã OTP!` }, 429);
         }
 
         // Block disposable spam domains
@@ -751,7 +763,7 @@ export default {
               <h2 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-top: 0; margin-bottom: 12px;">Xác Thực Tài Khoản Quản Trị Viên</h2>
               <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin: 0 0 16px 0;">
                 Kính gửi Quý khách hàng,<br>
-                Hệ thống nhận được yêu cầu xác thực email cho tài khoản Quản trị thuộc công ty <strong>${companyName || 'Doanh Nghiệp'}</strong>. Vui lòng nhập mã bảo mật bên dưới để hoàn tất:
+                Hệ thống nhận được yêu cầu xác thực email cho tài khoản Quản trị thuộc công ty <strong>${targetCompanyName}</strong>. Vui lòng nhập mã bảo mật bên dưới để hoàn tất:
               </p>
 
               <!-- OTP Highlight Box -->

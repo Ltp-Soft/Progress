@@ -1197,17 +1197,32 @@
                 });
                 const data = await res.json();
                 if (!res.ok || data.emailSent === false) {
-                    errBox.textContent = data.message || data.error || "Không thể gửi email OTP qua Resend. Vui lòng kiểm tra lại email hoặc chọn 'Google 1-Chạm'!";
+                    errBox.textContent = data.error || data.message || "Không thể gửi email OTP qua Resend. Vui lòng kiểm tra lại email hoặc chọn 'Google 1-Chạm'!";
                     errBox.classList.remove("hidden");
                     btn.disabled = false;
                     btn.textContent = "Gửi mã OTP";
                     return;
                 }
-                btn.textContent = "Đã gửi vào Email";
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.textContent = "Gửi lại OTP";
-                }, 30000);
+                
+                // Start 60s countdown timer on button to prevent spamming
+                let countdown = 60;
+                btn.disabled = true;
+                btn.textContent = `Gửi lại sau (${countdown}s)`;
+                btn.className = "hidden px-3.5 py-2.5 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold shrink-0 cursor-not-allowed";
+                if (currentRegAuthMethod === "EMAIL") btn.classList.remove("hidden");
+
+                const timer = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        btn.textContent = `Gửi lại sau (${countdown}s)`;
+                    } else {
+                        clearInterval(timer);
+                        btn.disabled = false;
+                        btn.textContent = "Gửi lại OTP";
+                        btn.className = "px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 text-xs font-extrabold shrink-0 transition";
+                        if (currentRegAuthMethod !== "EMAIL") btn.classList.add("hidden");
+                    }
+                }, 1000);
             } catch (e) {
                 errBox.textContent = "Lỗi kết nối mạng khi gửi OTP.";
                 errBox.classList.remove("hidden");

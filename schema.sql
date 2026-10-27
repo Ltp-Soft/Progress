@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
     PRIMARY KEY (tenant_id, key)
 );
 
--- 11. COUPONS & AFFILIATES
+-- 11. COUPONS, KOL AFFILIATES, COMMISSIONS, WITHDRAWALS & SUPER ADMINS
 CREATE TABLE IF NOT EXISTS coupons (
     code TEXT PRIMARY KEY,
     affiliate_id TEXT,
@@ -245,4 +245,58 @@ CREATE TABLE IF NOT EXISTS coupons (
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-INSERT OR IGNORE INTO coupons (code, discount_percent, is_active) VALUES ('LTPSOFT10', 10, 1), ('CHinhthuc10', 10, 1), ('NAM10', 10, 1);
+INSERT OR IGNORE INTO coupons (code, discount_percent, is_active) VALUES ('LTPSOFT10', 10, 1), ('CHINHTHUC10', 10, 1), ('NAM10', 10, 1);
+
+CREATE TABLE IF NOT EXISTS super_admins (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT,
+    full_name TEXT DEFAULT 'Root Super Admin',
+    role TEXT DEFAULT 'SUPER_ADMIN',
+    google_sub TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS affiliates (
+    id TEXT PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    phone_zalo TEXT DEFAULT '',
+    email TEXT UNIQUE NOT NULL,
+    bank_name TEXT DEFAULT '',
+    bank_account_number TEXT DEFAULT '',
+    bank_account_name TEXT DEFAULT '',
+    ref_code TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    status TEXT DEFAULT 'PENDING_APPROVAL', -- PENDING_APPROVAL (Chờ Admin duyệt tay), ACTIVE, BANNED
+    commission_rate_first_year REAL DEFAULT 0.20,
+    commission_rate_recurring REAL DEFAULT 0.10,
+    balance_available REAL DEFAULT 0,
+    balance_pending REAL DEFAULT 0,
+    total_withdrawn REAL DEFAULT 0,
+    approved_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS affiliate_commissions (
+    id TEXT PRIMARY KEY,
+    affiliate_id TEXT NOT NULL,
+    order_id TEXT NOT NULL,
+    tenant_id TEXT,
+    order_type TEXT DEFAULT 'NEW_ORDER',
+    order_amount REAL DEFAULT 0,
+    commission_rate REAL DEFAULT 0.20,
+    commission_amount REAL DEFAULT 0,
+    status TEXT DEFAULT 'PENDING', -- PENDING (14 ngày), APPROVED, PAID
+    unlock_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS withdrawal_requests (
+    id TEXT PRIMARY KEY,
+    affiliate_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    bank_info TEXT DEFAULT '',
+    status TEXT DEFAULT 'PENDING', -- PENDING, APPROVED, REJECTED
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+

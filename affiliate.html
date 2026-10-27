@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đối Tác KOL / Affiliate (Hoa Hồng 20%) — LTP Progress Hub</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #020617; color: #f8fafc; }
+        .card-surface { background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(148, 163, 184, 0.16); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <a href="landing.html" class="flex items-center gap-3">
+                <img src="asset/logo.png" alt="LTP Logo" class="h-9 w-9 rounded-xl object-contain bg-white/5 p-1 border border-slate-700">
+                <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-base tracking-tight text-white">LTP PROGRESS HUB</span>
+                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-amber-300 border border-slate-700">
+                        KOL / AFFILIATE (20%)
+                    </span>
+                </div>
+            </a>
+
+            <div class="flex items-center gap-3">
+                <div id="aff-header-guest" class="flex items-center gap-2">
+                    <a href="landing.html" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition">
+                        Về Trang Chủ Bán Hàng
+                    </a>
+                </div>
+                <div id="aff-header-user" class="hidden items-center gap-3">
+                    <span class="text-xs text-slate-300">Xin chào, <strong id="aff-user-greeting" class="text-white"></strong></span>
+                    <button onclick="logoutAffiliate()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 text-xs font-bold transition">
+                        Đăng xuất
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+
+        <!-- ======================================================================
+             VIEW 1: PUBLIC INTRO & LOGIN / REGISTER
+             ====================================================================== -->
+        <div id="aff-public-view" class="space-y-8">
+            <div class="text-center max-w-3xl mx-auto space-y-4">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-slate-900 text-amber-300 border border-slate-700">
+                    Chương Trình Hợp Tác Phân Phối Phần Mềm Quản Lý Tiến Độ LTP Soft
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-black text-white leading-tight">
+                    Hợp Tác Giới Thiệu <span class="text-sky-400">LTP Progress Hub</span> — Nhận Hoa Hồng Định Kỳ Bền Vững
+                </h1>
+                <p class="text-sm sm:text-base text-slate-300 leading-relaxed">
+                    Nhận ngay <strong class="text-white font-extrabold">20% hoa hồng</strong> cho đơn hàng đầu tiên của khách hàng bạn giới thiệu, và <strong class="text-white font-extrabold">10% hoa hồng</strong> cho mọi lần gia hạn hoặc nâng cấp tiếp theo. Khách hàng nhập mã của bạn được <strong class="text-emerald-400">giảm trực tiếp 10%</strong> trên hóa đơn.
+                </p>
+
+                <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button onclick="openAffRegisterModal()" class="px-6 py-3 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-sm border border-slate-200 transition">
+                        Đăng Ký Làm Đối Tác KOL
+                    </button>
+                    <button onclick="toggleAffLoginBox()" class="px-6 py-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-sm border border-slate-700 transition">
+                        Đã Có Tài Khoản KOL? Đăng Nhập
+                    </button>
+                </div>
+            </div>
+
+            <!-- Login Box -->
+            <div id="aff-login-box" class="hidden max-w-md mx-auto card-surface rounded-2xl p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 class="text-sm font-black text-white">Đăng Nhập Cổng Đối Tác KOL</h3>
+                    <button onclick="toggleAffLoginBox()" class="text-xs text-slate-400 hover:text-white">✕</button>
+                </div>
+                <div id="aff-login-err" class="hidden p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs"></div>
+                <form onsubmit="event.preventDefault(); submitAffLogin();" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Email hoặc Mã giới thiệu (Ref Code)</label>
+                        <input id="aff-login-user" type="text" required placeholder="VD: kol@gmail.com hoặc KTSNAM"
+                               class="w-full px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Mật khẩu</label>
+                        <input id="aff-login-pass" type="password" required placeholder="Nhập mật khẩu..."
+                               class="w-full px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white">
+                    </div>
+                    <button type="submit" id="btn-aff-login" class="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                        Đăng Nhập Quản Lý Hoa Hồng
+                    </button>
+                </form>
+            </div>
+
+            <!-- 3-Step Approval Process Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4">
+                <div class="card-surface rounded-2xl p-5 space-y-2">
+                    <div class="text-xs font-black text-slate-400 uppercase">Bước 01</div>
+                    <h3 class="text-base font-black text-white">Đăng Ký & Chờ Admin Duyệt</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Điền thông tin liên hệ, tài khoản nhận hoa hồng và chọn Mã giới thiệu riêng (VD: <code>KTSMINH</code>). Quản trị viên LTP Soft sẽ xét duyệt hồ sơ của bạn để đảm bảo chất lượng đối tác.
+                    </p>
+                </div>
+                <div class="card-surface rounded-2xl p-5 space-y-2">
+                    <div class="text-xs font-black text-slate-400 uppercase">Bước 02</div>
+                    <h3 class="text-base font-black text-white">Nhận Mã Giảm 10% & Bản Demo</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Ngay khi được Admin phê duyệt, Mã giới thiệu giảm 10% và Không gian Demo công ty mẫu (Gói Pro) sẽ tự động mở khóa để bạn quay video hoặc gửi cho khách hàng trải nghiệm.
+                    </p>
+                </div>
+                <div class="card-surface rounded-2xl p-5 space-y-2">
+                    <div class="text-xs font-black text-slate-400 uppercase">Bước 03</div>
+                    <h3 class="text-base font-black text-white">Đối Soát Tự Động & Rút Tiền</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Mỗi khi khách hàng thanh toán qua VietQR SePay có gắn mã hoặc link của bạn, hệ thống tự động cộng 20% hoa hồng năm đầu (10% gia hạn) vào ví đối tác minh bạch 100%.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================================
+             VIEW 2: LOGGED-IN KOL DASHBOARD
+             ====================================================================== -->
+        <div id="aff-dashboard-view" class="hidden space-y-6">
+
+            <!-- PENDING APPROVAL NOTICE (Shown until Super Admin manually approves) -->
+            <div id="aff-pending-banner" class="hidden rounded-2xl p-5 bg-amber-500/10 border border-amber-500/40 space-y-2">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <span class="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-xs font-extrabold border border-amber-500/40">
+                        ⏳ ĐANG CHỜ QUẢN TRỊ VIÊN DUYỆT TAY (PENDING APPROVAL)
+                    </span>
+                    <span class="text-xs text-slate-300">Hotline/Zalo hỗ trợ duyệt nhanh: <strong class="text-white">0559.595.945</strong></span>
+                </div>
+                <p class="text-xs text-slate-200 leading-relaxed">
+                    Hồ sơ đối tác KOL của bạn đã được ghi nhận trên hệ thống. Để chống tạo mã ảo, Quản trị viên LTP Soft sẽ kiểm tra và bấm <strong>Duyệt kích hoạt</strong> trên trang Quản trị. Ngay sau khi được duyệt, Mã giảm giá 10% và Không gian Demo bên dưới sẽ chính thức có hiệu lực!
+                </p>
+            </div>
+
+            <!-- Referral Link, Coupon Code & Demo Box -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="card-surface rounded-2xl p-5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-semibold">Mã Giảm Giá 10% Của Bạn</span>
+                        <span id="aff-status-pill" class="px-2 py-0.5 rounded text-[10px] font-bold"></span>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 pt-1">
+                        <span id="aff-ref-code" class="text-2xl font-black font-mono text-white tracking-wider">---</span>
+                        <button onclick="copyAffText('code')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-200 border border-slate-700">
+                            Sao chép mã
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Khách nhập mã này khi mua gói được giảm ngay 10%.</p>
+                </div>
+
+                <div class="card-surface rounded-2xl p-5 space-y-2">
+                    <div class="text-xs text-slate-400 font-semibold">Link Giới Thiệu Tự Động Gắn Mã</div>
+                    <div class="flex items-center gap-2 pt-1">
+                        <input id="aff-ref-link" type="text" readonly class="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-sky-400">
+                        <button onclick="copyAffText('link')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-xs font-bold text-slate-200 border border-slate-700 shrink-0">
+                            Copy Link
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Khách bấm vào link này sẽ tự động áp mã giảm 10% của bạn.</p>
+                </div>
+
+                <div class="card-surface rounded-2xl p-5 space-y-2">
+                    <div class="text-xs text-slate-400 font-semibold">Không Gian Demo Dành Cho KOL</div>
+                    <div class="pt-1 flex items-center justify-between gap-2">
+                        <div class="text-xs text-slate-300">TK Demo: <code>admin</code> / MK: <code>123456</code></div>
+                        <a id="aff-demo-link" href="#" target="_blank" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 text-xs font-extrabold border border-slate-200 shrink-0">
+                            Mở Bản Demo
+                        </a>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Dùng để quay video review hoặc demo trực tiếp cho khách.</p>
+                </div>
+            </div>
+
+            <!-- Wallet & KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-slate-400">Số dư khả dụng (Có thể rút)</div>
+                    <div id="aff-bal-avail" class="text-2xl font-black text-emerald-400 mt-1">0 đ</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-slate-400">Hoa hồng chờ đối soát (14 ngày)</div>
+                    <div id="aff-bal-pending" class="text-2xl font-black text-amber-300 mt-1">0 đ</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-slate-400">Tổng đã rút về ngân hàng</div>
+                    <div id="aff-bal-withdrawn" class="text-2xl font-black text-white mt-1">0 đ</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-xs text-slate-400">Số đơn hàng thành công</div>
+                    <div id="aff-stat-orders" class="text-2xl font-black text-sky-400 mt-1">0 đơn</div>
+                </div>
+            </div>
+
+            <!-- Withdrawal Request & Commission History -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-4 card-surface rounded-2xl p-5 space-y-4">
+                    <h3 class="text-sm font-black text-white">Yêu Cầu Rút Hoa Hồng</h3>
+                    <div id="aff-bank-summary" class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-1"></div>
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-300">Số tiền muốn rút (Tối thiểu 500.000đ)</label>
+                        <input id="aff-withdraw-amount" type="number" min="500000" step="50000" placeholder="VD: 500000"
+                               class="w-full px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-bold">
+                        <button onclick="submitAffWithdraw()" class="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                            Gửi Yêu Cầu Rút Tiền
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 card-surface rounded-2xl overflow-hidden">
+                    <div class="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                        <h3 class="text-sm font-black text-white">Lịch Sử Hoa Hồng Phát Sinh</h3>
+                        <button onclick="loadAffDashboard()" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 text-xs font-bold">Làm mới</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400 bg-slate-900/50">
+                                    <th class="py-3 px-4">Khách hàng</th>
+                                    <th class="py-3 px-3">Gói cước</th>
+                                    <th class="py-3 px-3">Giá trị đơn</th>
+                                    <th class="py-3 px-3">Hoa hồng nhận</th>
+                                    <th class="py-3 px-4">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aff-commissions-tbody" class="divide-y divide-slate-800/70"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ======================================================================
+         MODAL: REGISTER NEW KOL (PENDING MANUAL ADMIN APPROVAL)
+         ====================================================================== -->
+    <div id="aff-register-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="card-surface w-full max-w-lg rounded-2xl p-6 border border-slate-700 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-base font-black text-white">Đăng Ký Đối Tác KOL / Affiliate</h3>
+                    <p class="text-xs text-slate-400">Hồ sơ sẽ được Admin LTP Soft duyệt kích hoạt để bảo vệ quyền lợi đối tác</p>
+                </div>
+                <button onclick="closeAffRegisterModal()" class="w-8 h-8 rounded-lg bg-slate-900 text-slate-400 hover:text-white border border-slate-700">✕</button>
+            </div>
+
+            <div id="aff-reg-err" class="hidden p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs"></div>
+
+            <form onsubmit="event.preventDefault(); submitAffRegister();" class="space-y-3 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1">Họ và Tên KOL / Đối tác *</label>
+                        <input id="reg-aff-name" type="text" required placeholder="VD: KTS. Nguyễn Hoàng Nam"
+                               class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1">Số điện thoại / Zalo liên hệ *</label>
+                        <input id="reg-aff-phone" type="text" required placeholder="VD: 0909123456"
+                               class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1">Email đăng nhập *</label>
+                        <input id="reg-aff-email" type="email" required placeholder="VD: nam.kts@gmail.com"
+                               class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1">Mật khẩu quản lý *</label>
+                        <input id="reg-aff-pass" type="password" required placeholder="Tối thiểu 6 ký tự"
+                               class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-amber-300 mb-1">Mã giới thiệu mong muốn (Chữ & Số viết liền, 3–20 ký tự) *</label>
+                    <input id="reg-aff-code" type="text" required placeholder="VD: KTSNAM hoặc XAYDUNGANPHAT"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold uppercase">
+                    <span class="text-[11px] text-slate-400">Mã này vừa là mã giảm 10% cho khách của bạn, vừa gắn hoa hồng 20% về ví của bạn sau khi được Admin duyệt.</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1">Ngân hàng nhận tiền</label>
+                        <input id="reg-aff-bank" type="text" required value="MBBank"
+                               class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1">Số tài khoản</label>
+                        <input id="reg-aff-accnum" type="text" required placeholder="Số TK ngân hàng"
+                               class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-300 mb-1">Chủ tài khoản</label>
+                        <input id="reg-aff-accname" type="text" required placeholder="NGUYEN HOANG NAM"
+                               class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white uppercase">
+                    </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
+                    <span class="text-slate-300 font-semibold">Xác thực chống Bot: <strong id="aff-captcha-q" class="text-white">6 + 3 = ?</strong></span>
+                    <input id="aff-captcha-ans" type="number" required placeholder="Kết quả"
+                           class="w-24 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-center font-bold">
+                </div>
+
+                <button type="submit" id="btn-aff-reg-submit" class="w-full py-3 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                    Gửi Hồ Sơ Đăng Ký KOL (Chờ Admin Duyệt)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let affCaptchaExpected = 9;
+        let currentAffProfile = null;
+
+        function initAffCaptcha() {
+            const a = Math.floor(Math.random() * 7) + 2;
+            const b = Math.floor(Math.random() * 7) + 1;
+            affCaptchaExpected = a + b;
+            const q = document.getElementById("aff-captcha-q");
+            if (q) q.textContent = `${a} + ${b} = ?`;
+            const ans = document.getElementById("aff-captcha-ans");
+            if (ans) ans.value = "";
+        }
+
+        function getAffSession() {
+            try { return JSON.parse(localStorage.getItem("ltp_affiliate_session") || "null"); } catch { return null; }
+        }
+
+        function openAffRegisterModal() {
+            initAffCaptcha();
+            document.getElementById("aff-reg-err").classList.add("hidden");
+            document.getElementById("aff-register-modal").classList.remove("hidden");
+        }
+        function closeAffRegisterModal() {
+            document.getElementById("aff-register-modal").classList.add("hidden");
+        }
+        function toggleAffLoginBox() {
+            document.getElementById("aff-login-box").classList.toggle("hidden");
+        }
+
+        async function submitAffRegister() {
+            const errEl = document.getElementById("aff-reg-err");
+            errEl.classList.add("hidden");
+            const payload = {
+                full_name: document.getElementById("reg-aff-name").value.trim(),
+                phone_zalo: document.getElementById("reg-aff-phone").value.trim(),
+                email: document.getElementById("reg-aff-email").value.trim(),
+                password: document.getElementById("reg-aff-pass").value,
+                ref_code: document.getElementById("reg-aff-code").value.trim(),
+                bank_name: document.getElementById("reg-aff-bank").value.trim(),
+                bank_account_number: document.getElementById("reg-aff-accnum").value.trim(),
+                bank_account_name: document.getElementById("reg-aff-accname").value.trim(),
+                captcha_answer: Number(document.getElementById("aff-captcha-ans").value),
+                captcha_expected: affCaptchaExpected
+            };
+
+            const btn = document.getElementById("btn-aff-reg-submit");
+            btn.disabled = true;
+            btn.textContent = "Đang gửi hồ sơ...";
+            try {
+                const res = await fetch("/api/public/affiliate-register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Đăng ký thất bại");
+                localStorage.setItem("ltp_affiliate_session", JSON.stringify({ token: data.token, affiliate: data.affiliate }));
+                closeAffRegisterModal();
+                alert(data.message || "Đăng ký thành công! Vui lòng chờ Admin duyệt kích hoạt.");
+                await loadAffDashboard();
+            } catch (e) {
+                errEl.textContent = e.message;
+                errEl.classList.remove("hidden");
+                initAffCaptcha();
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Gửi Hồ Sơ Đăng Ký KOL (Chờ Admin Duyệt)";
+            }
+        }
+
+        async function submitAffLogin() {
+            const errEl = document.getElementById("aff-login-err");
+            errEl.classList.add("hidden");
+            const username = document.getElementById("aff-login-user").value.trim();
+            const password = document.getElementById("aff-login-pass").value;
+            try {
+                const res = await fetch("/api/public/affiliate-login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Đăng nhập thất bại");
+                localStorage.setItem("ltp_affiliate_session", JSON.stringify({ token: data.token, affiliate: data.affiliate }));
+                await loadAffDashboard();
+            } catch (e) {
+                errEl.textContent = e.message;
+                errEl.classList.remove("hidden");
+            }
+        }
+
+        function logoutAffiliate() {
+            localStorage.removeItem("ltp_affiliate_session");
+            location.reload();
+        }
+
+        async function loadAffDashboard() {
+            const sess = getAffSession();
+            if (!sess || !sess.token) {
+                document.getElementById("aff-public-view").classList.remove("hidden");
+                document.getElementById("aff-dashboard-view").classList.add("hidden");
+                document.getElementById("aff-header-guest").classList.remove("hidden");
+                document.getElementById("aff-header-user").classList.add("hidden");
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/public/affiliate-dashboard", {
+                    headers: { "Authorization": `Bearer ${sess.token}` }
+                });
+                if (res.status === 401) {
+                    logoutAffiliate();
+                    return;
+                }
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Không thể tải dữ liệu");
+
+                const p = data.profile;
+                currentAffProfile = p;
+
+                document.getElementById("aff-public-view").classList.add("hidden");
+                document.getElementById("aff-dashboard-view").classList.remove("hidden");
+                document.getElementById("aff-header-guest").classList.add("hidden");
+                document.getElementById("aff-header-user").classList.remove("hidden");
+                document.getElementById("aff-header-user").classList.add("flex");
+                document.getElementById("aff-user-greeting").textContent = p.full_name;
+
+                const isPending = p.status === "PENDING_APPROVAL";
+                document.getElementById("aff-pending-banner").classList.toggle("hidden", !isPending);
+
+                const statusPill = document.getElementById("aff-status-pill");
+                if (isPending) {
+                    statusPill.textContent = "⏳ Chờ Admin Duyệt";
+                    statusPill.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                } else {
+                    statusPill.textContent = "✓ Đã Kích Hoạt";
+                    statusPill.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                }
+
+                document.getElementById("aff-ref-code").textContent = p.ref_code;
+                document.getElementById("aff-ref-link").value = `${window.location.origin}/?ref=${p.ref_code}`;
+                document.getElementById("aff-demo-link").href = `${window.location.origin}/?tenant=demo-${p.ref_code.toLowerCase()}`;
+
+                document.getElementById("aff-bal-avail").textContent = Number(p.balance_available || 0).toLocaleString("vi-VN") + " đ";
+                document.getElementById("aff-bal-pending").textContent = Number(p.balance_pending || 0).toLocaleString("vi-VN") + " đ";
+                document.getElementById("aff-bal-withdrawn").textContent = Number(p.total_withdrawn || 0).toLocaleString("vi-VN") + " đ";
+                document.getElementById("aff-stat-orders").textContent = `${data.stats?.total_paid_orders || 0} đơn`;
+
+                document.getElementById("aff-bank-summary").innerHTML = `
+                    <div><b>Ngân hàng:</b> ${p.bank_name || "---"}</div>
+                    <div><b>Số TK:</b> <code>${p.bank_account_number || "---"}</code></div>
+                    <div><b>Chủ TK:</b> ${p.bank_account_name || "---"}</div>
+                `;
+
+                const tbody = document.getElementById("aff-commissions-tbody");
+                const comms = data.commissions || [];
+                if (!comms.length) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500">Chưa có đơn hàng phát sinh hoa hồng.</td></tr>`;
+                } else {
+                    tbody.innerHTML = comms.map(c => `
+                        <tr>
+                            <td class="py-3 px-4 font-bold text-white">${c.company_name_masked}</td>
+                            <td class="py-3 px-3 text-slate-300">${c.plan_type}</td>
+                            <td class="py-3 px-3 text-slate-300">${Number(c.order_amount || 0).toLocaleString("vi-VN")} đ</td>
+                            <td class="py-3 px-3 font-extrabold text-emerald-400">+${Number(c.commission_amount || 0).toLocaleString("vi-VN")} đ</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">
+                                    ${c.status === 'APPROVED' ? 'Khả dụng' : 'Chờ đối soát 14 ngày'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join("");
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function copyAffText(type) {
+            if (!currentAffProfile) return;
+            const txt = type === "code" ? currentAffProfile.ref_code : `${window.location.origin}/?ref=${currentAffProfile.ref_code}`;
+            navigator.clipboard.writeText(txt);
+            alert(`Đã sao chép: ${txt}`);
+        }
+
+        async function submitAffWithdraw() {
+            const sess = getAffSession();
+            if (!sess?.token) return;
+            const amt = Number(document.getElementById("aff-withdraw-amount").value);
+            if (!amt || amt < 500000) {
+                alert("Số tiền rút tối thiểu là 500.000 đ.");
+                return;
+            }
+            try {
+                const res = await fetch("/api/public/affiliate-withdraw", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({ amount: amt })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Không thể gửi yêu cầu rút tiền");
+                alert(data.message);
+                document.getElementById("aff-withdraw-amount").value = "";
+                await loadAffDashboard();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", loadAffDashboard);
+    </script>
+</body>
+</html>

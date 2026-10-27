@@ -340,6 +340,55 @@ async function ensureMultiTenantSchema(env) {
       is_active INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS super_admins (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT,
+      full_name TEXT DEFAULT 'Root Super Admin',
+      role TEXT DEFAULT 'SUPER_ADMIN',
+      google_sub TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS affiliates (
+      id TEXT PRIMARY KEY,
+      full_name TEXT NOT NULL,
+      phone_zalo TEXT DEFAULT '',
+      email TEXT UNIQUE NOT NULL,
+      bank_name TEXT DEFAULT '',
+      bank_account_number TEXT DEFAULT '',
+      bank_account_name TEXT DEFAULT '',
+      ref_code TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      status TEXT DEFAULT 'PENDING_APPROVAL',
+      commission_rate_first_year REAL DEFAULT 0.20,
+      commission_rate_recurring REAL DEFAULT 0.10,
+      balance_available REAL DEFAULT 0,
+      balance_pending REAL DEFAULT 0,
+      total_withdrawn REAL DEFAULT 0,
+      approved_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS affiliate_commissions (
+      id TEXT PRIMARY KEY,
+      affiliate_id TEXT NOT NULL,
+      order_id TEXT NOT NULL,
+      tenant_id TEXT,
+      order_type TEXT DEFAULT 'NEW_ORDER',
+      order_amount REAL DEFAULT 0,
+      commission_rate REAL DEFAULT 0.20,
+      commission_amount REAL DEFAULT 0,
+      status TEXT DEFAULT 'PENDING',
+      unlock_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS withdrawal_requests (
+      id TEXT PRIMARY KEY,
+      affiliate_id TEXT NOT NULL,
+      amount REAL NOT NULL,
+      bank_info TEXT DEFAULT '',
+      status TEXT DEFAULT 'PENDING',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)`
   ];
 
@@ -834,11 +883,14 @@ export default {
         let discountAmount = 0;
         let finalAmount = basePrice;
         let appliedCoupon = null;
+        let appliedAffiliateId = null;
 
         if (coupon_code) {
-          const cp = await env.DB.prepare("SELECT * FROM coupons WHERE code = ? AND is_active = 1").bind(String(coupon_code).trim().toUpperCase()).first();
+          const cleanCode = String(coupon_code).trim().toUpperCase();
+          const cp = await env.DB.prepare("SELECT * FROM coupons WHERE code = ? AND is_active = 1").bind(cleanCode).first();
           if (cp) {
             appliedCoupon = cp.code;
+            appliedAffiliateId = cp.affiliate_id || null;
             discountAmount = Math.round((basePrice * (cp.discount_percent || 10)) / 100);
             finalAmount = basePrice - discountAmount;
           }
@@ -849,13 +901,13 @@ export default {
           INSERT INTO payment_orders (
             id, order_type, subdomain_requested, company_name, owner_email,
             plan_type, billing_cycle, original_amount, discount_amount, amount,
-            coupon_code, order_status, google_owner_id, device_fingerprint,
+            coupon_code, affiliate_id, order_status, google_owner_id, device_fingerprint,
             owner_name, admin_password_hash, admin_password_plain
-          ) VALUES (?, 'NEW_REGISTER', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?)
+          ) VALUES (?, 'NEW_REGISTER', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?)
         `).bind(
           orderId, cleanSub, company_name.trim(), verifiedEmail,
           plan_type, billing_cycle, basePrice, discountAmount, finalAmount,
-          appliedCoupon, verifiedGoogleId, device_fingerprint || null,
+          appliedCoupon, appliedAffiliateId, verifiedGoogleId, device_fingerprint || null,
           owner_name || "Quản Trị Viên", pwHash, admin_password
         ).run();
 
@@ -988,6 +1040,33 @@ export default {
         await env.DB.prepare("UPDATE payment_orders SET order_status = 'PAID', paid_at = datetime('now'), tenant_id = ?, payment_reference = ? WHERE id = ?")
           .bind(finalTenantId, payload.referenceCode || payload.id || "SEPAY", orderId).run();
 
+        // Credit Affiliate Commission if order has an approved ACTIVE KOL affiliate
+        if (order.affiliate_id) {
+          try {
+            const aff = await env.DB.prepare("SELECT * FROM affiliates WHERE id = ? AND status = 'ACTIVE'").bind(order.affiliate_id).first();
+            if (aff) {
+              const isFirstOrder = order.order_type === "NEW_REGISTER";
+              const commRate = isFirstOrder
+                ? Number(aff.commission_rate_first_year || 0.20)
+                : Number(aff.commission_rate_recurring || 0.10);
+              const commAmount = Math.round(Number(order.amount || 0) * commRate);
+              const commId = `comm_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+              const unlockAt = new Date(Date.now() + 14 * 86400000).toISOString();
+              await env.DB.batch([
+                env.DB.prepare(`
+                  INSERT INTO affiliate_commissions (
+                    id, affiliate_id, order_id, tenant_id, order_type,
+                    order_amount, commission_rate, commission_amount, status, unlock_at
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)
+                `).bind(commId, aff.id, order.id, finalTenantId, order.order_type || "NEW_ORDER", order.amount, commRate, commAmount, unlockAt),
+                env.DB.prepare("UPDATE affiliates SET balance_pending = COALESCE(balance_pending, 0) + ? WHERE id = ?").bind(commAmount, aff.id)
+              ]);
+            }
+          } catch (affErr) {
+            console.error("Affiliate commission error:", affErr);
+          }
+        }
+
         // Send Automated Payment Confirmation & Workspace Activation Email via Resend
         if (order.owner_email) {
           await sendEmail({
@@ -1011,6 +1090,613 @@ export default {
         }
 
         return jsonResp({ success: true, orderId, subdomain: order.subdomain_requested });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    // ========================================================================
+    // 1.5. KOL / AFFILIATE PORTAL ENDPOINTS (MANUAL ADMIN APPROVAL WORKFLOW)
+    // ========================================================================
+    if (url.pathname === "/api/public/affiliate-register" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const {
+          full_name, phone_zalo, email, bank_name, bank_account_number,
+          bank_account_name, ref_code, password, captcha_answer, captcha_expected, website_honeypot
+        } = body;
+
+        if (website_honeypot) return jsonResp({ error: "Yêu cầu bị từ chối." }, 400);
+        if (captcha_expected !== undefined && Number(captcha_answer) !== Number(captcha_expected)) {
+          return jsonResp({ error: "Câu hỏi xác thực chống spam không chính xác. Vui lòng thử lại!" }, 400);
+        }
+        if (!full_name || !email || !ref_code || !password) {
+          return jsonResp({ error: "Vui lòng điền đầy đủ Họ tên, Email, Mã giới thiệu và Mật khẩu." }, 400);
+        }
+
+        const cleanRef = String(ref_code).trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (cleanRef.length < 3 || cleanRef.length > 20) {
+          return jsonResp({ error: "Mã giới thiệu chỉ gồm chữ và số (3–20 ký tự)." }, 400);
+        }
+
+        const cleanEmail = String(email).toLowerCase().trim();
+        const existing = await env.DB.prepare("SELECT id FROM affiliates WHERE LOWER(email) = ? OR ref_code = ?").bind(cleanEmail, cleanRef).first();
+        if (existing) {
+          return jsonResp({ error: "Email hoặc Mã giới thiệu này đã được đăng ký." }, 400);
+        }
+
+        const affId = `aff_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const passHash = await hashPassword(password);
+
+        // IMPORTANT: Register with status = 'PENDING_APPROVAL' and coupon is_active = 0 (Requires manual approval in Super Admin!)
+        await env.DB.prepare(`
+          INSERT INTO affiliates (
+            id, full_name, phone_zalo, email,
+            bank_name, bank_account_number, bank_account_name,
+            ref_code, password_hash, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_APPROVAL')
+        `).bind(
+          affId, full_name.trim(), (phone_zalo || "").trim(), cleanEmail,
+          (bank_name || "").trim(), (bank_account_number || "").trim(), (bank_account_name || "").trim().toUpperCase(),
+          cleanRef, passHash
+        ).run();
+
+        await env.DB.prepare(`
+          INSERT OR REPLACE INTO coupons (code, affiliate_id, discount_percent, is_active)
+          VALUES (?, ?, 10, 0)
+        `).bind(cleanRef, affId).run();
+
+        const token = await signJwt(env, { role: "AFFILIATE", aid: affId, ref: cleanRef, email: cleanEmail });
+        const rootDomain = env.ROOT_DOMAIN || url.host;
+
+        return jsonResp({
+          success: true,
+          token,
+          message: "Đăng ký thành công! Hồ sơ KOL của bạn đang ở trạng thái CHỜ ADMIN DUYỆT TAY. Ngay khi Admin duyệt, mã giới thiệu và không gian Demo của bạn sẽ tự động kích hoạt.",
+          affiliate: {
+            id: affId,
+            full_name: full_name.trim(),
+            ref_code: cleanRef,
+            email: cleanEmail,
+            status: "PENDING_APPROVAL",
+            ref_link: `https://${rootDomain}/?ref=${cleanRef}`,
+            demo_url: `https://${rootDomain}/?tenant=demo-${cleanRef.toLowerCase()}`
+          }
+        });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/public/affiliate-login" && request.method === "POST") {
+      try {
+        const { username, password } = await request.json();
+        if (!username || !password) {
+          return jsonResp({ error: "Vui lòng nhập Email hoặc Mã giới thiệu cùng mật khẩu." }, 400);
+        }
+        const cleanInput = String(username).trim().toLowerCase();
+        const aff = await env.DB.prepare(
+          "SELECT * FROM affiliates WHERE LOWER(email) = ? OR LOWER(ref_code) = ?"
+        ).bind(cleanInput, cleanInput).first();
+
+        if (!aff) return jsonResp({ error: "Tài khoản đối tác KOL không tồn tại." }, 401);
+        if (aff.status === "BANNED") {
+          return jsonResp({ error: "Tài khoản đối tác của bạn đã bị khóa. Vui lòng liên hệ Admin." }, 403);
+        }
+
+        const ok = await verifyPassword(password, aff.password_hash, "");
+        if (!ok) return jsonResp({ error: "Sai mật khẩu. Vui lòng thử lại." }, 401);
+
+        const token = await signJwt(env, { role: "AFFILIATE", aid: aff.id, ref: aff.ref_code, email: aff.email });
+        const rootDomain = env.ROOT_DOMAIN || url.host;
+
+        return jsonResp({
+          success: true,
+          token,
+          affiliate: {
+            id: aff.id,
+            full_name: aff.full_name,
+            ref_code: aff.ref_code,
+            email: aff.email,
+            phone_zalo: aff.phone_zalo,
+            status: aff.status,
+            bank_name: aff.bank_name,
+            bank_account_number: aff.bank_account_number,
+            bank_account_name: aff.bank_account_name,
+            balance_available: aff.balance_available || 0,
+            balance_pending: aff.balance_pending || 0,
+            total_withdrawn: aff.total_withdrawn || 0,
+            ref_link: `https://${rootDomain}/?ref=${aff.ref_code}`,
+            demo_url: `https://${rootDomain}/?tenant=demo-${aff.ref_code.toLowerCase()}`
+          }
+        });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/public/affiliate-dashboard" && request.method === "GET") {
+      try {
+        if (!authUser || authUser.role !== "AFFILIATE" || !authUser.aid) {
+          return jsonResp({ error: "Phiên đăng nhập đối tác không hợp lệ." }, 401);
+        }
+        const aff = await env.DB.prepare("SELECT * FROM affiliates WHERE id = ?").bind(authUser.aid).first();
+        if (!aff) return jsonResp({ error: "Không tìm thấy tài khoản đối tác." }, 404);
+
+        // Auto-unlock commissions older than 14 days
+        const nowIso = new Date().toISOString();
+        const readyComm = await env.DB.prepare(`
+          SELECT SUM(commission_amount) as unlock_sum FROM affiliate_commissions
+          WHERE affiliate_id = ? AND status = 'PENDING' AND unlock_at <= ?
+        `).bind(aff.id, nowIso).first();
+
+        if (readyComm && Number(readyComm.unlock_sum) > 0) {
+          const sumVal = Number(readyComm.unlock_sum);
+          await env.DB.batch([
+            env.DB.prepare("UPDATE affiliate_commissions SET status = 'APPROVED' WHERE affiliate_id = ? AND status = 'PENDING' AND unlock_at <= ?").bind(aff.id, nowIso),
+            env.DB.prepare("UPDATE affiliates SET balance_available = COALESCE(balance_available, 0) + ?, balance_pending = MAX(0, COALESCE(balance_pending, 0) - ?) WHERE id = ?").bind(sumVal, sumVal, aff.id)
+          ]);
+          aff.balance_available = (aff.balance_available || 0) + sumVal;
+          aff.balance_pending = Math.max(0, (aff.balance_pending || 0) - sumVal);
+        }
+
+        const trialsCount = await env.DB.prepare("SELECT COUNT(*) as cnt FROM payment_orders WHERE affiliate_id = ?").bind(aff.id).first();
+        const paidOrders = await env.DB.prepare("SELECT COUNT(*) as cnt, SUM(commission_amount) as total_earned FROM affiliate_commissions WHERE affiliate_id = ?").bind(aff.id).first();
+
+        const commissions = await env.DB.prepare(`
+          SELECT ac.*, po.company_name, po.plan_type
+          FROM affiliate_commissions ac
+          LEFT JOIN payment_orders po ON ac.order_id = po.id
+          WHERE ac.affiliate_id = ?
+          ORDER BY ac.created_at DESC LIMIT 30
+        `).bind(aff.id).all();
+
+        const maskedCommissions = (commissions.results || []).map(c => {
+          const rawName = c.company_name || "Khách hàng";
+          const masked = rawName.length > 5 ? rawName.slice(0, 4) + "***" : rawName + "***";
+          return {
+            id: c.id,
+            company_name_masked: masked,
+            plan_type: c.plan_type || "BUSINESS",
+            order_amount: c.order_amount,
+            commission_amount: c.commission_amount,
+            status: c.status,
+            unlock_at: c.unlock_at,
+            created_at: c.created_at
+          };
+        });
+
+        const withdrawals = await env.DB.prepare("SELECT * FROM withdrawal_requests WHERE affiliate_id = ? ORDER BY created_at DESC LIMIT 20").bind(aff.id).all();
+        const rootDomain = env.ROOT_DOMAIN || url.host;
+
+        return jsonResp({
+          success: true,
+          profile: {
+            id: aff.id,
+            full_name: aff.full_name,
+            email: aff.email,
+            phone_zalo: aff.phone_zalo,
+            ref_code: aff.ref_code,
+            status: aff.status,
+            commission_rate_first_year: aff.commission_rate_first_year || 0.20,
+            commission_rate_recurring: aff.commission_rate_recurring || 0.10,
+            bank_name: aff.bank_name,
+            bank_account_number: aff.bank_account_number,
+            bank_account_name: aff.bank_account_name,
+            balance_available: aff.balance_available || 0,
+            balance_pending: aff.balance_pending || 0,
+            total_withdrawn: aff.total_withdrawn || 0,
+            ref_link: `https://${rootDomain}/?ref=${aff.ref_code}`,
+            demo_url: `https://${rootDomain}/?tenant=demo-${aff.ref_code.toLowerCase()}`
+          },
+          stats: {
+            total_trials: trialsCount?.cnt || 0,
+            total_paid_orders: paidOrders?.cnt || 0,
+            total_commission_earned: paidOrders?.total_earned || 0
+          },
+          commissions: maskedCommissions,
+          withdrawals: withdrawals.results || []
+        });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/public/affiliate-withdraw" && request.method === "POST") {
+      try {
+        if (!authUser || authUser.role !== "AFFILIATE" || !authUser.aid) {
+          return jsonResp({ error: "Phiên đăng nhập đối tác không hợp lệ." }, 401);
+        }
+        const { amount } = await request.json();
+        const amt = Number(amount);
+        if (!amt || isNaN(amt) || amt < 500000) {
+          return jsonResp({ error: "Số tiền rút tối thiểu là 500.000 đ." }, 400);
+        }
+        const aff = await env.DB.prepare("SELECT * FROM affiliates WHERE id = ?").bind(authUser.aid).first();
+        if (!aff) return jsonResp({ error: "Không tìm thấy đối tác." }, 404);
+        if (aff.status !== "ACTIVE") {
+          return jsonResp({ error: "Tài khoản KOL của bạn chưa được duyệt kích hoạt nên chưa thể rút tiền." }, 403);
+        }
+        if ((aff.balance_available || 0) < amt) {
+          return jsonResp({ error: "Số dư khả dụng không đủ để thực hiện rút tiền." }, 400);
+        }
+
+        const reqId = `wdr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const bankInfo = `${aff.bank_name} - ${aff.bank_account_number} (${aff.bank_account_name})`;
+
+        await env.DB.batch([
+          env.DB.prepare("UPDATE affiliates SET balance_available = balance_available - ?, total_withdrawn = COALESCE(total_withdrawn, 0) + ? WHERE id = ?").bind(amt, amt, aff.id),
+          env.DB.prepare("INSERT INTO withdrawal_requests (id, affiliate_id, amount, bank_info, status) VALUES (?, ?, ?, ?, 'PENDING')").bind(reqId, aff.id, amt, bankInfo)
+        ]);
+
+        return jsonResp({
+          success: true,
+          message: `Đã gửi yêu cầu rút ${amt.toLocaleString("vi-VN")} đ thành công! Bộ phận kế toán sẽ chuyển khoản trong vòng 24h làm việc.`,
+          new_balance: aff.balance_available - amt
+        });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    // ========================================================================
+    // 1.6. SUPER ADMIN PORTAL ENDPOINTS (PLATFORM OWNER: TENANTS, KOLS, COUPONS, ORDERS)
+    // ========================================================================
+    if (url.pathname === "/api/super-admin/auth" && request.method === "POST") {
+      try {
+        const { login_type, email, password, google_token } = await request.json();
+
+        if (login_type === "GOOGLE") {
+          if (!google_token) return jsonResp({ error: "Thiếu mã xác thực Google" }, 400);
+          const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(google_token)}`);
+          if (!verifyRes.ok) return jsonResp({ error: "Mã xác thực Google không hợp lệ." }, 401);
+          const gPayload = await verifyRes.json();
+          const googleEmail = (gPayload.email || "").toLowerCase().trim();
+          const googleSub = gPayload.sub;
+
+          let admin = await env.DB.prepare("SELECT * FROM super_admins WHERE LOWER(email) = ? OR google_sub = ?").bind(googleEmail, googleSub).first();
+          const totalAdmins = await env.DB.prepare("SELECT COUNT(*) as count FROM super_admins").first();
+
+          if (!admin && Number(totalAdmins?.count || 0) === 0) {
+            const newId = `sa_${Date.now()}`;
+            await env.DB.prepare("INSERT INTO super_admins (id, email, full_name, role, google_sub) VALUES (?, ?, ?, 'SUPER_ADMIN', ?)")
+              .bind(newId, googleEmail, gPayload.name || "Owner Platform", googleSub).run();
+            admin = { id: newId, email: googleEmail, full_name: gPayload.name || "Owner Platform", role: "SUPER_ADMIN" };
+          }
+
+          if (!admin) {
+            return jsonResp({ error: `Email Google "${googleEmail}" không có quyền truy cập Bảng Điều Khiển Tối Cao.` }, 403);
+          }
+
+          const token = await signJwt(env, { aid: admin.id, email: admin.email, role: "SUPER_ADMIN", is_super_admin: true });
+          return jsonResp({ success: true, token, admin: { id: admin.id, email: admin.email, full_name: admin.full_name, role: "SUPER_ADMIN" } });
+        }
+
+        if (!email || !password) {
+          return jsonResp({ error: "Vui lòng nhập Email và Mật khẩu quản trị tối cao." }, 400);
+        }
+        const cleanEmail = String(email).toLowerCase().trim();
+        let admin = await env.DB.prepare("SELECT * FROM super_admins WHERE LOWER(email) = ?").bind(cleanEmail).first();
+        const totalAdmins = await env.DB.prepare("SELECT COUNT(*) as count FROM super_admins").first();
+
+        // Owner Bootstrapping: First Super Admin login sets the Root Super Admin account
+        if (!admin && Number(totalAdmins?.count || 0) === 0) {
+          const newId = `sa_${Date.now()}`;
+          const hashed = await hashPassword(password);
+          await env.DB.prepare("INSERT INTO super_admins (id, email, password_hash, full_name, role) VALUES (?, ?, ?, 'Root Super Admin', 'SUPER_ADMIN')")
+            .bind(newId, cleanEmail, hashed).run();
+          admin = { id: newId, email: cleanEmail, password_hash: hashed, full_name: "Root Super Admin", role: "SUPER_ADMIN" };
+        }
+
+        if (!admin || !admin.password_hash) {
+          return jsonResp({ error: "Tài khoản không tồn tại hoặc chưa cài đặt mật khẩu." }, 401);
+        }
+
+        const ok = await verifyPassword(password, admin.password_hash, "");
+        if (!ok) return jsonResp({ error: "Sai mật khẩu quản trị tối cao." }, 401);
+
+        const token = await signJwt(env, { aid: admin.id, email: admin.email, role: "SUPER_ADMIN", is_super_admin: true });
+        return jsonResp({ success: true, token, admin: { id: admin.id, email: admin.email, full_name: admin.full_name, role: "SUPER_ADMIN" } });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/super-admin/overview" && request.method === "GET") {
+      try {
+        if (!authUser || !authUser.is_super_admin) {
+          return jsonResp({ error: "Yêu cầu quyền Quản Trị Viên Tối Cao (Super Admin)." }, 401);
+        }
+
+        const totalTenantsRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM tenants").first();
+        const activeTenantsRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM tenants WHERE status = 'ACTIVE'").first();
+        const trialTenantsRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM tenants WHERE status = 'TRIAL'").first();
+        const expiredTenantsRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM tenants WHERE status = 'EXPIRED' OR datetime(expires_at) < datetime('now')").first();
+        const totalAffiliatesRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM affiliates").first();
+        const pendingAffiliatesRow = await env.DB.prepare("SELECT COUNT(*) as cnt FROM affiliates WHERE status = 'PENDING_APPROVAL'").first();
+        const pendingWithdrawalsRow = await env.DB.prepare("SELECT COUNT(*) as cnt, SUM(amount) as total_amount FROM withdrawal_requests WHERE status = 'PENDING'").first();
+        const totalRevenueRow = await env.DB.prepare("SELECT SUM(amount) as total_rev FROM payment_orders WHERE order_status = 'PAID'").first();
+
+        const tenantsList = await env.DB.prepare(`
+          SELECT t.*,
+            (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id AND u.is_active = 1) as user_count,
+            (SELECT COUNT(*) FROM projects p WHERE p.tenant_id = t.id AND p.status != 'DELETED') as project_count,
+            (SELECT COUNT(*) FROM tasks tk WHERE tk.tenant_id = t.id AND tk.is_deleted = 0) as task_count
+          FROM tenants t
+          ORDER BY t.created_at DESC
+        `).all();
+
+        const affiliatesList = await env.DB.prepare(`
+          SELECT a.*,
+            (SELECT COUNT(*) FROM payment_orders po WHERE po.affiliate_id = a.id) as total_referred_orders,
+            (SELECT COUNT(*) FROM affiliate_commissions ac WHERE ac.affiliate_id = a.id) as total_paid_orders,
+            (SELECT SUM(ac.commission_amount) FROM affiliate_commissions ac WHERE ac.affiliate_id = a.id) as total_commission_generated
+          FROM affiliates a
+          ORDER BY CASE WHEN a.status = 'PENDING_APPROVAL' THEN 0 ELSE 1 END, a.created_at DESC
+        `).all();
+
+        const withdrawalsList = await env.DB.prepare(`
+          SELECT w.*, a.full_name as affiliate_name, a.email as affiliate_email, a.phone_zalo, a.ref_code
+          FROM withdrawal_requests w
+          JOIN affiliates a ON w.affiliate_id = a.id
+          ORDER BY CASE WHEN w.status = 'PENDING' THEN 0 ELSE 1 END, w.created_at DESC
+          LIMIT 100
+        `).all();
+
+        const couponsList = await env.DB.prepare("SELECT * FROM coupons ORDER BY created_at DESC").all();
+        const recentOrders = await env.DB.prepare("SELECT * FROM payment_orders ORDER BY created_at DESC LIMIT 60").all();
+
+        return jsonResp({
+          success: true,
+          stats: {
+            total_tenants: totalTenantsRow?.cnt || 0,
+            active_tenants: activeTenantsRow?.cnt || 0,
+            trial_tenants: trialTenantsRow?.cnt || 0,
+            expired_tenants: expiredTenantsRow?.cnt || 0,
+            total_affiliates: totalAffiliatesRow?.cnt || 0,
+            pending_affiliates: pendingAffiliatesRow?.cnt || 0,
+            pending_withdrawals_count: pendingWithdrawalsRow?.cnt || 0,
+            pending_withdrawals_amount: pendingWithdrawalsRow?.total_amount || 0,
+            total_revenue: totalRevenueRow?.total_rev || 0
+          },
+          tenants: tenantsList.results || [],
+          affiliates: affiliatesList.results || [],
+          withdrawals: withdrawalsList.results || [],
+          coupons: couponsList.results || [],
+          orders: recentOrders.results || []
+        });
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/super-admin/manage-tenant" && request.method === "POST") {
+      try {
+        if (!authUser || !authUser.is_super_admin) {
+          return jsonResp({ error: "Yêu cầu quyền Quản Trị Viên Tối Cao." }, 401);
+        }
+        const body = await request.json();
+        const { action, tenant_id, extend_days, extra_storage_gb, plan_type, status } = body;
+
+        if (!tenant_id) return jsonResp({ error: "Thiếu tenant_id" }, 400);
+        const targetT = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(tenant_id).first();
+        if (!targetT) return jsonResp({ error: "Không tìm thấy công ty khách hàng." }, 404);
+
+        if (action === "EXTEND_DAYS") {
+          const days = Math.max(0, Number(extend_days) || 0);
+          const addGb = Math.max(0, Number(extra_storage_gb) || 0);
+          const currentExpiry = new Date(targetT.expires_at).getTime();
+          const baseTime = currentExpiry > Date.now() ? currentExpiry : Date.now();
+          const updatedExpiry = days > 0 ? new Date(baseTime + days * 86400000).toISOString() : targetT.expires_at;
+          const addMb = addGb * 1024;
+
+          let newPlan = targetT.plan_type;
+          let maxUsers = targetT.max_users;
+          let storageLimitMb = targetT.storage_limit_mb;
+          if (plan_type && PLANS[plan_type]) {
+            newPlan = plan_type;
+            maxUsers = PLANS[plan_type].maxUsers;
+            storageLimitMb = PLANS[plan_type].storageLimitMb;
+          }
+
+          await env.DB.prepare(`
+            UPDATE tenants
+            SET expires_at = ?,
+                addon_storage_mb = COALESCE(addon_storage_mb, 0) + ?,
+                plan_type = ?,
+                max_users = ?,
+                storage_limit_mb = ?,
+                status = CASE WHEN ? > 0 AND status IN ('EXPIRED', 'TRIAL') THEN 'ACTIVE' ELSE status END
+            WHERE id = ?
+          `).bind(updatedExpiry, addMb, newPlan, maxUsers, storageLimitMb, days, tenant_id).run();
+
+          return jsonResp({
+            success: true,
+            message: `Đã cập nhật công ty "${targetT.company_name}" thành công! (Gói: ${newPlan}, Hạn mới: ${new Date(updatedExpiry).toLocaleDateString("vi-VN")})`
+          });
+        }
+
+        if (action === "UPDATE_STATUS") {
+          await env.DB.prepare("UPDATE tenants SET status = ? WHERE id = ?").bind(status, tenant_id).run();
+          return jsonResp({ success: true, message: `Đã chuyển trạng thái "${targetT.company_name}" sang ${status}.` });
+        }
+
+        if (action === "DELETE_TENANT") {
+          if (tenant_id === "tenant-demo") {
+            return jsonResp({ error: "Không thể xóa công ty Demo gốc của hệ thống." }, 400);
+          }
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM task_files WHERE tenant_id = ?").bind(tenant_id),
+            env.DB.prepare("DELETE FROM tasks WHERE tenant_id = ?").bind(tenant_id),
+            env.DB.prepare("DELETE FROM projects WHERE tenant_id = ?").bind(tenant_id),
+            env.DB.prepare("DELETE FROM users WHERE tenant_id = ?").bind(tenant_id),
+            env.DB.prepare("DELETE FROM departments WHERE tenant_id = ?").bind(tenant_id),
+            env.DB.prepare("DELETE FROM qr_invites WHERE tenant_id = ?").bind(tenant_id),
+            env.DB.prepare("DELETE FROM tenants WHERE id = ?").bind(tenant_id)
+          ]);
+          return jsonResp({ success: true, message: `Đã xóa vĩnh viễn công ty "${targetT.company_name}" (${targetT.subdomain}).` });
+        }
+
+        return jsonResp({ error: "Thao tác không hợp lệ." }, 400);
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/super-admin/manage-affiliate" && request.method === "POST") {
+      try {
+        if (!authUser || !authUser.is_super_admin) {
+          return jsonResp({ error: "Yêu cầu quyền Quản Trị Viên Tối Cao." }, 401);
+        }
+        const body = await request.json();
+        const { action, affiliate_id, request_id, first_year_rate, recurring_rate, coupon_code, discount_percent } = body;
+
+        // 1. MANUAL APPROVAL OF KOL (Duyệt tay KOL trên trang Super Admin!)
+        if (action === "APPROVE_AFFILIATE") {
+          const aff = await env.DB.prepare("SELECT * FROM affiliates WHERE id = ?").bind(affiliate_id).first();
+          if (!aff) return jsonResp({ error: "Không tìm thấy đối tác KOL." }, 404);
+
+          await env.DB.batch([
+            env.DB.prepare("UPDATE affiliates SET status = 'ACTIVE', approved_at = datetime('now') WHERE id = ?").bind(affiliate_id),
+            env.DB.prepare("INSERT OR REPLACE INTO coupons (code, affiliate_id, discount_percent, is_active) VALUES (?, ?, 10, 1)").bind(aff.ref_code, affiliate_id)
+          ]);
+
+          // Seed Demo Workspace for the newly approved KOL
+          const cleanRef = aff.ref_code.toLowerCase();
+          const demoSub = `demo-${cleanRef}`;
+          const demoTenantId = `tenant_demo_${cleanRef}`;
+          const existingDemo = await env.DB.prepare("SELECT id FROM tenants WHERE subdomain = ?").bind(demoSub).first();
+          if (!existingDemo) {
+            await env.DB.prepare(`
+              INSERT INTO tenants (
+                id, subdomain, company_name, owner_email, plan_type, status,
+                max_users, max_projects, storage_limit_mb, max_file_size_mb, ai_daily_limit, expires_at
+              ) VALUES (?, ?, ?, ?, 'PRO', 'ACTIVE', 100, 999999, 81920, 500, 200, datetime('now', '+1 year'))
+            `).bind(demoTenantId, demoSub, `Demo KOL — ${aff.full_name}`, aff.email).run();
+
+            for (let i = 0; i < DEFAULT_DEPARTMENTS.length; i++) {
+              const d = DEFAULT_DEPARTMENTS[i];
+              await env.DB.prepare("INSERT OR IGNORE INTO departments (id, tenant_id, code, name, prefix, color, order_index) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                .bind(`dept_${demoSub}_${d.code}`, demoTenantId, d.code, d.name, d.prefix, d.color, i).run();
+            }
+
+            const demoPwHash = await hashPassword("123456");
+            await env.DB.prepare(`
+              INSERT OR IGNORE INTO users (
+                id, tenant_id, username, email, full_name, pass, password_hash, password_plain_hint,
+                role, dept, dept_tags, prefix, task_permission_mode, is_active
+              ) VALUES (?, ?, 'admin', ?, ?, '123456', ?, '123456', 'ADMIN', 'ALL', '[]', 'C', 'AUTONOMOUS', 1)
+            `).bind(`admin_${demoSub}`, demoTenantId, aff.email, `Admin Demo (${aff.full_name})`, demoPwHash).run();
+          }
+
+          // Notify KOL via Resend Email
+          if (aff.email) {
+            const rootDomain = env.ROOT_DOMAIN || url.host;
+            await sendEmail({
+              to: aff.email,
+              subject: `[LTP Progress Hub] Hồ sơ Đối tác KOL (${aff.ref_code}) đã được phê duyệt!`,
+              html: `
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; color: #0f172a;">
+                  <h2 style="margin-top: 0; color: #0f172a;">Chúc mừng ${aff.full_name}, tài khoản KOL của bạn đã được kích hoạt!</h2>
+                  <p style="font-size: 14px; color: #334155;">Quản trị viên LTP Soft đã phê duyệt hồ sơ đối tác của bạn. Ngay bây giờ mã giới thiệu và không gian Demo của bạn đã sẵn sàng hoạt động:</p>
+                  <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin: 18px 0; font-size: 13px; line-height: 1.8;">
+                    <div><b>Mã giảm giá 10% cho khách hàng:</b> <code>${aff.ref_code}</code></div>
+                    <div><b>Link giới thiệu tự động:</b> <a href="https://${rootDomain}/?ref=${aff.ref_code}">https://${rootDomain}/?ref=${aff.ref_code}</a></div>
+                    <div><b>Không gian Demo (admin / 123456):</b> <a href="https://${rootDomain}/?tenant=${demoSub}">https://${rootDomain}/?tenant=${demoSub}</a></div>
+                  </div>
+                </div>
+              `,
+              env
+            });
+          }
+
+          return jsonResp({
+            success: true,
+            message: `Đã DUYỆT TAY đối tác KOL "${aff.full_name}"! Mã giới thiệu "${aff.ref_code}" (giảm 10%) và không gian Demo đã được kích hoạt.`
+          });
+        }
+
+        if (action === "BAN_AFFILIATE" || action === "UNBAN_AFFILIATE") {
+          const newStatus = action === "BAN_AFFILIATE" ? "BANNED" : "ACTIVE";
+          const isCouponActive = action === "BAN_AFFILIATE" ? 0 : 1;
+          await env.DB.batch([
+            env.DB.prepare("UPDATE affiliates SET status = ? WHERE id = ?").bind(newStatus, affiliate_id),
+            env.DB.prepare("UPDATE coupons SET is_active = ? WHERE affiliate_id = ?").bind(isCouponActive, affiliate_id)
+          ]);
+          return jsonResp({
+            success: true,
+            message: `Đã ${newStatus === "BANNED" ? "khóa tài khoản & vô hiệu mã giới thiệu" : "mở khóa tài khoản & bật lại mã giới thiệu"} của KOL.`
+          });
+        }
+
+        if (action === "SET_COMMISSION_RATES") {
+          const r1 = Number(first_year_rate) || 0.20;
+          const r2 = Number(recurring_rate) || 0.10;
+          await env.DB.prepare("UPDATE affiliates SET commission_rate_first_year = ?, commission_rate_recurring = ? WHERE id = ?")
+            .bind(r1, r2, affiliate_id).run();
+          return jsonResp({
+            success: true,
+            message: `Đã cập nhật mức hoa hồng KOL: Năm đầu ${Math.round(r1 * 100)}%, Gia hạn ${Math.round(r2 * 100)}%.`
+          });
+        }
+
+        if (action === "APPROVE_WITHDRAWAL" || action === "REJECT_WITHDRAWAL") {
+          const reqRow = await env.DB.prepare("SELECT * FROM withdrawal_requests WHERE id = ?").bind(request_id).first();
+          if (!reqRow || reqRow.status !== "PENDING") {
+            return jsonResp({ error: "Yêu cầu rút tiền không tồn tại hoặc đã xử lý." }, 400);
+          }
+          if (action === "APPROVE_WITHDRAWAL") {
+            await env.DB.prepare("UPDATE withdrawal_requests SET status = 'APPROVED' WHERE id = ?").bind(request_id).run();
+            return jsonResp({ success: true, message: `Đã xác nhận chuyển khoản ${Number(reqRow.amount).toLocaleString("vi-VN")} đ thành công!` });
+          } else {
+            await env.DB.batch([
+              env.DB.prepare("UPDATE withdrawal_requests SET status = 'REJECTED' WHERE id = ?").bind(request_id),
+              env.DB.prepare("UPDATE affiliates SET balance_available = COALESCE(balance_available, 0) + ?, total_withdrawn = MAX(0, COALESCE(total_withdrawn, 0) - ?) WHERE id = ?")
+                .bind(reqRow.amount, reqRow.amount, reqRow.affiliate_id)
+            ]);
+            return jsonResp({ success: true, message: `Đã từ chối và hoàn lại ${Number(reqRow.amount).toLocaleString("vi-VN")} đ vào ví KOL.` });
+          }
+        }
+
+        if (action === "CREATE_COUPON") {
+          const cleanCode = String(coupon_code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+          const pct = Math.min(90, Math.max(1, Number(discount_percent) || 10));
+          if (!cleanCode) return jsonResp({ error: "Vui lòng nhập mã giảm giá." }, 400);
+          await env.DB.prepare("INSERT OR REPLACE INTO coupons (code, discount_percent, is_active) VALUES (?, ?, 1)").bind(cleanCode, pct).run();
+          return jsonResp({ success: true, message: `Đã tạo mã ưu đãi "${cleanCode}" (Giảm ${pct}%)!` });
+        }
+
+        if (action === "TOGGLE_COUPON") {
+          const cp = await env.DB.prepare("SELECT * FROM coupons WHERE code = ?").bind(coupon_code).first();
+          if (!cp) return jsonResp({ error: "Không tìm thấy mã giảm giá." }, 404);
+          const nextState = cp.is_active ? 0 : 1;
+          await env.DB.prepare("UPDATE coupons SET is_active = ? WHERE code = ?").bind(nextState, coupon_code).run();
+          return jsonResp({ success: true, message: `Đã ${nextState ? "Bật" : "Tắt"} mã giảm giá ${coupon_code}.` });
+        }
+
+        return jsonResp({ error: "Thao tác không hợp lệ." }, 400);
+      } catch (err) {
+        return jsonResp({ error: err.message }, 500);
+      }
+    }
+
+    if (url.pathname === "/api/super-admin/manage-order" && request.method === "POST") {
+      try {
+        if (!authUser || !authUser.is_super_admin) {
+          return jsonResp({ error: "Yêu cầu quyền Quản Trị Viên Tối Cao." }, 401);
+        }
+        const { order_id } = await request.json();
+        const order = await env.DB.prepare("SELECT * FROM payment_orders WHERE id = ?").bind(order_id).first();
+        if (!order) return jsonResp({ error: "Không tìm thấy đơn hàng." }, 404);
+        if (order.order_status === "PAID") return jsonResp({ error: "Đơn hàng này đã được kích hoạt trước đó." }, 400);
+
+        // Reuse the SePay webhook logic by simulating an internal webhook call
+        const fakeWebhookReq = new Request(new URL("/api/webhook/sepay", request.url).toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: order.id, transferAmount: order.amount, referenceCode: "MANUAL_SUPER_ADMIN" })
+        });
+        return await this.fetch(fakeWebhookReq, env);
       } catch (err) {
         return jsonResp({ error: err.message }, 500);
       }

@@ -3,6 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function routeRootToLanding() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const ref = (params.get("ref") || "").trim().toUpperCase();
+                if (ref) localStorage.setItem("ltp_ref_code", ref);
+
+                const pathname = window.location.pathname.toLowerCase();
+                if (pathname.startsWith("/super-admin") || pathname.startsWith("/master-root")) {
+                    window.location.replace("/super-admin.html" + window.location.search);
+                    return;
+                }
+                if (pathname.startsWith("/affiliate")) {
+                    window.location.replace("/affiliate.html" + window.location.search);
+                    return;
+                }
+
+                const hasTenantParam = params.has("tenant") || params.has("subdomain") || params.has("workspace");
+                const hasActiveSession = Boolean(localStorage.getItem("CRYSTAL_ACTIVE_SESSION_V2") || localStorage.getItem("ltp_jwt_token"));
+                const host = window.location.hostname.toLowerCase();
+                const isRootDomain =
+                    host === "ltp-soft.com" ||
+                    host === "www.ltp-soft.com" ||
+                    host === "progress.ltp-soft.com" ||
+                    host === "localhost" ||
+                    host === "127.0.0.1" ||
+                    host.endsWith(".pages.dev");
+
+                if (isRootDomain && !hasTenantParam && !hasActiveSession && (pathname === "/" || pathname === "/index.html")) {
+                    window.location.replace("/landing.html" + window.location.search);
+                }
+            } catch (e) {}
+        })();
+    </script>
     <title>LTP Progress Hub — Nền Tảng Quản Lý Tiến Độ Dự Án & Phòng Ban Đa Chi Nhánh</title>
     <link rel="icon" type="image/png" href="./favicon.png">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">

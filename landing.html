@@ -69,18 +69,21 @@
                 </div>
             </a>
 
-            <nav class="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-300">
+            <nav class="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-300">
                 <a href="#features" class="hover:text-sky-400 transition">Tính năng cốt lõi</a>
                 <a href="#qr-onboarding" class="hover:text-sky-400 transition">QR Phòng chờ</a>
                 <a href="#pricing" class="hover:text-sky-400 transition">Bảng giá & Gói cước</a>
                 <a href="#enterprise" class="hover:text-amber-400 transition text-amber-300/90">Gói Tập Đoàn</a>
+                <a href="affiliate.html" class="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700 text-xs font-extrabold transition">
+                    Đối tác KOL (20%)
+                </a>
             </nav>
 
             <div class="flex items-center gap-2.5">
-                <button onclick="openWorkspaceLoginModal()" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs sm:text-sm font-bold transition">
-                    🔑 Đăng nhập Workspace
+                <button onclick="openWorkspaceLoginModal()" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs sm:text-sm font-bold transition">
+                    Đăng nhập Workspace
                 </button>
-                <button onclick="openRegisterModal('TRIAL')" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-sky-500/25 transition">
+                <button onclick="openRegisterModal('TRIAL')" class="px-4 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-950 border border-slate-200 text-xs sm:text-sm font-extrabold transition">
                     Dùng thử 14 ngày
                 </button>
             </div>
@@ -431,8 +434,10 @@
                     <ul class="space-y-2">
                         <li><a href="https://ltp-soft.com" target="_blank" class="hover:text-sky-400 transition">Chấm công GPS & Quản lý Nhân sự</a></li>
                         <li><a href="#pricing" class="hover:text-sky-400 transition">Bảng giá LTP Progress Hub</a></li>
+                        <li><a href="affiliate.html" class="text-amber-300 hover:text-amber-200 font-bold transition">Hợp tác KOL / Affiliate (Hoa hồng 20%)</a></li>
                         <li><a href="javascript:void(0)" onclick="openWorkspaceLoginModal()" class="hover:text-sky-400 transition">Đăng nhập Không gian làm việc</a></li>
                         <li><a href="admin.html" class="hover:text-sky-400 transition">Cổng Quản trị Admin Công ty</a></li>
+                        <li><a href="super-admin.html" class="text-slate-500 hover:text-slate-300 transition">Quản trị Nền tảng (Root Master)</a></li>
                     </ul>
                 </div>
 
@@ -549,11 +554,11 @@
                         </div>
                     </div>
 
-                    <!-- Paid Plan Billing Options -->
-                    <div id="paid-options-box" class="hidden p-3.5 rounded-2xl bg-slate-900/95 border border-sky-500/30 space-y-3">
+                    <!-- Paid Plan Billing Options + KOL Referral Coupon -->
+                    <div id="paid-options-box" class="hidden p-3.5 rounded-2xl bg-slate-900/95 border border-slate-700 space-y-3">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-slate-300">Chu kỳ thanh toán:</span>
-                            <div class="flex gap-2">
+                            <div class="flex gap-3">
                                 <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer">
                                     <input type="radio" name="reg-cycle" value="MONTHLY" checked onchange="updateModalPriceSummary()"> Theo Tháng
                                 </label>
@@ -562,6 +567,19 @@
                                 </label>
                             </div>
                         </div>
+
+                        <div class="pt-2 border-t border-slate-800 space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-300">Mã giới thiệu KOL / Mã ưu đãi (Giảm 10%):</label>
+                            <div class="flex gap-2">
+                                <input id="reg-coupon" type="text" placeholder="Nhập mã giới thiệu (nếu có)..."
+                                       class="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-mono text-amber-300 uppercase">
+                                <button type="button" onclick="applyRegisterCoupon()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-slate-700">
+                                    Áp dụng
+                                </button>
+                            </div>
+                            <div id="reg-coupon-msg" class="hidden text-[11px] font-bold"></div>
+                        </div>
+
                         <div class="flex items-center justify-between pt-2 border-t border-slate-800">
                             <span class="text-xs text-slate-400">Tổng thanh toán VietQR:</span>
                             <span id="reg-total-amount" class="text-lg font-black text-sky-400">599.000đ</span>
@@ -742,13 +760,61 @@
             }
         }
 
+        let appliedDiscountPercent = 0;
+
         function updateModalPriceSummary() {
             if (selectedPlanCode === "TRIAL") return;
             const cycleEl = document.querySelector('input[name="reg-cycle"]:checked');
             const cycle = cycleEl ? cycleEl.value : "MONTHLY";
-            const amount = PLAN_PRICES[selectedPlanCode]?.[cycle] || 0;
-            document.getElementById("reg-total-amount").textContent = formatVND(amount);
+            const baseAmount = PLAN_PRICES[selectedPlanCode]?.[cycle] || 0;
+            const finalAmount = Math.round(baseAmount * (100 - appliedDiscountPercent) / 100);
+            document.getElementById("reg-total-amount").textContent = formatVND(finalAmount);
         }
+
+        async function applyRegisterCoupon() {
+            const codeEl = document.getElementById("reg-coupon");
+            const msgEl = document.getElementById("reg-coupon-msg");
+            const code = (codeEl?.value || "").trim().toUpperCase();
+            if (!code) return;
+            try {
+                const res = await fetch("/api/public/check-coupon", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code })
+                });
+                const data = await res.json();
+                msgEl.classList.remove("hidden");
+                if (!res.ok || !data.valid) {
+                    appliedDiscountPercent = 0;
+                    msgEl.className = "text-[11px] font-bold text-rose-400";
+                    msgEl.textContent = data.error || "Mã giới thiệu không tồn tại hoặc KOL chưa được Admin duyệt.";
+                } else {
+                    appliedDiscountPercent = Number(data.discount_percent) || 10;
+                    msgEl.className = "text-[11px] font-bold text-emerald-400";
+                    msgEl.textContent = `✓ Đã áp dụng mã ${data.code}: Giảm trực tiếp ${appliedDiscountPercent}%!`;
+                }
+                updateModalPriceSummary();
+            } catch (e) {}
+        }
+
+        // Capture ?ref=MAKOL from URL automatically
+        (function captureReferralFromUrl() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const ref = (params.get("ref") || "").trim().toUpperCase();
+                if (ref) localStorage.setItem("ltp_ref_code", ref);
+                const savedRef = localStorage.getItem("ltp_ref_code") || "";
+                if (savedRef) {
+                    window.addEventListener("DOMContentLoaded", () => {
+                        const cpInput = document.getElementById("reg-coupon");
+                        if (cpInput && !cpInput.value) {
+                            cpInput.value = savedRef;
+                            applyRegisterCoupon();
+                        }
+                    });
+                }
+            } catch (e) {}
+        })();
 
         function autoSuggestSubdomain(val) {
             const subInput = document.getElementById("reg-subdomain");
@@ -854,21 +920,28 @@
             const cycleEl = document.querySelector('input[name="reg-cycle"]:checked');
             const billingCycle = cycleEl ? cycleEl.value : currentBillingCycle;
 
+            const couponCode = (document.getElementById("reg-coupon")?.value || localStorage.getItem("ltp_ref_code") || "").trim().toUpperCase();
+            const companyName = document.getElementById("reg-company").value.trim();
+            const subdomain = document.getElementById("reg-subdomain").value.trim().toLowerCase();
+            const fullName = document.getElementById("reg-fullname").value.trim();
+            const phone = document.getElementById("reg-phone").value.trim();
+            const email = document.getElementById("reg-email").value.trim().toLowerCase();
+            const otpCode = document.getElementById("reg-otp").value.trim();
+            const password = document.getElementById("reg-password").value;
+
             const payload = {
-                companyName: document.getElementById("reg-company").value.trim(),
-                subdomain: document.getElementById("reg-subdomain").value.trim().toLowerCase(),
-                fullName: document.getElementById("reg-fullname").value.trim(),
-                phone: document.getElementById("reg-phone").value.trim(),
-                email: document.getElementById("reg-email").value.trim().toLowerCase(),
-                otpCode: document.getElementById("reg-otp").value.trim(),
-                password: document.getElementById("reg-password").value,
-                planCode: selectedPlanCode,
-                billingCycle,
-                googleCredential: googleIdToken,
-                mathA,
-                mathB,
-                mathAnswer: Number(document.getElementById("math-answer").value),
-                website: document.getElementById("reg-website-hp").value
+                company_name: companyName,
+                subdomain,
+                owner_name: fullName,
+                owner_phone: phone,
+                owner_email: email,
+                otp_code: otpCode,
+                admin_password: password,
+                plan_type: selectedPlanCode === "TRIAL" ? "BUSINESS" : selectedPlanCode,
+                billing_cycle: billingCycle,
+                is_trial: selectedPlanCode === "TRIAL",
+                coupon_code: couponCode,
+                google_token: googleIdToken
             };
 
             btn.disabled = true;
@@ -889,23 +962,25 @@
                     return;
                 }
 
-                // If Trial or 100% Free Coupon -> Auto-login directly into Admin Portal!
-                if (data.mode === "TRIAL" || data.mode === "PAID_FREE") {
+                // If Trial -> Auto-login directly into Admin Portal!
+                if (data.is_trial || data.mode === "TRIAL") {
                     saveTenantAdminSession(data);
-                    window.location.href = "admin.html?welcome=1";
+                    window.location.href = data.redirect_url || `admin.html?tenant=${encodeURIComponent(subdomain)}`;
                     return;
                 }
 
                 // If VIETQR payment required -> Show VietQR and start 3-second SePay polling
-                if (data.mode === "VIETQR" && data.order) {
+                if (data.order) {
+                    const ord = data.order;
+                    const ordId = ord.order_id || ord.orderCode;
                     document.getElementById("reg-step-form").classList.add("hidden");
                     document.getElementById("reg-step-qr").classList.remove("hidden");
-                    document.getElementById("vietqr-img").src = data.order.qrUrl;
-                    document.getElementById("qr-order-code").textContent = data.order.orderCode;
-                    document.getElementById("qr-code-text").textContent = data.order.orderCode;
-                    document.getElementById("qr-amount-text").textContent = formatVND(data.order.amount);
+                    document.getElementById("vietqr-img").src = ord.qr_url || ord.qrUrl;
+                    document.getElementById("qr-order-code").textContent = ordId;
+                    document.getElementById("qr-code-text").textContent = ordId;
+                    document.getElementById("qr-amount-text").textContent = formatVND(ord.amount);
 
-                    startOrderPolling(data.order.orderCode);
+                    startOrderPolling(ordId, subdomain);
                 }
             } catch (err) {
                 errBox.textContent = "Lỗi kết nối máy chủ. Vui lòng thử lại.";
@@ -914,18 +989,18 @@
             }
         }
 
-        function startOrderPolling(orderCode) {
+        function startOrderPolling(orderCode, subdomain) {
             if (orderPollTimer) clearInterval(orderPollTimer);
             orderPollTimer = setInterval(async () => {
                 try {
-                    const res = await fetch(`/api/public/order-status?code=${encodeURIComponent(orderCode)}`);
+                    const res = await fetch(`/api/public/order-status?order_id=${encodeURIComponent(orderCode)}`);
                     const data = await res.json();
-                    if (data.status === "PAID" && data.token) {
+                    if (data.paid || data.status === "PAID") {
                         clearInterval(orderPollTimer);
                         document.getElementById("qr-status-text").textContent = "✅ Đã nhận thanh toán! Đang mở trang Quản trị...";
-                        saveTenantAdminSession(data);
+                        if (data.token) saveTenantAdminSession(data);
                         setTimeout(() => {
-                            window.location.href = "admin.html?welcome=1";
+                            window.location.href = data.redirect_url || `index.html?tenant=${encodeURIComponent(subdomain || data.subdomain || "")}&workspace=1`;
                         }, 1000);
                     }
                 } catch (e) {}
@@ -972,7 +1047,7 @@
                     body: JSON.stringify({ subdomain, username, password })
                 });
                 const data = await res.json();
-                if (!res.ok || !data.success) {
+                if (!res.ok || (data.status !== "success" && !data.success)) {
                     errBox.textContent = data.error || "Sai tài khoản hoặc mật khẩu.";
                     errBox.classList.remove("hidden");
                     return;
@@ -980,12 +1055,14 @@
 
                 localStorage.setItem("ltp_jwt_token", data.token);
                 localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
-                    id: data.user.username,
+                    id: data.user.id || data.user.username,
                     username: data.user.username,
                     name: data.user.fullName,
                     role: data.user.role,
-                    department: data.user.department,
-                    deptTags: data.user.deptTags || [data.user.department],
+                    dept: data.user.dept || data.user.department || "ALL",
+                    department: data.user.dept || data.user.department || "ALL",
+                    deptTags: data.user.deptTags || [data.user.dept || "ALL"],
+                    prefix: data.user.prefix || "C",
                     taskPermissionMode: data.user.taskPermissionMode || "REPORT_ONLY",
                     avatarUrl: data.user.avatarUrl || "",
                     tenant: data.tenant || null,
@@ -993,10 +1070,11 @@
                     loginTime: new Date().toISOString()
                 }));
 
+                const subParam = data.user.subdomain || subdomain || "";
                 if (dest === "admin" && ["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(data.user.role)) {
-                    window.location.href = "admin.html";
+                    window.location.href = `admin.html${subParam ? `?tenant=${encodeURIComponent(subParam)}` : ""}`;
                 } else {
-                    window.location.href = "index.html?workspace=1";
+                    window.location.href = `index.html?workspace=1${subParam ? `&tenant=${encodeURIComponent(subParam)}` : ""}`;
                 }
             } catch (err) {
                 errBox.textContent = "Lỗi kết nối máy chủ.";

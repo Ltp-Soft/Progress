@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khu Vực Quản Trị Tối Cao (Super Admin) — LTP Progress Hub</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #020617; color: #f8fafc; }
+        .card-surface { background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(148, 163, 184, 0.16); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ======================================================================
+         SCREEN 1: SUPER ADMIN LOGIN (GOOGLE OAUTH + ROOT EMAIL/PASSWORD)
+         ====================================================================== -->
+    <div id="sa-login-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="card-surface w-full max-w-md rounded-2xl p-8 space-y-5 shadow-2xl">
+            <div class="text-center space-y-2">
+                <img src="asset/logo.png" alt="LTP Soft" class="w-14 h-14 mx-auto rounded-xl object-contain bg-white/5 p-1.5 border border-slate-700">
+                <h1 class="text-xl font-black text-white">Khu Vực Quản Trị Tối Cao (Super Admin)</h1>
+                <p class="text-xs text-slate-400">
+                    Bảng điều khiển toàn bộ khách hàng, duyệt tay KOL Affiliate, tạo mã giảm giá và quản lý doanh thu LTP Progress Hub.
+                </p>
+            </div>
+
+            <div id="sa-login-err" class="hidden p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs"></div>
+
+            <!-- Google Sign-in Button -->
+            <div class="flex justify-center">
+                <div id="super-admin-google-btn"></div>
+            </div>
+
+            <div class="flex items-center gap-3 text-[11px] text-slate-500">
+                <div class="flex-1 h-px bg-slate-800"></div>
+                <span>HOẶC ĐĂNG NHẬP BẰNG EMAIL CHỦ NỀN TẢNG</span>
+                <div class="flex-1 h-px bg-slate-800"></div>
+            </div>
+
+            <form onsubmit="event.preventDefault(); submitSaPasswordLogin();" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-300 mb-1">Email Quản trị tối cao</label>
+                    <input id="sa-email-input" type="email" required placeholder="VD: admin@ltp-soft.com"
+                           class="w-full px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-300 mb-1">Mật khẩu Root Master</label>
+                    <input id="sa-pass-input" type="password" required placeholder="Nhập mật khẩu..."
+                           class="w-full px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white">
+                </div>
+                <button type="submit" id="btn-sa-login" class="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                    Truy Cập Bảng Điều Khiển Tối Cao
+                </button>
+            </form>
+
+            <div class="text-center pt-2">
+                <a href="landing.html" class="text-xs text-slate-400 hover:text-white underline">← Quay về Trang chủ bán hàng</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================================
+         SCREEN 2: SUPER ADMIN DASHBOARD
+         ====================================================================== -->
+    <div id="sa-dashboard-screen" class="hidden flex-1 flex flex-col">
+
+        <!-- Header -->
+        <header class="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <img src="asset/logo.png" alt="LTP Logo" class="h-9 w-9 rounded-xl object-contain bg-white/5 p-1 border border-slate-700">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-sm sm:text-base text-white">LTP PROGRESS HUB — SUPER ADMIN</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-amber-300 border border-slate-700">ROOT MASTER</span>
+                        </div>
+                        <div id="sa-admin-email" class="text-[11px] text-slate-400"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="loadSaOverview()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition">
+                        Làm mới dữ liệu
+                    </button>
+                    <a href="landing.html" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold transition">
+                        Trang Chủ Bán Hàng
+                    </a>
+                    <button onclick="logoutSuperAdmin()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 text-xs font-bold transition">
+                        Đăng xuất
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+            <!-- KPI Summary Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-[11px] text-slate-400 font-semibold">Tổng Công Ty (Tenants)</div>
+                    <div id="sa-stat-tenants" class="text-2xl font-black text-white mt-1">0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-[11px] text-slate-400 font-semibold">Đang Hoạt Động / Trial</div>
+                    <div id="sa-stat-active" class="text-xl font-black text-emerald-400 mt-1">0 / 0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-[11px] text-amber-300 font-semibold">KOL Chờ Duyệt Tay</div>
+                    <div id="sa-stat-pending-kol" class="text-2xl font-black text-amber-300 mt-1">0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-[11px] text-slate-400 font-semibold">Tổng Đối Tác KOL</div>
+                    <div id="sa-stat-kols" class="text-2xl font-black text-white mt-1">0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-[11px] text-slate-400 font-semibold">Lệnh Rút Tiền Chờ Duyệt</div>
+                    <div id="sa-stat-withdrawals" class="text-xl font-black text-rose-400 mt-1">0</div>
+                </div>
+                <div class="card-surface rounded-2xl p-4">
+                    <div class="text-[11px] text-slate-400 font-semibold">Tổng Doanh Thu SePay</div>
+                    <div id="sa-stat-revenue" class="text-xl font-black text-sky-400 mt-1">0 đ</div>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+                <button onclick="switchSaTab('tenants')" id="sa-tab-btn-tenants"
+                        class="px-4 py-2 rounded-lg text-xs font-extrabold bg-white text-slate-950 border border-slate-200 transition">
+                    1. Quản Lý Khách Hàng (Tenants)
+                </button>
+                <button onclick="switchSaTab('affiliates')" id="sa-tab-btn-affiliates"
+                        class="px-4 py-2 rounded-lg text-xs font-extrabold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition flex items-center gap-2">
+                    <span>2. Duyệt Tay KOL & Mã Giảm Giá</span>
+                    <span id="sa-badge-pending-kol" class="hidden px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black">0</span>
+                </button>
+                <button onclick="switchSaTab('withdrawals')" id="sa-tab-btn-withdrawals"
+                        class="px-4 py-2 rounded-lg text-xs font-extrabold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition">
+                    3. Duyệt Rút Tiền KOL
+                </button>
+                <button onclick="switchSaTab('orders')" id="sa-tab-btn-orders"
+                        class="px-4 py-2 rounded-lg text-xs font-extrabold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition">
+                    4. Đơn Hàng VietQR & SePay
+                </button>
+            </div>
+
+            <!-- ==================================================================
+                 TAB 1: QUẢN LÝ KHÁCH HÀNG (TENANTS)
+                 ================================================================== -->
+            <section id="sa-panel-tenants" class="space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input id="sa-tenant-search" type="text" oninput="renderSaTenants()" placeholder="Tìm theo tên công ty, subdomain, email..."
+                               class="w-72 px-3.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white">
+                        <select id="sa-tenant-filter" onchange="renderSaTenants()" class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                            <option value="ALL">Tất cả công ty</option>
+                            <option value="CLIENT">Khách hàng thật (Ẩn bản Demo)</option>
+                            <option value="TRIAL">Đang dùng thử (TRIAL)</option>
+                            <option value="ACTIVE">Đang hoạt động (ACTIVE)</option>
+                            <option value="EXPIRED">Đã hết hạn / Tạm khóa</option>
+                            <option value="DEMO">Không gian Demo KOL</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card-surface rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/60">
+                                    <th class="py-3 px-4">Công ty / Subdomain</th>
+                                    <th class="py-3 px-3">Liên hệ chủ sở hữu</th>
+                                    <th class="py-3 px-3">Gói cước</th>
+                                    <th class="py-3 px-3">Nhân sự / Dự án / Cloud R2</th>
+                                    <th class="py-3 px-3">Hạn sử dụng</th>
+                                    <th class="py-3 px-4 text-right">Thao tác Quản trị</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sa-tenants-tbody" class="divide-y divide-slate-800/70"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================================================================
+                 TAB 2: DUYỆT TAY KOL / AFFILIATE & MÃ GIẢM GIÁ (COUPONS)
+                 ================================================================== -->
+            <section id="sa-panel-affiliates" class="hidden space-y-6">
+                <!-- KOL Affiliates Table -->
+                <div class="card-surface rounded-2xl overflow-hidden">
+                    <div class="p-4 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-sm font-black text-white">Danh Sách Đối Tác KOL / Affiliate (Duyệt Tay Kích Hoạt)</h3>
+                            <p class="text-[11px] text-slate-400">KOL mới đăng ký sẽ ở trạng thái <strong>Chờ duyệt tay (PENDING_APPROVAL)</strong>. Chỉ khi bạn bấm <strong>Duyệt KOL</strong> thì mã giới thiệu và bản Demo mới hoạt động.</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50">
+                                    <th class="py-3 px-4">Đối tác KOL</th>
+                                    <th class="py-3 px-3">Mã giới thiệu (Ref)</th>
+                                    <th class="py-3 px-3">Ngân hàng nhận hoa hồng</th>
+                                    <th class="py-3 px-3">Tỷ lệ Hoa hồng</th>
+                                    <th class="py-3 px-3">Đơn / Ví khả dụng</th>
+                                    <th class="py-3 px-3">Trạng thái</th>
+                                    <th class="py-3 px-4 text-right">Phê duyệt & Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sa-affiliates-tbody" class="divide-y divide-slate-800/70"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Standalone Promo Coupons Manager -->
+                <div class="card-surface rounded-2xl p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-black text-white">Quản Lý Mã Giảm Giá / Coupon Khuyến Mãi</h3>
+                            <p class="text-xs text-slate-400">Tạo thêm các mã giảm giá chiến dịch của công ty hoặc bật/tắt mã của KOL</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input id="new-coupon-code" type="text" placeholder="Mã mới (VD: LTP2026)"
+                                   class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-mono uppercase">
+                            <input id="new-coupon-pct" type="number" min="1" max="90" value="10" placeholder="% Giảm"
+                                   class="w-20 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-bold">
+                            <button onclick="createSaCoupon()" class="px-3.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 text-xs font-extrabold border border-slate-200 transition">
+                                + Tạo Mã Giảm Giá
+                            </button>
+                        </div>
+                    </div>
+                    <div id="sa-coupons-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 text-xs"></div>
+                </div>
+            </section>
+
+            <!-- ==================================================================
+                 TAB 3: DUYỆT RÚT TIỀN KOL (WITHDRAWALS)
+                 ================================================================== -->
+            <section id="sa-panel-withdrawals" class="hidden space-y-4">
+                <div class="card-surface rounded-2xl overflow-hidden">
+                    <div class="p-4 bg-slate-900/90 border-b border-slate-800">
+                        <h3 class="text-sm font-black text-white">Yêu Cầu Rút Tiền Hoa Hồng Của KOL</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50">
+                                    <th class="py-3 px-4">Đối tác KOL</th>
+                                    <th class="py-3 px-3">Số tiền rút</th>
+                                    <th class="py-3 px-3">Thông tin chuyển khoản</th>
+                                    <th class="py-3 px-3">Thời gian</th>
+                                    <th class="py-3 px-3">Trạng thái</th>
+                                    <th class="py-3 px-4 text-right">Xử lý</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sa-withdrawals-tbody" class="divide-y divide-slate-800/70"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================================================================
+                 TAB 4: ĐƠN HÀNG VIETQR & SEPAY (ORDERS)
+                 ================================================================== -->
+            <section id="sa-panel-orders" class="hidden space-y-4">
+                <div class="card-surface rounded-2xl overflow-hidden">
+                    <div class="p-4 bg-slate-900/90 border-b border-slate-800">
+                        <h3 class="text-sm font-black text-white">Danh Sách Đơn Hàng VietQR & Đối Soát SePay</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50">
+                                    <th class="py-3 px-4">Mã Đơn</th>
+                                    <th class="py-3 px-3">Công ty / Subdomain</th>
+                                    <th class="py-3 px-3">Loại đơn / Gói</th>
+                                    <th class="py-3 px-3">Số tiền</th>
+                                    <th class="py-3 px-3">Mã giảm giá</th>
+                                    <th class="py-3 px-3">Trạng thái</th>
+                                    <th class="py-3 px-4 text-right">Kích hoạt thủ công</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sa-orders-tbody" class="divide-y divide-slate-800/70"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ======================================================================
+         MODAL: EXTEND TENANT DAYS / UPGRADE PLAN / ADD STORAGE GB
+         ====================================================================== -->
+    <div id="sa-extend-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="card-surface w-full max-w-md rounded-2xl p-6 border border-slate-700 space-y-4 text-xs">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 id="sa-extend-title" class="text-sm font-black text-white">Gia Hạn & Nâng Cấp Công Ty</h3>
+                <button onclick="document.getElementById('sa-extend-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <input type="hidden" id="sa-extend-tenant-id">
+            <div>
+                <label class="block font-bold text-slate-300 mb-1">Chuyển đổi Gói cước</label>
+                <select id="sa-extend-plan" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-bold">
+                    <option value="TRIAL">TRIAL (Dùng thử 10 NV)</option>
+                    <option value="STARTER">STARTER (15 NV - 10 GB)</option>
+                    <option value="BUSINESS">BUSINESS (40 NV - 35 GB)</option>
+                    <option value="PRO">PRO (100 NV - 80 GB)</option>
+                    <option value="ENTERPRISE">ENTERPRISE (Không giới hạn NV - 300 GB)</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-300 mb-1">Cộng thêm số ngày</label>
+                    <input id="sa-extend-days" type="number" value="365" min="0"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-emerald-400 font-bold">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-300 mb-1">Cộng thêm Cloud R2 (+GB)</label>
+                    <input id="sa-extend-gb" type="number" value="0" min="0"
+                           class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sky-400 font-bold">
+                </div>
+            </div>
+            <button onclick="submitSaExtendTenant()" class="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200 transition">
+                Lưu Cập Nhật Cho Khách Hàng
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_CLIENT_ID = "383174442594-tfaqba8noaibh1sr24tpcj1nl3ckq851.apps.googleusercontent.com";
+        let saData = { stats: {}, tenants: [], affiliates: [], withdrawals: [], coupons: [], orders: [] };
+
+        function getSaSession() {
+            try { return JSON.parse(localStorage.getItem("ltp_super_admin_session") || "null"); } catch { return null; }
+        }
+
+        function initSaGoogleButton() {
+            if (getSaSession()) return;
+            if (!window.google?.accounts?.id) {
+                setTimeout(initSaGoogleButton, 300);
+                return;
+            }
+            try {
+                window.google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: async (resp) => {
+                        if (resp.credential) await submitSaGoogleLogin(resp.credential);
+                    }
+                });
+                const btn = document.getElementById("super-admin-google-btn");
+                if (btn) {
+                    window.google.accounts.id.renderButton(btn, { theme: "filled_blue", size: "large", shape: "pill", width: 320 });
+                }
+            } catch (e) {}
+        }
+
+        async function submitSaGoogleLogin(googleToken) {
+            const errEl = document.getElementById("sa-login-err");
+            errEl.classList.add("hidden");
+            try {
+                const res = await fetch("/api/super-admin/auth", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ login_type: "GOOGLE", google_token: googleToken })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Đăng nhập Google thất bại");
+                localStorage.setItem("ltp_super_admin_session", JSON.stringify(data));
+                await loadSaOverview();
+            } catch (e) {
+                errEl.textContent = e.message;
+                errEl.classList.remove("hidden");
+            }
+        }
+
+        async function submitSaPasswordLogin() {
+            const errEl = document.getElementById("sa-login-err");
+            errEl.classList.add("hidden");
+            const email = document.getElementById("sa-email-input").value.trim();
+            const password = document.getElementById("sa-pass-input").value;
+            try {
+                const res = await fetch("/api/super-admin/auth", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ login_type: "PASSWORD", email, password })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Sai thông tin đăng nhập");
+                localStorage.setItem("ltp_super_admin_session", JSON.stringify(data));
+                await loadSaOverview();
+            } catch (e) {
+                errEl.textContent = e.message;
+                errEl.classList.remove("hidden");
+            }
+        }
+
+        function logoutSuperAdmin() {
+            localStorage.removeItem("ltp_super_admin_session");
+            location.reload();
+        }
+
+        function switchSaTab(tab) {
+            ["tenants", "affiliates", "withdrawals", "orders"].forEach(t => {
+                document.getElementById("sa-panel-" + t).classList.toggle("hidden", t !== tab);
+                const btn = document.getElementById("sa-tab-btn-" + t);
+                if (t === tab) {
+                    btn.className = "px-4 py-2 rounded-lg text-xs font-extrabold bg-white text-slate-950 border border-slate-200 transition flex items-center gap-2";
+                } else {
+                    btn.className = "px-4 py-2 rounded-lg text-xs font-extrabold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition flex items-center gap-2";
+                }
+            });
+        }
+
+        async function loadSaOverview() {
+            const sess = getSaSession();
+            if (!sess?.token) {
+                document.getElementById("sa-login-screen").classList.remove("hidden");
+                document.getElementById("sa-dashboard-screen").classList.add("hidden");
+                initSaGoogleButton();
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/super-admin/overview", {
+                    headers: { "Authorization": `Bearer ${sess.token}` }
+                });
+                if (res.status === 401) {
+                    logoutSuperAdmin();
+                    return;
+                }
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Không thể tải dữ liệu Super Admin");
+
+                saData = data;
+                document.getElementById("sa-login-screen").classList.add("hidden");
+                document.getElementById("sa-dashboard-screen").classList.remove("hidden");
+                document.getElementById("sa-admin-email").textContent = `Chủ nền tảng: ${sess.admin?.email || "Root Master"}`;
+
+                const s = data.stats || {};
+                document.getElementById("sa-stat-tenants").textContent = s.total_tenants || 0;
+                document.getElementById("sa-stat-active").textContent = `${s.active_tenants || 0} / ${s.trial_tenants || 0}`;
+                document.getElementById("sa-stat-pending-kol").textContent = s.pending_affiliates || 0;
+                document.getElementById("sa-stat-kols").textContent = s.total_affiliates || 0;
+                document.getElementById("sa-stat-withdrawals").textContent = s.pending_withdrawals_count || 0;
+                document.getElementById("sa-stat-revenue").textContent = Number(s.total_revenue || 0).toLocaleString("vi-VN") + " đ";
+
+                const badgeKol = document.getElementById("sa-badge-pending-kol");
+                if ((s.pending_affiliates || 0) > 0) {
+                    badgeKol.textContent = s.pending_affiliates;
+                    badgeKol.classList.remove("hidden");
+                } else {
+                    badgeKol.classList.add("hidden");
+                }
+
+                renderSaTenants();
+                renderSaAffiliates();
+                renderSaCoupons();
+                renderSaWithdrawals();
+                renderSaOrders();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        function formatBytes(bytes) {
+            const b = Number(bytes || 0);
+            if (b <= 0) return "0 MB";
+            const gb = b / (1024 * 1024 * 1024);
+            if (gb >= 1) return gb.toFixed(2) + " GB";
+            return (b / (1024 * 1024)).toFixed(1) + " MB";
+        }
+
+        function renderSaTenants() {
+            const q = (document.getElementById("sa-tenant-search")?.value || "").toLowerCase().trim();
+            const f = document.getElementById("sa-tenant-filter")?.value || "ALL";
+            const rows = (saData.tenants || []).filter(t => {
+                const isDemo = (t.subdomain || "").startsWith("demo-") || t.subdomain === "demo";
+                if (f === "CLIENT" && isDemo) return false;
+                if (f === "DEMO" && !isDemo) return false;
+                if (f === "TRIAL" && t.status !== "TRIAL") return false;
+                if (f === "ACTIVE" && t.status !== "ACTIVE") return false;
+                if (f === "EXPIRED" && t.status !== "EXPIRED" && t.status !== "LOCKED") return false;
+                if (q) {
+                    const hay = `${t.company_name} ${t.subdomain} ${t.owner_email} ${t.owner_phone || ""}`.toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+
+            const tbody = document.getElementById("sa-tenants-tbody");
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">Không có công ty nào khớp bộ lọc.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(t => {
+                const totalMb = (Number(t.storage_limit_mb) || 500) + (Number(t.addon_storage_mb) || 0);
+                const expDate = t.expires_at ? new Date(t.expires_at).toLocaleDateString("vi-VN") : "---";
+                const isLocked = t.status === "LOCKED";
+                return `
+                    <tr class="hover:bg-slate-900/40">
+                        <td class="py-3.5 px-4">
+                            <div class="font-bold text-white">${t.company_name}</div>
+                            <div class="text-[11px] font-mono text-sky-400">?tenant=${t.subdomain}</div>
+                        </td>
+                        <td class="py-3.5 px-3">
+                            <div class="text-slate-200">${t.owner_email || "---"}</div>
+                            <div class="text-[11px] text-slate-400">${t.owner_phone || ""}</div>
+                        </td>
+                        <td class="py-3.5 px-3">
+                            <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-bold text-white text-[11px]">${t.plan_type}</span>
+                            <span class="ml-1 px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-300' : (t.status === 'TRIAL' ? 'bg-sky-500/20 text-sky-300' : 'bg-rose-500/20 text-rose-300')}">${t.status}</span>
+                        </td>
+                        <td class="py-3.5 px-3 text-slate-300">
+                            <div><b>${t.user_count || 0}</b>/${t.max_users >= 999999 ? '∞' : t.max_users} NV • <b>${t.project_count || 0}</b> Dự án</div>
+                            <div class="text-[11px] text-emerald-400">R2: ${formatBytes(t.storage_used_bytes)} / ${(totalMb / 1024).toFixed(1)} GB</div>
+                        </td>
+                        <td class="py-3.5 px-3 font-semibold text-slate-200">${expDate}</td>
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="inline-flex flex-wrap justify-end gap-1.5">
+                                <a href="index.html?tenant=${encodeURIComponent(t.subdomain)}&workspace=1" target="_blank"
+                                   class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-[11px] font-bold">
+                                    Mở Workspace
+                                </a>
+                                <button onclick="openSaExtendModal('${t.id}', '${t.company_name.replace(/'/g, "")}', '${t.plan_type}')"
+                                        class="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-950 text-[11px] font-extrabold border border-slate-200">
+                                    Gia hạn / Đổi gói
+                                </button>
+                                <button onclick="toggleSaTenantLock('${t.id}', '${isLocked ? "ACTIVE" : "LOCKED"}')"
+                                        class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-bold">
+                                    ${isLocked ? "Mở khóa" : "Khóa"}
+                                </button>
+                                ${t.id !== "tenant-demo" ? `
+                                <button onclick="deleteSaTenant('${t.id}', '${t.company_name.replace(/'/g, "")}')"
+                                        class="px-2.5 py-1 rounded bg-slate-900 hover:bg-rose-950/50 text-rose-400 border border-slate-700 text-[11px] font-bold">
+                                    Xóa
+                                </button>` : ""}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function openSaExtendModal(id, name, plan) {
+            document.getElementById("sa-extend-tenant-id").value = id;
+            document.getElementById("sa-extend-title").textContent = `Gia Hạn & Nâng Cấp: ${name}`;
+            document.getElementById("sa-extend-plan").value = plan || "BUSINESS";
+            document.getElementById("sa-extend-days").value = 365;
+            document.getElementById("sa-extend-gb").value = 0;
+            document.getElementById("sa-extend-modal").classList.remove("hidden");
+        }
+
+        async function submitSaExtendTenant() {
+            const sess = getSaSession();
+            const tenant_id = document.getElementById("sa-extend-tenant-id").value;
+            const plan_type = document.getElementById("sa-extend-plan").value;
+            const extend_days = Number(document.getElementById("sa-extend-days").value) || 0;
+            const extra_storage_gb = Number(document.getElementById("sa-extend-gb").value) || 0;
+            try {
+                const res = await fetch("/api/super-admin/manage-tenant", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({ action: "EXTEND_DAYS", tenant_id, plan_type, extend_days, extra_storage_gb })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Lỗi cập nhật");
+                alert(data.message);
+                document.getElementById("sa-extend-modal").classList.add("hidden");
+                await loadSaOverview();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function toggleSaTenantLock(tenant_id, status) {
+            const sess = getSaSession();
+            try {
+                const res = await fetch("/api/super-admin/manage-tenant", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({ action: "UPDATE_STATUS", tenant_id, status })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Lỗi cập nhật");
+                await loadSaOverview();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function deleteSaTenant(tenant_id, name) {
+            if (!confirm(`XÁC NHẬN XÓA VĨNH VIỄN công ty [${name}] và toàn bộ dự án liên quan?`)) return;
+            const sess = getSaSession();
+            try {
+                const res = await fetch("/api/super-admin/manage-tenant", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({ action: "DELETE_TENANT", tenant_id })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Lỗi xóa công ty");
+                alert(data.message);
+                await loadSaOverview();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        function renderSaAffiliates() {
+            const tbody = document.getElementById("sa-affiliates-tbody");
+            const rows = saData.affiliates || [];
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Chưa có đối tác KOL nào đăng ký.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(a => {
+                const isPending = a.status === "PENDING_APPROVAL";
+                const isBanned = a.status === "BANNED";
+                const r1 = Math.round((Number(a.commission_rate_first_year) || 0.20) * 100);
+                const r2 = Math.round((Number(a.commission_rate_recurring) || 0.10) * 100);
+                return `
+                    <tr class="hover:bg-slate-900/40 ${isPending ? 'bg-amber-500/5' : ''}">
+                        <td class="py-3.5 px-4">
+                            <div class="font-bold text-white">${a.full_name}</div>
+                            <div class="text-[11px] text-slate-400">${a.email} • ${a.phone_zalo || ""}</div>
+                        </td>
+                        <td class="py-3.5 px-3 font-mono font-black text-amber-300 text-sm">${a.ref_code}</td>
+                        <td class="py-3.5 px-3 text-slate-300">
+                            <div>${a.bank_name || "---"} — <code>${a.bank_account_number || "---"}</code></div>
+                            <div class="text-[11px] text-slate-400">${a.bank_account_name || ""}</div>
+                        </td>
+                        <td class="py-3.5 px-3">
+                            <span class="font-bold text-white">Năm đầu: ${r1}%</span> • <span class="text-slate-400">Gia hạn: ${r2}%</span>
+                            <button onclick="promptSaCommissionRate('${a.id}', '${a.full_name.replace(/'/g, "")}', ${r1}, ${r2})"
+                                    class="ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-sky-400 hover:bg-slate-700">Sửa %</button>
+                        </td>
+                        <td class="py-3.5 px-3">
+                            <div><b>${a.total_paid_orders || 0}</b> đơn thành công</div>
+                            <div class="text-emerald-400 font-bold">Ví: ${Number(a.balance_available || 0).toLocaleString("vi-VN")} đ</div>
+                        </td>
+                        <td class="py-3.5 px-3">
+                            ${isPending
+                                ? `<span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black">⏳ CHỜ DUYỆT TAY</span>`
+                                : (isBanned
+                                    ? `<span class="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold">ĐÃ KHÓA</span>`
+                                    : `<span class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">✓ ĐANG HOẠT ĐỘNG</span>`)
+                            }
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="inline-flex flex-wrap justify-end gap-1.5">
+                                ${isPending ? `
+                                <button onclick="approveSaAffiliate('${a.id}', '${a.full_name.replace(/'/g, "")}')"
+                                        class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-xs border border-slate-200">
+                                    ✓ Duyệt KOL & Kích Hoạt Mã
+                                </button>` : ""}
+                                <button onclick="toggleSaBanAffiliate('${a.id}', ${isBanned})"
+                                        class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-bold">
+                                    ${isBanned ? "Mở khóa KOL" : "Khóa / Tắt mã"}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        async function approveSaAffiliate(affiliate_id, name) {
+            if (!confirm(`Xác nhận DUYỆT TAY đối tác KOL [${name}]?\nHệ thống sẽ kích hoạt mã giảm giá 10%, khởi tạo công ty Demo cho KOL và gửi Email thông báo.`)) return;
+            const sess = getSaSession();
+            try {
+                const res = await fetch("/api/super-admin/manage-affiliate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({ action: "APPROVE_AFFILIATE", affiliate_id })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Lỗi duyệt KOL");
+                alert(data.message);
+                await loadSaOverview();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function toggleSaBanAffiliate(affiliate_id, isBanned) {
+            const sess = getSaSession();
+            try {
+                const res = await fetch("/api/super-admin/manage-affiliate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({ action: isBanned ? "UNBAN_AFFILIATE" : "BAN_AFFILIATE", affiliate_id })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Lỗi thao tác");
+                await loadSaOverview();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function promptSaCommissionRate(affiliate_id, name, cur1, cur2) {
+            const r1 = prompt(`Nhập % hoa hồng NĂM ĐẦU cho KOL [${name}] (VD: 20):`, cur1);
+            if (r1 === null) return;
+            const r2 = prompt(`Nhập % hoa hồng GIA HẠN cho KOL [${name}] (VD: 10):`, cur2);
+            if (r2 === null) return;
+            const sess = getSaSession();
+            try {
+                const res = await fetch("/api/super-admin/manage-affiliate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({
+                        action: "SET_COMMISSION_RATES",
+                        affiliate_id,
+                        first_year_rate: Number(r1) / 100,
+                        recurring_rate: Number(r2) / 100
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Lỗi cập nhật");
+                alert(data.message);
+                await loadSaOverview();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        function renderSaCoupons() {
+            const grid = document.getElementById("sa-coupons-grid");
+            const list = saData.coupons || [];
+            grid.innerHTML = list.map(c => `
+                <div class="p-3 rounded-xl bg-slate-900 border ${c.is_active ? 'border-slate-700' : 'border-slate-800 opacity-50'} flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-mono font-black text-white">${c.code}</div>
+                        <div class="text-[10px] text-emerald-400 font-bold">Giảm ${c.discount_percent || 10}%</div>
+                    </div>
+                    <button onclick="toggleSaCoupon('${c.code}')" class="px-2 py-1 rounded bg-slate-800 text-[10px] font-bold text-slate-300">
+                        ${c.is_active ? "Đang Bật" : "Đang Tắt"}
+                    </button>
+                </div>
+            `).join("");
+        }
+
+        async function createSaCoupon() {
+            const coupon_code = document.getElementById("new-coupon-code").value.trim();
+            const discount_percent = Number(document.getElementById("new-coupon-pct").value) || 10;
+            if (!coupon_code) return alert("Vui lòng nhập mã giảm giá!");
+            const sess = getSaSession();
+            try {
+                const res = await fetch("/api/super-admin/manage-affiliate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                    body: JSON.stringify({ action: "CREATE_COUPON", coupon_code, discount_percent })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Lỗi tạo mã");
+                document.getElementById("new-coupon-code").value = "";
+                await loadSaOverview();
+            } catch (e) {
+                alert(e.message);
+            }
+        }
+
+        async function toggleSaCoupon(coupon_code) {
+            const sess = getSaSession();
+            await fetch("/api/super-admin/manage-affiliate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                body: JSON.stringify({ action: "TOGGLE_COUPON", coupon_code })
+            });
+            await loadSaOverview();
+        }
+
+        function renderSaWithdrawals() {
+            const tbody = document.getElementById("sa-withdrawals-tbody");
+            const rows = saData.withdrawals || [];
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">Chưa có yêu cầu rút tiền nào.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = rows.map(w => `
+                <tr>
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-white">${w.affiliate_name} (${w.ref_code})</div>
+                        <div class="text-[11px] text-slate-400">${w.affiliate_email}</div>
+                    </td>
+                    <td class="py-3 px-3 font-black text-emerald-400">${Number(w.amount || 0).toLocaleString("vi-VN")} đ</td>
+                    <td class="py-3 px-3 font-mono text-slate-200">${w.bank_info}</td>
+                    <td class="py-3 px-3 text-slate-400">${w.created_at || ""}</td>
+                    <td class="py-3 px-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${w.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300' : (w.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300')}">${w.status}</span>
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                        ${w.status === "PENDING" ? `
+                            <button onclick="decideSaWithdrawal('${w.id}', 'APPROVE_WITHDRAWAL')" class="px-2.5 py-1 rounded bg-white text-slate-950 font-extrabold text-[11px]">Xác nhận đã CK</button>
+                            <button onclick="decideSaWithdrawal('${w.id}', 'REJECT_WITHDRAWAL')" class="ml-1 px-2.5 py-1 rounded bg-slate-900 text-rose-400 border border-slate-700 font-bold text-[11px]">Từ chối</button>
+                        ` : "---"}
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        async function decideSaWithdrawal(request_id, action) {
+            if (!confirm("Xác nhận thực hiện thao tác này?")) return;
+            const sess = getSaSession();
+            const res = await fetch("/api/super-admin/manage-affiliate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                body: JSON.stringify({ action, request_id })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.error || "Lỗi xử lý");
+            alert(data.message);
+            await loadSaOverview();
+        }
+
+        function renderSaOrders() {
+            const tbody = document.getElementById("sa-orders-tbody");
+            const rows = saData.orders || [];
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">Chưa có đơn hàng nào.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = rows.map(o => `
+                <tr>
+                    <td class="py-3 px-4 font-mono font-black text-sky-400">${o.id}</td>
+                    <td class="py-3 px-3">
+                        <div class="font-bold text-white">${o.company_name}</div>
+                        <div class="text-[11px] font-mono text-slate-400">${o.subdomain_requested} • ${o.owner_email}</div>
+                    </td>
+                    <td class="py-3 px-3 text-slate-300">${o.order_type} • <b>${o.plan_type}</b> (${o.billing_cycle})</td>
+                    <td class="py-3 px-3 font-black text-emerald-400">${Number(o.amount || 0).toLocaleString("vi-VN")} đ</td>
+                    <td class="py-3 px-3 font-mono text-amber-300">${o.coupon_code || "---"}</td>
+                    <td class="py-3 px-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.order_status === 'PAID' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${o.order_status}</span>
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                        ${o.order_status === "PENDING" ? `
+                            <button onclick="manualActivateOrder('${o.id}')" class="px-3 py-1 rounded bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-[11px]">
+                                Kích hoạt tay
+                            </button>
+                        ` : `<span class="text-[11px] text-slate-500">Đã kích hoạt</span>`}
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        async function manualActivateOrder(order_id) {
+            if (!confirm(`Xác nhận KÍCH HOẠT THỦ CÔNG đơn hàng [${order_id}]?`)) return;
+            const sess = getSaSession();
+            const res = await fetch("/api/super-admin/manage-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.token}` },
+                body: JSON.stringify({ order_id })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.error || "Lỗi kích hoạt");
+            alert(`Đã kích hoạt đơn hàng ${order_id} thành công!`);
+            await loadSaOverview();
+        }
+
+        window.addEventListener("DOMContentLoaded", loadSaOverview);
+    </script>
+</body>
+</html>

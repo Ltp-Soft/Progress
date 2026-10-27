@@ -525,7 +525,8 @@ async function resolveTenantContext(request, env, authUser) {
     if (host.endsWith(`.${rootDomain}`)) {
       const sub = host.slice(0, -(rootDomain.length + 1));
       if (sub && sub !== "progress" && sub !== "www") {
-        const bySub = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ?").bind(sub).first();
+        const cleanBaseSub = sub.replace(/-(pm|progress)$/i, "");
+        const bySub = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR subdomain = ?").bind(sub, cleanBaseSub).first();
         if (bySub) return bySub;
       }
     }

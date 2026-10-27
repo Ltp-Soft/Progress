@@ -728,15 +728,39 @@ export default {
         `).bind(otpId, cleanEmail, otpCode, purpose, expSec).run();
 
         const emailHtml = `
-          <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #0f172a; color: #f8fafc;">
-            <h2 style="color: #38bdf8; margin-top: 0;">LTP PROGRESS HUB — Mã Xác Thực OTP</h2>
-            <p style="color: #cbd5e1; font-size: 14px;">Xin chào, mã xác thực bảo mật (OTP) của bạn tại <b>LTP Soft</b> là:</p>
-            <div style="background: #1e293b; border: 2px dashed #38bdf8; border-radius: 12px; padding: 16px; text-align: center; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #38bdf8; margin: 20px 0;">
-              ${otpCode}
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; border: 1px solid #1e293b; border-radius: 20px; background-color: #0b1120; color: #f8fafc; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            <!-- Brand Header -->
+            <div style="text-align: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #1e293b;">
+              <h1 style="color: #38bdf8; font-size: 26px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">LTP PROGRESS HUB</h1>
+              <p style="color: #94a3b8; font-size: 13px; margin: 6px 0 0 0; font-weight: 500;">Nền Tảng Điều Phối Tiến Độ & Báo Cáo Thi Công Toàn Diện</p>
             </div>
-            <p style="color: #94a3b8; font-size: 12px;">Mã có hiệu lực trong 10 phút. Tuyệt đối không chia sẻ mã này cho người lạ.</p>
-            <hr style="border: none; border-top: 1px solid #334155; margin: 16px 0;">
-            <p style="color: #64748b; font-size: 11px; margin: 0;">© 2026 CÔNG TY TNHH TMDV LÊ TÀI PHÁT (LTP SOFT) — Hotline/Zalo: 0559595945</p>
+
+            <!-- Main Content Card -->
+            <div style="background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+              <h2 style="font-size: 16px; font-weight: 700; color: #f8fafc; margin-top: 0; margin-bottom: 12px;">Xác Thực Tài Khoản Quản Trị Viên</h2>
+              <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin: 0 0 16px 0;">
+                Kính gửi Quý khách hàng,<br>
+                Hệ thống nhận được yêu cầu xác thực email cho tài khoản Quản trị thuộc công ty <strong>${companyName || 'Doanh Nghiệp'}</strong>. Vui lòng nhập mã bảo mật bên dưới để hoàn tất:
+              </p>
+
+              <!-- OTP Highlight Box -->
+              <div style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(14, 165, 233, 0.05)); border: 2px dashed #0284c7; border-radius: 14px; padding: 20px; text-align: center; margin: 20px 0;">
+                <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px; color: #38bdf8; margin-bottom: 6px;">Mã Xác Thực Một Lần (OTP)</div>
+                <div style="font-size: 36px; font-weight: 900; letter-spacing: 10px; color: #ffffff; font-family: monospace;">${otpCode}</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-top: 6px;">Có hiệu lực trong vòng <strong>10 phút</strong></div>
+              </div>
+
+              <div style="font-size: 12px; color: #f59e0b; background-color: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 6px; line-height: 1.5;">
+                <strong>Lưu ý bảo mật:</strong> Tuyệt đối không chia sẻ mã này cho bất kỳ ai. Ban quản trị LTP SOFT không bao giờ yêu cầu bạn cung cấp mã OTP qua điện thoại hoặc tin nhắn.
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="font-size: 12px; color: #64748b; text-align: center; line-height: 1.6; padding-top: 12px;">
+              <p style="margin: 0 0 4px 0;"><strong style="color: #94a3b8;">CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ LÊ TÀI PHÁT (LTP SOFT)</strong></p>
+              <p style="margin: 0 0 4px 0;">Mã số thuế: 0317654107 • Hotline / Zalo: <strong>0559.595.945</strong></p>
+              <p style="margin: 0; font-size: 11px; color: #475569;">© 2026 LTP Soft. Mọi quyền được bảo lưu.</p>
+            </div>
           </div>
         `;
         const mailResult = await sendEmail({
@@ -1025,19 +1049,88 @@ export default {
 
           // Send Automated Welcome Email via Resend
           if (verifiedEmail) {
+            const rootDomain = env.ROOT_DOMAIN || "ltp-soft.com";
+            const workspaceUrl = `https://${cleanSub}-pm.${rootDomain}`;
+            const directLoginUrl = `https://progress.${rootDomain}/?tenant=${cleanSub}`;
+
             await sendEmail({
               to: verifiedEmail,
-              subject: `[LTP Progress Hub] Kích hoạt dùng thử 14 ngày — ${company_name.trim()}`,
+              subject: `[LTP Progress Hub] Thông tin Không gian làm việc & Tài khoản Quản trị — ${company_name.trim()}`,
               html: `
-                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; color: #0f172a;">
-                  <h2 style="margin-top: 0; color: #0f172a;">Chào mừng ${company_name.trim()} đến với LTP Progress Hub!</h2>
-                  <p style="font-size: 14px; color: #334155; line-height: 1.6;">Không gian điều phối tiến độ thi công & sản xuất của bạn đã được khởi tạo thành công (Gói Dùng Thử 14 Ngày).</p>
-                  <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin: 18px 0; font-size: 13px; line-height: 1.8;">
-                    <div><b>Mã công ty (Subdomain):</b> <code>${cleanSub}</code></div>
-                    <div><b>Tài khoản Quản trị (Admin):</b> <code>admin</code> (hoặc đăng nhập bằng Email <code>${verifiedEmail}</code>)</div>
-                    <div><b>Mật khẩu khởi tạo:</b> <code>${admin_password}</code></div>
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; border: 1px solid #1e293b; border-radius: 20px; background-color: #0b1120; color: #f8fafc; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                  <!-- Brand Header -->
+                  <div style="text-align: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #1e293b;">
+                    <h1 style="color: #38bdf8; font-size: 26px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">LTP PROGRESS HUB</h1>
+                    <p style="color: #94a3b8; font-size: 13px; margin: 6px 0 0 0; font-weight: 500;">Nền Tảng Quản Trị Tiến Độ & Điều Phối Đa Phòng Ban</p>
                   </div>
-                  <p style="font-size: 12px; color: #64748b;">© 2026 CÔNG TY TNHH TMDV LÊ TÀI PHÁT (LTP SOFT) — Hotline/Zalo: 0559.595.945</p>
+
+                  <!-- Greeting Card -->
+                  <div style="background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 24px; margin-bottom: 20px;">
+                    <div style="display: inline-block; padding: 4px 12px; background-color: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 9999px; font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 12px;">
+                      DÙNG THỬ 14 NGÀY MIỄN PHÍ
+                    </div>
+                    <h2 style="font-size: 18px; font-weight: 800; color: #f8fafc; margin: 0 0 10px 0;">Chào mừng ${company_name.trim()}!</h2>
+                    <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin: 0;">
+                      Không gian làm việc riêng của Quý doanh nghiệp đã được khởi tạo tự động. Quý khách vui lòng lưu lại email này để tra cứu tài khoản và liên kết quản trị khi cần.
+                    </p>
+                  </div>
+
+                  <!-- Account Credentials Box -->
+                  <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 24px;">
+                    <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; margin: 0 0 16px 0; font-weight: 800;">
+                      THÔNG TIN ĐĂNG NHẬP QUẢN TRỊ VIÊN
+                    </h3>
+
+                    <table style="width: 100%; font-size: 13px; border-collapse: collapse; line-height: 2;">
+                      <tr>
+                        <td style="color: #94a3b8; width: 42%;">Mã công ty (Subdomain):</td>
+                        <td style="color: #38bdf8; font-weight: 700; font-family: monospace; font-size: 14px;">${cleanSub}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #94a3b8;">Tên miền con riêng:</td>
+                        <td><a href="${workspaceUrl}" style="color: #38bdf8; text-decoration: none; font-weight: 700; font-family: monospace;">${cleanSub}-pm.${rootDomain}</a></td>
+                      </tr>
+                      <tr>
+                        <td style="color: #94a3b8;">Tài khoản đăng nhập:</td>
+                        <td style="color: #ffffff; font-weight: 700;"><code>admin</code> hoặc <code>${verifiedEmail}</code></td>
+                      </tr>
+                      <tr>
+                        <td style="color: #94a3b8;">Mật khẩu quản trị:</td>
+                        <td style="color: #fbbf24; font-weight: 700; font-family: monospace; font-size: 14px;">${admin_password}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #94a3b8;">Thời hạn dùng thử:</td>
+                        <td style="color: #34d399; font-weight: 700;">14 Ngày (Đến hết ${new Date(Date.now() + 14 * 86400000).toLocaleDateString("vi-VN")})</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #94a3b8;">Quyền hạn tài khoản:</td>
+                        <td style="color: #e2e8f0; font-weight: 600;">Toàn quyền Quản Trị Hệ Thống (Root Admin)</td>
+                      </tr>
+                    </table>
+
+                    <div style="text-align: center; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.1);">
+                      <a href="${directLoginUrl}" style="display: inline-block; background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; padding: 12px 32px; font-size: 13px; font-weight: 800; text-decoration: none; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.4);">
+                        VÀO KHÔNG GIAN LÀM VIỆC NGAY
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- Quick Start Guidance -->
+                  <div style="background-color: #0f172a; border: 1px solid #1e293b; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px; font-size: 12px; line-height: 1.6; color: #cbd5e1;">
+                    <div style="font-weight: 700; color: #ffffff; margin-bottom: 6px;">Bước tiếp theo dành cho Quản trị viên:</div>
+                    <ul style="margin: 0; padding-left: 18px; space-y: 4px;">
+                      <li>Vào <b>Cài Đặt Phòng Ban</b> để điều chỉnh danh mục bộ phận (Thi công, Thiết kế, Kế hoạch, Xưởng, MEP...).</li>
+                      <li>Sử dụng tính năng <b>Tạo Mã QR Tuyển Quân</b> để nhân viên quét điện thoại tự đăng ký vào dự án.</li>
+                      <li>Khởi tạo hoặc chỉnh sửa Dự Án Mẫu đã được tạo sẵn trên Bảng Gantt.</li>
+                    </ul>
+                  </div>
+
+                  <!-- Footer -->
+                  <div style="font-size: 12px; color: #64748b; text-align: center; line-height: 1.6; border-top: 1px solid #1e293b; padding-top: 20px;">
+                    <p style="margin: 0 0 4px 0;"><strong style="color: #94a3b8;">CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ LÊ TÀI PHÁT (LTP SOFT)</strong></p>
+                    <p style="margin: 0 0 4px 0;">Mã số thuế: 0317654107 • Hotline Hỗ Trợ 24/7 / Zalo: <strong>0559.595.945</strong></p>
+                    <p style="margin: 0; font-size: 11px; color: #475569;">Email này được gửi tự động từ hệ thống LTP Soft. Vui lòng không trả lời trực tiếp.</p>
+                  </div>
                 </div>
               `,
               env
@@ -1246,20 +1339,94 @@ export default {
 
         // Send Automated Payment Confirmation & Workspace Activation Email via Resend
         if (order.owner_email) {
+          const rootDomain = env.ROOT_DOMAIN || "ltp-soft.com";
+          const sub = order.subdomain_requested;
+          const workspaceUrl = `https://${sub}-pm.${rootDomain}`;
+          const directLoginUrl = `https://progress.${rootDomain}/?tenant=${sub}`;
+          const expiryDateStr = new Date(Date.now() + (order.billing_cycle === "MONTHLY" ? 30 : 365) * 86400000).toLocaleDateString("vi-VN");
+
           await sendEmail({
             to: order.owner_email,
-            subject: `[LTP Progress Hub] Xác nhận thanh toán #${orderId} — Kích hoạt gói ${planCfg.name}`,
+            subject: `[LTP Progress Hub] Hóa đơn điện tử & Thông tin kích hoạt gói ${planCfg.name} (#${orderId})`,
             html: `
-              <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; color: #0f172a;">
-                <h2 style="margin-top: 0; color: #0f172a;">Thanh toán thành công đơn hàng #${orderId}</h2>
-                <p style="font-size: 14px; color: #334155; line-height: 1.6;">Hệ thống SePay đã xác nhận khoản thanh toán <b>${Number(order.amount || 0).toLocaleString("vi-VN")} đ</b> và kích hoạt tự động không gian làm việc của <b>${order.company_name}</b>.</p>
-                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin: 18px 0; font-size: 13px; line-height: 1.8;">
-                  <div><b>Gói cước kích hoạt:</b> ${planCfg.name} (${order.billing_cycle === "MONTHLY" ? "01 Tháng" : "01 Năm"})</div>
-                  <div><b>Mã công ty (Subdomain):</b> <code>${order.subdomain_requested}</code></div>
-                  <div><b>Tài khoản Admin:</b> <code>admin</code> (hoặc <code>${order.owner_email}</code>)</div>
-                  <div><b>Hạn mức:</b> ${planCfg.maxUsers >= 999999 ? "Không giới hạn" : planCfg.maxUsers} nhân sự • ${Math.round(planCfg.storageLimitMb / 1024)} GB Cloud R2</div>
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; border: 1px solid #1e293b; border-radius: 20px; background-color: #0b1120; color: #f8fafc; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                <!-- Brand Header -->
+                <div style="text-align: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #1e293b;">
+                  <h1 style="color: #38bdf8; font-size: 26px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">LTP PROGRESS HUB</h1>
+                  <p style="color: #94a3b8; font-size: 13px; margin: 6px 0 0 0; font-weight: 500;">Nền Tảng Quản Trị Tiến Độ & Điều Phối Đa Phòng Ban</p>
                 </div>
-                <p style="font-size: 12px; color: #64748b;">© 2026 CÔNG TY TNHH TMDV LÊ TÀI PHÁT (LTP SOFT) — Hotline/Zalo: 0559.595.945</p>
+
+                <!-- Activation Status Card -->
+                <div style="background-color: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 24px; margin-bottom: 20px;">
+                  <div style="display: inline-block; padding: 4px 12px; background-color: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 9999px; font-size: 11px; font-weight: 800; color: #34d399; text-transform: uppercase; margin-bottom: 12px;">
+                    THANH TOÁN THÀNH CÔNG • ĐÃ KÍCH HOẠT CHÍNH THỨC
+                  </div>
+                  <h2 style="font-size: 18px; font-weight: 800; color: #f8fafc; margin: 0 0 10px 0;">Kính gửi Quý công ty ${order.company_name}!</h2>
+                  <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6; margin: 0;">
+                    Hệ thống xác nhận đã nhận đủ số tiền <strong>${Number(order.amount || 0).toLocaleString("vi-VN")} đ</strong> qua cổng VietQR SePay. Gói cước <strong>${planCfg.name}</strong> của Quý khách đã được kích hoạt thành công trên hệ thống máy chủ Cloudflare toàn cầu.
+                  </p>
+                </div>
+
+                <!-- Plan & Account Credentials Box -->
+                <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 24px;">
+                  <h3 style="font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; margin: 0 0 16px 0; font-weight: 800;">
+                    CHI TIẾT GÓI DỊCH VỤ & THÔNG TIN ĐĂNG NHẬP
+                  </h3>
+
+                  <table style="width: 100%; font-size: 13px; border-collapse: collapse; line-height: 2;">
+                    <tr>
+                      <td style="color: #94a3b8; width: 42%;">Mã đơn hàng:</td>
+                      <td style="color: #ffffff; font-weight: 700; font-family: monospace;">#${orderId}</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #94a3b8;">Gói dịch vụ kích hoạt:</td>
+                      <td style="color: #38bdf8; font-weight: 800;">${planCfg.name} (${order.billing_cycle === "MONTHLY" ? "Theo Tháng" : "Theo Năm"})</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #94a3b8;">Thời hạn sử dụng:</td>
+                      <td style="color: #34d399; font-weight: 700;">Đến ngày ${expiryDateStr}</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #94a3b8;">Hạn mức nhân sự:</td>
+                      <td style="color: #ffffff; font-weight: 600;">${planCfg.maxUsers >= 999999 ? "Không giới hạn" : planCfg.maxUsers + " nhân viên"}</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #94a3b8;">Dung lượng lưu trữ Cloud R2:</td>
+                      <td style="color: #ffffff; font-weight: 600;">${Math.round(planCfg.storageLimitMb / 1024)} GB (Tái sử dụng trọn đời)</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #94a3b8;">Mã công ty (Subdomain):</td>
+                      <td style="color: #38bdf8; font-weight: 700; font-family: monospace;">${sub}</td>
+                    </tr>
+                    <tr>
+                      <td style="color: #94a3b8;">Đường dẫn truy cập riêng:</td>
+                      <td><a href="${workspaceUrl}" style="color: #38bdf8; text-decoration: none; font-weight: 700; font-family: monospace;">${sub}-pm.${rootDomain}</a></td>
+                    </tr>
+                    <tr>
+                      <td style="color: #94a3b8;">Tài khoản Quản trị (Admin):</td>
+                      <td style="color: #ffffff; font-weight: 700;"><code>admin</code> hoặc <code>${order.owner_email}</code></td>
+                    </tr>
+                    ${order.admin_password_plain ? `
+                    <tr>
+                      <td style="color: #94a3b8;">Mật khẩu quản trị:</td>
+                      <td style="color: #fbbf24; font-weight: 700; font-family: monospace; font-size: 14px;">${order.admin_password_plain}</td>
+                    </tr>
+                    ` : ''}
+                  </table>
+
+                  <div style="text-align: center; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="${directLoginUrl}" style="display: inline-block; background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; padding: 12px 32px; font-size: 13px; font-weight: 800; text-decoration: none; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.4);">
+                      TRUY CẬP KHÔNG GIAN LÀM VIỆC NGAY
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Footer -->
+                <div style="font-size: 12px; color: #64748b; text-align: center; line-height: 1.6; border-top: 1px solid #1e293b; padding-top: 20px;">
+                  <p style="margin: 0 0 4px 0;"><strong style="color: #94a3b8;">CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ LÊ TÀI PHÁT (LTP SOFT)</strong></p>
+                  <p style="margin: 0 0 4px 0;">Mã số thuế: 0317654107 • Hotline / Zalo: <strong>0559.595.945</strong></p>
+                  <p style="margin: 0; font-size: 11px; color: #475569;">Quý khách vui lòng lưu giữ email này để làm căn cứ đối soát dịch vụ và bảo hành kỹ thuật.</p>
+                </div>
               </div>
             `,
             env

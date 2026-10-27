@@ -327,23 +327,21 @@
 
             // Remove from local workspace and D1
             try {
+                const actionUrl = window.getApiUrl ? window.getApiUrl("/api/admin/project-action") : "/api/admin/project-action";
+                const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
+                fetch(actionUrl, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ action: "DELETE", projectId: p.id })
+                }).catch(() => {});
+
                 const rawWs = localStorage.getItem("gantt_live_workspace_v7");
                 if (rawWs) {
                     const ws = JSON.parse(rawWs);
                     if (ws && Array.isArray(ws.projects)) {
-                        const targetPrj = ws.projects.find(x => x.id === p.id);
-                        if (targetPrj) targetPrj.status = "DELETED";
-                        const updatedProjects = ws.projects.filter(x => x.id !== p.id);
-                        const payloadWorkspace = { ...ws, projects: [...updatedProjects, { id: p.id, status: "DELETED" }] };
-                        ws.projects = updatedProjects;
+                        ws.projects = ws.projects.filter(x => x.id !== p.id);
+                        if (ws.currentProjectId === p.id) ws.currentProjectId = ws.projects[0]?.id || "";
                         localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(ws));
-                        const wsUrl = window.getApiUrl ? window.getApiUrl(`/api/workspace?_t=${Date.now()}`) : `/api/workspace?_t=${Date.now()}`;
-                        const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
-                        fetch(wsUrl, {
-                            method: "POST",
-                            headers,
-                            body: JSON.stringify(payloadWorkspace)
-                        }).catch(() => {});
                     }
                 }
             } catch (e) {}

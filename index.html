@@ -207,6 +207,12 @@
         </div>
 
         <div class="user-area">
+            <button id="btn-open-company-admin" class="ltp-btn-dark" onclick="openAdminPortal()" style="display:none; background:#ffffff; color:#0f172a; border-color:#cbd5e1; font-weight:700; position:relative;" title="Mở Trung Tâm Quản Trị Công Ty">
+                <img src="./asset/icons/admin-sliders.svg" alt="" style="width:13px; height:13px;">
+                <span>Quản Trị</span>
+                <span id="index-waiting-badge" style="display:none; position:absolute; top:-6px; right:-6px; background:#f43f5e; color:#ffffff; font-size:10px; font-weight:900; border-radius:10px; padding:1px 5px; border:2px solid #0f172a; animation:pulse 1.5s infinite;">0</span>
+            </button>
+
             <select id="admin-dept-select" style="display:none; font-size:11px; padding:3px 8px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:6px; cursor:pointer;" onchange="switchAdminDeptContext(this.value)">
                 <option value="CONSTRUCTION">Phòng CONSTRUCTION (Thi Công)</option>
                 <option value="DESIGNER">Phòng DESIGNER (Thiết Kế)</option>
@@ -1282,7 +1288,30 @@
                 menuAuthBtn.innerHTML = isGuest ? "🔑 Đăng Nhập" : "🚪 Đăng Xuất";
             }
 
-
+            const btnOpenAdmin = document.getElementById("btn-open-company-admin");
+            if (btnOpenAdmin) {
+                btnOpenAdmin.style.display = (isAdmin || isBoss || isDeptAdmin) ? "inline-flex" : "none";
+                if (isAdmin) {
+                    fetch("/api/admin/overview", { headers: window.authMgr ? window.authMgr.getAuthHeaders() : {} })
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => {
+                            if (data && Array.isArray(data.users)) {
+                                const waitingCount = data.users.filter(u => u.status === "WAITING_ROOM" || u.isActive === 2 || u.role === "WAITING").length;
+                                const badge = document.getElementById("index-waiting-badge");
+                                if (badge) {
+                                    if (waitingCount > 0) {
+                                        badge.textContent = waitingCount;
+                                        badge.style.display = "inline-flex";
+                                        badge.title = `Có ${waitingCount} nhân sự đang trong phòng chờ duyệt!`;
+                                    } else {
+                                        badge.style.display = "none";
+                                    }
+                                }
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }
 
             if (isAdmin) {
                 document.body.classList.add("is-admin-mode");
@@ -1292,6 +1321,13 @@
         }
 
 
+
+        function openAdminPortal() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user = window.authMgr ? window.authMgr.getCurrentUser() : null;
+            const tenantParam = urlParams.get("tenant") || user?.tenant?.subdomain || user?.subdomain || "";
+            window.location.href = tenantParam ? `admin.html?tenant=${encodeURIComponent(tenantParam)}` : 'admin.html';
+        }
 
         function openLoginModal() {
             document.getElementById("login-username-input").value = "";

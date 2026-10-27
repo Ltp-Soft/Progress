@@ -3176,6 +3176,23 @@ export default {
         ).run();
         return jsonResp({ status: "success", message: "Đã cập nhật phân quyền & hạn mức dự án!" });
       }
+
+      if (action === "DELETE" || action === "PERMANENT_DELETE") {
+        const { results: files } = await env.DB.prepare("SELECT * FROM task_files WHERE project_id = ?").bind(projectId).all();
+        let freedBytes = 0;
+        for (const f of files || []) {
+          freedBytes += Number(f.file_size || 0);
+          if (env.MY_BUCKET && f.file_key) {
+            try { await env.MY_BUCKET.delete(f.file_key); } catch (e) {}
+          }
+        }
+        await env.DB.prepare("DELETE FROM task_files WHERE project_id = ?").bind(projectId).run();
+        await env.DB.prepare("DELETE FROM tasks WHERE project_id = ?").bind(projectId).run();
+        await env.DB.prepare("DELETE FROM projects WHERE id = ? AND tenant_id = ?").bind(projectId, tenantId).run();
+        await env.DB.prepare("UPDATE tenants SET storage_used_bytes = MAX(0, COALESCE(storage_used_bytes, 0) - ?) WHERE id = ?").bind(freedBytes, tenantId).run();
+
+        return jsonResp({ status: "success", message: "Đã xóa vĩnh viễn dự án và toàn bộ dữ liệu!" });
+      }
     }
 
     // EMPLOYEE & DEPARTMENT PERFORMANCE ANALYTICS (BY PROJECT, MONTH, YEAR)
@@ -3368,13 +3385,17 @@ export default {
     // ========================================================================
     if (url.pathname === "/api/db/version" && request.method === "GET") {
       try {
-        const projectId = url.searchParams.get("projectId") || "PRJ_01";
-        const maxTaskRow = await env.DB.prepare("SELECT MAX(updated_at) as max_updated FROM tasks WHERE project_id = ?").bind(projectId).first();
-        const prjRow = await env.DB.prepare("SELECT updated_at FROM projects WHERE id = ?").bind(projectId).first();
-        const lastUpdated = Math.max(maxTaskRow?.max_updated || 0, prjRow?.updated_at || 0);
-        return jsonResp({ projectId, version: lastUpdated || Date.now() });
+        const projectId = url.searchParams.get("projectId") || "";
+        const maxTaskRow = await env.DB.prepare(
+          "SELECT MAX(updated_at) as max_updated FROM tasks WHERE tenant_id = ? AND (project_id = ? OR ? = '')"
+        ).bind(tenantId, projectId, projectId).first();
+        const prjRow = await env.DB.prepare(
+          "SELECT MAX(updated_at) as max_prj FROM projects WHERE tenant_id = ? AND (id = ? OR ? = '')"
+        ).bind(tenantId, projectId, projectId).first();
+        const lastUpdated = Math.max(Number(maxTaskRow?.max_updated || 0), Number(prjRow?.max_prj || 0));
+        return jsonResp({ projectId, version: lastUpdated });
       } catch (err) {
-        return jsonResp({ version: Date.now() });
+        return jsonResp({ projectId, version: 0 });
       }
     }
 

@@ -115,6 +115,9 @@
                     </svg>
                     <span id="admin-bell-badge" class="hidden absolute -top-1.5 -right-1.5 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white ring-2 ring-slate-950 animate-pulse">0</span>
                 </button>
+                <button onclick="switchCompany()" class="px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-400 border border-slate-700 text-xs font-bold transition inline-flex items-center gap-1.5" title="Đổi hoặc chọn công ty khác để quản trị">
+                    <span>🏢 Đổi Công Ty</span>
+                </button>
                 <a href="index.html?workspace=1" class="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 text-xs font-bold transition inline-flex items-center gap-2">
                     <img src="asset/icons/pricing-grid.svg" alt="" class="w-3.5 h-3.5">
                     <span>Mở Bảng Tiến Độ Gantt</span>
@@ -747,10 +750,24 @@
                     if (sess && sess.token) token = sess.token;
                 } catch (e) {}
             }
-            return {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tenantParam = urlParams.get("tenant") || urlParams.get("subdomain") || getSubdomainFromHost();
+            const headers = {
                 "Content-Type": "application/json",
                 "Authorization": token ? `Bearer ${token}` : ""
             };
+            if (tenantParam) {
+                headers["X-Tenant"] = tenantParam;
+            }
+            return headers;
+        }
+
+        function switchCompany() {
+            if (confirm("Bạn có muốn đổi sang công ty khác để quản trị?")) {
+                localStorage.removeItem("ltp_jwt_token");
+                localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
+                showAdminLoginGate();
+            }
         }
 
         function formatBytes(bytes) {
@@ -780,10 +797,14 @@
         }
 
         function getSubdomainFromHost() {
-            const host = window.location.hostname;
+            const host = window.location.hostname.toLowerCase();
             const parts = host.split(".");
-            if (parts.length >= 3 && parts[0] !== "www") {
-                return parts[0].replace(/-(pm|progress)$/i, "");
+            if (parts.length >= 3) {
+                const sub = parts[0];
+                if (sub === "www" || sub === "progress" || sub === "staging" || sub === "app") {
+                    return "";
+                }
+                return sub.replace(/-(pm|progress)$/i, "");
             }
             return "";
         }
@@ -919,10 +940,18 @@
 
                 renderHeaderAndKpis();
                 renderActiveQrInvites();
-                renderWaitingRoomAndUsers();
-                renderProjectsTable();
-                renderBrandingTab();
-                populateDepartmentSelects();
+                if (!silent) {
+                    renderWaitingRoomAndUsers();
+                    renderProjectsTable();
+                    renderBrandingTab();
+                    populateDepartmentSelects();
+                } else {
+                    const activeEl = document.activeElement;
+                    const isTyping = activeEl && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName);
+                    if (!isTyping) {
+                        renderWaitingRoomAndUsers();
+                    }
+                }
 
                 // Update notification bell for waiting room
                 const waitingUsers = (adminState.users || []).filter(u => u.status === "WAITING_ROOM" || u.isActive === 2 || u.role === "WAITING");
@@ -1434,6 +1463,11 @@
                                         class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-bold transition inline-flex items-center gap-1">
                                     <img src="./asset/icons/vault-lock.svg" class="w-3.5 h-3.5 invert opacity-85" alt=""> ${isClosed ? "Mở lại" : "Lưu & Đóng"}
                                 </button>
+                                <button onclick="permanentDeleteProject('${p.id}', '${p.name.replace(/'/g, "\\'")}')"
+                                        class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[11px] font-bold transition inline-flex items-center gap-1"
+                                        title="Xóa vĩnh viễn dự án này">
+                                    <img src="./asset/icons/trash-minimal.svg" class="w-3.5 h-3.5 invert opacity-85" alt=""> Xóa
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -1517,6 +1551,46 @@
                 });
                 await loadAdminOverview();
             } catch (e) {}
+        }
+
+        async function permanentDeleteProject(projectId, projectName) {
+            if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN dự án [${projectName}]?\nToàn bộ công việc, tài liệu và lịch sử tiến độ sẽ bị xóa hoàn toàn khỏi hệ thống!`)) return;
+            try {
+                const res = await fetch("/api/admin/project-action", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action: "DELETE", projectId })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || "Không thể xóa dự án.");
+                    return;
+                }
+                // Clean from localStorage
+                try {
+                    const rawWs = localStorage.getItem("gantt_live_workspace_v7");
+                    if (rawWs) {
+                        const ws = JSON.parse(rawWs);
+                        if (ws && Array.isArray(ws.projects)) {
+                            ws.projects = ws.projects.filter(p => p.id !== projectId);
+                            if (ws.currentProjectId === projectId) ws.currentProjectId = ws.projects[0]?.id || "";
+                            localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(ws));
+                        }
+                    }
+                    const rawArch = localStorage.getItem("gantt_archived_projects");
+                    if (rawArch) {
+                        const arch = JSON.parse(rawArch);
+                        if (Array.isArray(arch)) {
+                            localStorage.setItem("gantt_archived_projects", JSON.stringify(arch.filter(p => p.id !== projectId)));
+                        }
+                    }
+                } catch (e) {}
+
+                await loadAdminOverview(false);
+                alert(`🗑️ Đã xóa vĩnh viễn dự án [${projectName}]!`);
+            } catch (e) {
+                alert("Lỗi kết nối khi gửi yêu cầu xóa dự án.");
+            }
         }
 
         async function loadPerformanceAnalytics() {
@@ -1956,7 +2030,13 @@
         window.addEventListener("DOMContentLoaded", () => {
             loadAdminOverview(false);
             // Realtime auto-poll for QR waiting room scans & seat updates without screen flicker
-            setInterval(() => loadAdminOverview(true), 7000);
+            setInterval(() => {
+                const activeEl = document.activeElement;
+                if (activeEl && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName)) return;
+                const openModal = document.querySelector(".fixed:not(.hidden)");
+                if (openModal && openModal.id !== "admin-splash") return;
+                loadAdminOverview(true);
+            }, 12000);
         });
     </script>
 </body>

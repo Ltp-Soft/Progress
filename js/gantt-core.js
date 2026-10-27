@@ -95,7 +95,7 @@ class GanttCore {
 
     startRealtimePolling() {
         if (this.pollingInterval) clearInterval(this.pollingInterval);
-        this.pollingInterval = setInterval(() => this.checkServerVersion(), 3500);
+        this.pollingInterval = setInterval(() => this.checkServerVersion(), 10000);
     }
 
     getDefaultWorkspaceData() {
@@ -151,18 +151,26 @@ class GanttCore {
 
     async checkServerVersion() {
         if (!this.workspace || !this.workspace.currentProjectId) return;
+        // Do not auto-sync if user is currently interacting with the chart or modal is open!
+        if (this.isDragging || this.isResizing || this.isLinking) return;
+        const activeEl = document.activeElement;
+        if (activeEl && (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName) || activeEl.isContentEditable)) return;
+        const openModals = document.querySelectorAll(".modal[style*='display: flex'], .modal:not(.hidden):not([style*='display: none'])");
+        if (openModals && openModals.length > 0) return;
+
         try {
             const baseUrl = window.WORKER_API_BASE || "https://schedule-manager-api.sdivn01.workers.dev";
             const headers = window.authMgr ? window.authMgr.getAuthHeaders() : {};
             const res = await fetch(`${baseUrl}/api/db/version?projectId=${this.workspace.currentProjectId}&_t=${Date.now()}`, { headers });
             if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
                 const data = await res.json();
-                if (data.version && this.lastServerVersion && data.version > this.lastServerVersion) {
+                const srvVer = Number(data.version || 0);
+                if (srvVer > 0 && this.lastServerVersion > 0 && srvVer > this.lastServerVersion) {
                     console.log("⚡ Server D1 DB version updated! Auto-syncing live workspace...");
-                    this.lastServerVersion = data.version;
+                    this.lastServerVersion = srvVer;
                     await this.loadFromCloudflareD1(true);
-                } else if (!this.lastServerVersion) {
-                    this.lastServerVersion = data.version || Date.now();
+                } else if (!this.lastServerVersion || this.lastServerVersion === 0) {
+                    this.lastServerVersion = srvVer;
                 }
             }
         } catch (e) {
@@ -199,7 +207,7 @@ class GanttCore {
             headers,
             body: JSON.stringify(this.workspace)
         }).then(res => {
-            this.lastServerVersion = Date.now();
+            this.lastServerVersion = Math.floor(Date.now() / 1000);
         }).catch(err => console.warn("Server sync save error:", err));
     }
 
@@ -493,6 +501,12 @@ class GanttCore {
         const canUseAi = window.authMgr ? window.authMgr.canUseAiMina() : (isAdmin || isBoss || isDeptAdmin);
         if (minaFab) minaFab.style.display = canUseAi ? "flex" : "none";
         if (!canUseAi && minaChat) minaChat.style.display = "none";
+
+        // Show Company Admin Portal button for ADMIN / PROJECT_ADMIN / BOSS / DEPT_ADMIN
+        const btnCompanyAdmin = document.getElementById("btn-open-company-admin");
+        if (btnCompanyAdmin) {
+            btnCompanyAdmin.style.display = (isAdmin || isBoss || isDeptAdmin) ? "inline-flex" : "none";
+        }
 
 
 

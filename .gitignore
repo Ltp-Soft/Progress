@@ -7,6 +7,7 @@ test_multilang.pdf
 # Chặn server giả lập local và file database thô dưới máy
 server.py
 app.js
+package.json
 schedule_d1.sqlite
 workspace_store.json
 uploads/

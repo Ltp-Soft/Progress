@@ -1,10 +1,7 @@
 name = "ltp-progress-hub"
-main = "worker.js"
 compatibility_date = "2024-09-01"
+pages_build_output_dir = "."
 
-# ==============================================================================
-# PRODUCTION ENVIRONMENT (Nhánh "main" - Khách hàng thực tế đang dùng)
-# ==============================================================================
 [[d1_databases]]
 binding = "DB"
 database_name = "ltp_progress_db"
@@ -16,38 +13,3 @@ bucket_name = "ltp-progress-files"
 
 [ai]
 binding = "AI"
-
-[vars]
-ROOT_DOMAIN = "ltp-soft.com"
-VIETQR_BANK_BIN = "970422"
-VIETQR_ACCOUNT_NO = "0388888888"
-VIETQR_ACCOUNT_NAME = "CONG TY LTP SOFT"
-EMAIL_FROM = "LTP Soft <no-reply@ltp-soft.com>"
-
-# ==============================================================================
-# STAGING / PREVIEW ENVIRONMENT (Nhánh "staging" - Link review/test bản cập nhật)
-# ==============================================================================
-[env.staging]
-name = "ltp-progress-hub-staging"
-
-[[env.staging.d1_databases]]
-binding = "DB"
-database_name = "ltp_progress_db_staging"
-database_id = "d392c96f-b982-4ac6-8787-8b71b9bd5718"
-
-[[env.staging.r2_buckets]]
-binding = "MY_BUCKET"
-bucket_name = "ltp-progress-files"
-
-[env.staging.ai]
-binding = "AI"
-
-[env.staging.vars]
-ROOT_DOMAIN = "ltp-soft.com"
-VIETQR_BANK_BIN = "970422"
-VIETQR_ACCOUNT_NO = "0388888888"
-VIETQR_ACCOUNT_NAME = "CONG TY LTP SOFT"
-EMAIL_FROM = "LTP Soft <no-reply@ltp-soft.com>"
-
-
-

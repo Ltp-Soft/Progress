@@ -746,12 +746,15 @@ export default {
           env
         });
 
+        console.log(`[OTP] Sending OTP to ${cleanEmail}, result:`, JSON.stringify(mailResult));
+
         return jsonResp({
           status: "success",
           emailSent: mailResult.success,
+          error: mailResult.success ? undefined : mailResult.error,
           message: mailResult.success
-            ? `Đã gửi mã OTP 6 số tới ${cleanEmail}. Vui lòng kiểm tra hộp thư!`
-            : `Hệ thống đã tạo mã xác thực cho ${cleanEmail}.`,
+            ? `Đã gửi mã OTP 6 số tới ${cleanEmail}. Vui lòng kiểm tra hộp thư (cả mục Spam/Thư rác)!`
+            : `Không thể gửi email OTP (${mailResult.error || "Lỗi Resend"}). Vui lòng kiểm tra cấu hình Resend hoặc dùng đăng ký nhanh với Google!`,
           otpDemoHint: mailResult.success ? undefined : otpCode
         });
       } catch (err) {

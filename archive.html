@@ -73,10 +73,10 @@
     <script src="./js/rag-exporter.js"></script>
     
     <script>
-        // STRICT ACCESS CONTROL: ONLY ADMIN & BOSS CAN ACCESS VAULT
+        // STRICT ACCESS CONTROL: ONLY ADMIN & PROJECT_ADMIN CAN ACCESS VAULT
         (function enforceAdminOnly() {
             const user = window.authMgr ? window.authMgr.getCurrentUser() : null;
-            const isAdmin = user && (user.role === "ADMIN" || user.role === "BOSS");
+            const isAdmin = user && (user.role === "ADMIN" || user.role === "PROJECT_ADMIN");
             if (!isAdmin) {
                 alert("🔒 Chỉ Tài khoản Quản trị Viên (Admin) mới có quyền truy cập Kho Dự Án Đã Đóng Băng!");
                 window.location.replace("/index.html");
@@ -87,17 +87,8 @@
         let currentViewingProj = null;
 
         function isJunkOrDemoProject(p) {
-            if (!p) return true;
-            const jIds = ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'];
-            if (jIds.includes(p.id)) return true;
-            if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_') || p.id.startsWith('PRJ_179') || p.id.startsWith('PRJ_RPT_179') || p.id.startsWith('demo_'))) return true;
-            if (typeof p.name === 'string') {
-                const lower = p.name.toLowerCase();
-                if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád' || lower.includes('(copy)') || lower.includes('marketing plan') || lower.includes('woocen') || lower.includes('giám sát tháng 10')) {
-                    return true;
-                }
-            }
-            return false;
+            if (!p || !p.id) return true;
+            return ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'].includes(p.id) || String(p.id).startsWith('demo_');
         }
 
         async function loadVaultData() {

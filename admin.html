@@ -68,11 +68,6 @@
 
             <form onsubmit="handleAdminGateLogin(event)" class="space-y-4 relative">
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Mã công ty (Subdomain) <span class="text-slate-500 font-normal">(Bỏ trống nếu đã vào đúng domain con)</span></label>
-                    <input id="admin-gate-subdomain" type="text" placeholder="VD: taiphat"
-                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-sky-400 font-mono focus:outline-none focus:border-sky-400">
-                </div>
-                <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Tài khoản Admin / Email <span class="text-rose-400">*</span></label>
                     <input id="admin-gate-username" type="text" required placeholder="admin hoặc email@domain.com"
                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:outline-none focus:border-sky-400">
@@ -121,9 +116,6 @@
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
                     <span id="admin-bell-badge" class="hidden absolute -top-1.5 -right-1.5 flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white ring-2 ring-slate-950 animate-pulse">0</span>
-                </button>
-                <button onclick="switchCompany()" class="px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-400 border border-slate-700 text-xs font-bold transition inline-flex items-center gap-1.5" title="Đổi hoặc chọn công ty khác để quản trị">
-                    <span>🏢 Đổi Công Ty</span>
                 </button>
                 <a href="index.html?workspace=1" class="px-3.5 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-900 border border-slate-300 text-xs font-bold transition inline-flex items-center gap-2">
                     <img src="asset/icons/pricing-grid.svg" alt="" class="w-3.5 h-3.5">
@@ -778,14 +770,6 @@
             return headers;
         }
 
-        function switchCompany() {
-            if (confirm("Bạn có muốn đổi sang công ty khác để quản trị?")) {
-                localStorage.removeItem("ltp_jwt_token");
-                localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
-                showAdminLoginGate();
-            }
-        }
-
         function formatBytes(bytes) {
             const b = Number(bytes || 0);
             if (b <= 0) return "0 MB";
@@ -813,6 +797,9 @@
         }
 
         function getSubdomainFromHost() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const explicit = (urlParams.get("tenant") || urlParams.get("subdomain") || "").trim().toLowerCase();
+            if (explicit) return explicit.replace(/-(pm|progress)$/i, "");
             const host = window.location.hostname.toLowerCase();
             const parts = host.split(".");
             if (parts.length >= 3) {
@@ -830,15 +817,6 @@
             if (gate) gate.classList.remove("hidden");
             const splash = document.getElementById("admin-splash");
             if (splash) splash.style.display = "none";
-
-            const subInput = document.getElementById("admin-gate-subdomain");
-            if (subInput && !subInput.value) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const subParam = urlParams.get("tenant") || getSubdomainFromHost();
-                if (subParam && subParam !== "default" && subParam !== "www") {
-                    subInput.value = subParam;
-                }
-            }
         }
 
         function hideAdminLoginGate() {
@@ -848,14 +826,13 @@
 
         async function handleAdminGateLogin(e) {
             e.preventDefault();
-            const subInput = document.getElementById("admin-gate-subdomain");
             const uInput = document.getElementById("admin-gate-username");
             const pInput = document.getElementById("admin-gate-password");
             const errBox = document.getElementById("admin-gate-error");
             const btn = document.getElementById("admin-gate-submit-btn");
 
             errBox.classList.add("hidden");
-            const subdomain = (subInput?.value || "").trim() || getSubdomainFromHost();
+            const subdomain = getSubdomainFromHost();
             const username = (uInput?.value || "").trim();
             const password = (pInput?.value || "").trim();
 
@@ -869,9 +846,11 @@
             btn.innerHTML = `<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> <span>Đang xác thực...</span>`;
 
             try {
+                const reqHeaders = { "Content-Type": "application/json" };
+                if (subdomain) reqHeaders["X-Tenant"] = subdomain;
                 const res = await fetch("/api/auth/login", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: reqHeaders,
                     body: JSON.stringify({ subdomain, username, password })
                 });
                 const data = await res.json();
@@ -883,7 +862,17 @@
                     return;
                 }
 
-                if (!["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(data.user?.role)) {
+                const activeTenantSub = (data.tenant?.subdomain || subdomain || "").toLowerCase();
+                const prevTenantSub = localStorage.getItem("gantt_active_tenant_sub") || "";
+                if (prevTenantSub !== activeTenantSub) {
+                    localStorage.removeItem("gantt_live_workspace_v7");
+                    localStorage.removeItem("gantt_tenant_departments");
+                }
+                if (activeTenantSub) {
+                    localStorage.setItem("gantt_active_tenant_sub", activeTenantSub);
+                }
+
+                if (!["ADMIN", "PROJECT_ADMIN"].includes(data.user?.role)) {
                     // Non-admin account (STAFF / DEPT_ADMIN) logged in via admin page -> save credentials & route straight to Gantt!
                     if (data.token) {
                         localStorage.setItem("ltp_jwt_token", data.token);
@@ -911,6 +900,7 @@
 
                 if (data.token) {
                     localStorage.setItem("ltp_jwt_token", data.token);
+                    localStorage.setItem("gantt_auth_token", data.token);
                 }
                 localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
                     id: data.user.id || data.user.username,
@@ -942,13 +932,18 @@
 
         async function loadAdminOverview(silent = false) {
             let token = localStorage.getItem("ltp_jwt_token");
-            if (!token) {
-                try {
-                    const sess = JSON.parse(localStorage.getItem("CRYSTAL_ACTIVE_SESSION_V2") || "null");
-                    if (sess && sess.token) token = sess.token;
-                } catch (e) {}
-            }
-            if (!token) {
+            let sess = null;
+            try {
+                sess = JSON.parse(localStorage.getItem("CRYSTAL_ACTIVE_SESSION_V2") || "null");
+                if (!token && sess && sess.token) token = sess.token;
+            } catch (e) {}
+
+            const hostSub = getSubdomainFromHost();
+            const sessSub = (sess?.tenant?.subdomain || "").toLowerCase().replace(/-(pm|progress)$/i, "");
+            if (!token || !String(token).includes(".") || (hostSub && sessSub && sessSub !== hostSub)) {
+                localStorage.removeItem("ltp_jwt_token");
+                localStorage.removeItem("gantt_auth_token");
+                localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
                 showAdminLoginGate();
                 return;
             }
@@ -971,6 +966,20 @@
                 adminState.users = data.users || [];
                 adminState.qrInvites = data.qrInvites || [];
                 adminState.projects = data.projects || [];
+
+                try {
+                    const mappedDepts = adminState.departments.map(d => ({
+                        id: d.id || d.code,
+                        code: d.code || d.id,
+                        name: d.name,
+                        class: `dept-${(d.code || d.id || 'dept').toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+                        color: d.color || "#2563eb",
+                        prefix: d.prefix || (d.name ? d.name.charAt(0).toUpperCase() : "C"),
+                        defaultTaskMode: d.defaultTaskMode || "REPORT_ONLY",
+                        defaultExpanded: true
+                    }));
+                    localStorage.setItem("gantt_tenant_departments", JSON.stringify(mappedDepts));
+                } catch (e) {}
 
                 renderHeaderAndKpis();
                 renderActiveQrInvites();
@@ -1091,13 +1100,13 @@
         }
 
         function populateDepartmentSelects() {
-            const depts = adminState.departments.length
-                ? adminState.departments
-                : [{ code: "DESIGN", name: "Thiết kế" }, { code: "SITE", name: "Thi công" }, { code: "OFFICE", name: "Văn phòng" }];
+            const depts = adminState.departments || [];
 
             const qrSelect = document.getElementById("qr-default-dept");
             const manualSelect = document.getElementById("manual-user-dept");
-            const optionsHtml = depts.map(d => `<option value="${d.name}">${d.name}</option>`).join("");
+            const optionsHtml = depts.length > 0
+                ? depts.map(d => `<option value="${d.name}">${d.name}</option>`).join("")
+                : `<option value="">-- Chưa tạo phòng ban --</option>`;
             if (qrSelect) qrSelect.innerHTML = optionsHtml;
             if (manualSelect) manualSelect.innerHTML = optionsHtml;
 
@@ -1149,9 +1158,7 @@
             const waitingBox = document.getElementById("waiting-room-box");
             const waitingList = document.getElementById("waiting-room-list");
 
-            const depts = adminState.departments.length
-                ? adminState.departments
-                : [{ name: "Thiết kế" }, { name: "Thi công" }, { name: "Văn phòng" }];
+            const depts = adminState.departments || [];
 
             if (waitingUsers.length > 0) {
                 waitingBox.classList.remove("hidden");
@@ -1229,9 +1236,7 @@
         function renderUsersTable() {
             const q = (document.getElementById("staff-search-input")?.value || "").trim().toLowerCase();
             const tbody = document.getElementById("users-table-body");
-            const depts = adminState.departments.length
-                ? adminState.departments
-                : [{ code: "CONSTRUCTION", name: "Thi công", color: "#0284c7" }, { code: "DESIGNER", name: "Thiết kế", color: "#7c3aed" }, { code: "FACTORY", name: "Xưởng SX", color: "#ea580c" }];
+            const depts = adminState.departments || [];
             const isEnterprise = adminState.tenant?.planCode === "ENTERPRISE";
 
             // 1. Calculate Headcount per Department & Render Compact Dropdown

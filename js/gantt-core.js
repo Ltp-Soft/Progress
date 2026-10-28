@@ -6,29 +6,18 @@
  */
 
 function isJunkOrDemoProject(p) {
-    if (!p) return true;
-    const jIds = ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'];
-    if (jIds.includes(p.id)) return true;
-    if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_') || p.id.startsWith('PRJ_179') || p.id.startsWith('PRJ_RPT_179') || p.id.startsWith('demo_'))) return true;
-    if (typeof p.name === 'string') {
-        const lower = p.name.toLowerCase();
-        if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád' || lower.includes('(copy)') || lower.includes('marketing plan') || lower.includes('woocen') || lower.includes('giám sát tháng 10')) {
-            return true;
-        }
-    }
-    return false;
+    if (!p || !p.id) return true;
+    // Only filter exact legacy demo IDs. Never filter by timestamp prefix (PRJ_179...) — real new projects use it!
+    return ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'].includes(p.id) || String(p.id).startsWith('demo_');
 }
 
-let DEPARTMENTS = [
-    { id: "CONSTRUCTION", name: "CONSTRUCTION", code: "C", prefix: "C", class: "dept-construction", color: "#2563eb", defaultExpanded: true },
-    { id: "DESIGNER", name: "DESIGNER", code: "G", prefix: "G", class: "dept-designer", color: "#7c3aed", defaultExpanded: true },
-    { id: "PLANNING", name: "PLANNING", code: "G", prefix: "G", class: "dept-planning", color: "#059669", defaultExpanded: true },
-    { id: "FACTORY", name: "FACTORY", code: "X", prefix: "X", class: "dept-factory", color: "#ea580c", defaultExpanded: true },
-    { id: "MEP", name: "MEP", code: "E", prefix: "E", class: "dept-mep", color: "#d97706", defaultExpanded: true },
-    { id: "STORAGE", name: "STORAGE", code: "H", prefix: "H", class: "dept-storage", color: "#64748b", defaultExpanded: true },
-    { id: "PURCHASING", name: "PURCHASING", code: "H", prefix: "H", class: "dept-purchasing", color: "#0891b2", defaultExpanded: true },
-    { id: "ACCOUNTANT", name: "ACCOUNTANT", code: "A", prefix: "A", class: "dept-accountant", color: "#4f46e5", defaultExpanded: true }
-];
+let DEPARTMENTS = (() => {
+    try {
+        const cached = JSON.parse(localStorage.getItem("gantt_tenant_departments") || "null");
+        if (Array.isArray(cached) && cached.length > 0) return cached;
+    } catch (e) {}
+    return [];
+})();
 window.DEPARTMENTS = DEPARTMENTS;
 
 const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -147,6 +136,10 @@ class GanttCore {
     startRealtimePolling() {
         if (this.pollingInterval) clearInterval(this.pollingInterval);
         this.pollingInterval = setInterval(() => this.checkServerVersion(), 10000);
+        if (!this._focusSyncBound) {
+            this._focusSyncBound = true;
+            window.addEventListener("focus", () => this.checkServerVersion());
+        }
     }
 
     getDefaultWorkspaceData() {
@@ -201,7 +194,7 @@ class GanttCore {
 
 
     async checkServerVersion() {
-        if (!this.workspace || !this.workspace.currentProjectId) return;
+        if (!this.workspace) return;
         // Do not auto-sync if user is currently interacting with the chart or modal is open!
         if (this.isDragging || this.isResizing || this.isLinking) return;
         const activeEl = document.activeElement;
@@ -210,18 +203,23 @@ class GanttCore {
         if (openModals && openModals.length > 0) return;
 
         try {
-            const baseUrl = window.WORKER_API_BASE || "https://schedule-manager-api.sdivn01.workers.dev";
+            const baseUrl = window.WORKER_API_BASE || "";
             const headers = window.authMgr ? window.authMgr.getAuthHeaders() : {};
-            const res = await fetch(`${baseUrl}/api/db/version?projectId=${this.workspace.currentProjectId}&_t=${Date.now()}`, { headers });
+            const prjId = this.workspace.currentProjectId || "";
+            const res = await fetch(`${baseUrl}/api/db/version?projectId=${encodeURIComponent(prjId)}&_t=${Date.now()}`, { headers });
             if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
                 const data = await res.json();
                 const srvVer = Number(data.version || 0);
-                if (srvVer > 0 && this.lastServerVersion > 0 && srvVer > this.lastServerVersion) {
-                    console.log("⚡ Server D1 DB version updated! Auto-syncing live workspace...");
+                const srvMeta = String(data.metaSig || "");
+                const verChanged = srvVer > 0 && this.lastServerVersion > 0 && srvVer > this.lastServerVersion;
+                const metaChanged = srvMeta && this.lastMetaSig && srvMeta !== this.lastMetaSig;
+                if (verChanged || metaChanged) {
                     this.lastServerVersion = srvVer;
+                    this.lastMetaSig = srvMeta;
                     await this.loadFromCloudflareD1(true);
-                } else if (!this.lastServerVersion || this.lastServerVersion === 0) {
-                    this.lastServerVersion = srvVer;
+                } else {
+                    if (!this.lastServerVersion) this.lastServerVersion = srvVer;
+                    if (!this.lastMetaSig && srvMeta) this.lastMetaSig = srvMeta;
                 }
             }
         } catch (e) {
@@ -231,6 +229,7 @@ class GanttCore {
 
     // REALTIME LOCALSTORAGE & SERVER SQL SYNC
     saveToLocalStorage() {
+        this._lastLocalSaveAt = Date.now();
         if (this.workspace && Array.isArray(this.workspace.d2dLinks)) {
             try {
                 localStorage.setItem("gantt_d2d_links_v1", JSON.stringify(this.workspace.d2dLinks));
@@ -243,18 +242,19 @@ class GanttCore {
             console.warn("Could not save to LocalStorage:", e);
         }
 
-        const baseUrl = window.WORKER_API_BASE || "https://schedule-manager-api.sdivn01.workers.dev";
+        const baseUrl = window.WORKER_API_BASE || "";
         const headers = {
             "Content-Type": "application/json",
             ...(window.authMgr ? window.authMgr.getAuthHeaders() : {})
         };
 
-        fetch(`${baseUrl}/api/workspace?_t=${Date.now()}`, {
+        return fetch(`${baseUrl}/api/workspace?_t=${Date.now()}`, {
             method: "POST",
             headers,
             body: JSON.stringify(this.workspace)
         }).then(res => {
             this.lastServerVersion = Math.floor(Date.now() / 1000);
+            return res;
         }).catch(err => console.warn("Server sync save error:", err));
     }
 
@@ -278,7 +278,7 @@ class GanttCore {
 
         let loadedData = null;
         try {
-            const baseUrl = window.WORKER_API_BASE || "https://schedule-manager-api.sdivn01.workers.dev";
+            const baseUrl = window.WORKER_API_BASE || "";
             const headers = window.authMgr ? window.authMgr.getAuthHeaders() : {};
             const res = await fetch(`${baseUrl}/api/workspace?_t=${Date.now()}`, { headers });
             if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
@@ -301,6 +301,14 @@ class GanttCore {
                             defaultExpanded: true
                         }));
                         DEPARTMENTS = window.DEPARTMENTS;
+                        DEPARTMENTS.forEach(d => {
+                            if (this.expandedDepts[d.id] === undefined) {
+                                this.expandedDepts[d.id] = true;
+                            }
+                        });
+                        try {
+                            localStorage.setItem("gantt_tenant_departments", JSON.stringify(window.DEPARTMENTS));
+                        } catch (e) {}
                         this.updateDepartmentSelectors();
                     }
                     if (data.directoryUsers && Array.isArray(data.directoryUsers)) {
@@ -356,13 +364,18 @@ class GanttCore {
         // Filter out legacy demo projects from loadedData
         loadedData.projects = (loadedData.projects || []).filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
 
-        // Merge local data into loadedData so mirror tasks and custom project tags are NEVER lost on F5!
+        // Merge local data into loadedData so newly created projects (if F5 happened mid-save), mirror tasks and custom project tags are NEVER lost on F5!
+        let hasUnsyncedNewProject = false;
         if (localData && localData.projects && Array.isArray(localData.projects)) {
             localData.projects.forEach(localP => {
-                if (!localP || ['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(localP.id)) return;
+                if (!localP || isJunkOrDemoProject(localP)) return;
                 const srvP = loadedData.projects.find(sp => sp.id === localP.id);
                 if (!srvP) {
-                    return; // Deleted on server D1, do not resurrect!
+                    if (localP.createdAt && (Date.now() - Number(localP.createdAt) < 60000)) {
+                        loadedData.projects.push(localP);
+                        hasUnsyncedNewProject = true;
+                    }
+                    return;
                 } else {
                     // 1. Merge tags
                     if (Array.isArray(localP.projectTags)) {
@@ -485,6 +498,9 @@ class GanttCore {
         }
 
         localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(this.workspace));
+        if (hasUnsyncedNewProject) {
+            this.saveToLocalStorage();
+        }
         if (document.getElementById("gantt-unified-container")) {
             this.renderProjectsSidebar();
             this.renderGantt();
@@ -1560,12 +1576,14 @@ class GanttCore {
         this.renderGantt();
     }
 
-    updateProjectInvitedDepartments(projectId, updatedInvitedDepts) {
+    updateProjectInvitedDepartments(projectId, updatedInvitedDepts, uncheckedDepts = []) {
         const prj = this.workspace.projects.find(p => p.id === projectId);
         if (!prj) return;
 
-        const removedDepts = prj.invitedDepts.filter(d => !updatedInvitedDepts.includes(d));
-        prj.invitedDepts = updatedInvitedDepts;
+        const prevActive = (prj.invitedDepts || []).filter(d => !String(d).startsWith("!"));
+        const removedDepts = prevActive.filter(d => !updatedInvitedDepts.includes(d));
+        const exclusionTokens = (uncheckedDepts || []).map(id => "!" + id);
+        prj.invitedDepts = [...updatedInvitedDepts, ...exclusionTokens];
 
         removedDepts.forEach(deptId => {
             const removedTaskCodeIns = prj.tasks
@@ -1796,9 +1814,19 @@ class GanttCore {
             }
         } else {
             const allDepts = (window.DEPARTMENTS && window.DEPARTMENTS.length > 0) ? window.DEPARTMENTS : (DEPARTMENTS || []);
-            const activeDepts = (prj.invitedDepts && Array.isArray(prj.invitedDepts) && prj.invitedDepts.length > 0)
-                ? allDepts.filter(d => prj.invitedDepts.includes(d.id) || prj.invitedDepts.includes(d.code) || prj.invitedDepts.includes(d.name))
-                : allDepts;
+            const inv = Array.isArray(prj.invitedDepts) ? prj.invitedDepts : [];
+            const excludedSet = new Set(inv.filter(x => String(x).startsWith("!")).map(x => String(x).slice(1)));
+            let activeDepts;
+            if (prj.isDeptReport && inv.length > 0) {
+                const matched = allDepts.filter(d =>
+                    !excludedSet.has(d.id) && !excludedSet.has(d.code) &&
+                    (inv.includes(d.id) || inv.includes(d.code) || inv.includes(d.name))
+                );
+                activeDepts = matched.length > 0 ? matched : allDepts.filter(d => !excludedSet.has(d.id) && !excludedSet.has(d.code));
+            } else {
+                // Under Construction / Shared projects automatically include all Admin departments unless explicitly unchecked (!id)
+                activeDepts = allDepts.filter(d => !excludedSet.has(d.id) && !excludedSet.has(d.code) && !excludedSet.has(d.name));
+            }
             groups = activeDepts.map(d => ({
                 id: d.id || d.code,
                 name: d.name || d.code || d.id,

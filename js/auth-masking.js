@@ -5,10 +5,24 @@
  * Dynamic Company Branding (Logo + Name), and Role-Based Access Security.
  */
 
-const ACCOUNTS_DB = [
-    { id: "Admin", pass: "Tpl@1234", role: "ADMIN", dept: "ALL", isBoss: false, canEditAll: true, taskPermissionMode: "AUTONOMOUS" },
-    { id: "Guess", pass: "guest123", role: "GUEST", dept: "NONE", isGuest: true, taskPermissionMode: "REPORT_ONLY" }
-];
+const ACCOUNTS_DB = [];
+
+function getHostSubdomain() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const explicit = params.get("tenant") || params.get("subdomain") || "";
+        if (explicit) return explicit.trim().toLowerCase().replace(/-(pm|progress)$/i, "");
+        const host = (window.location.hostname || "").toLowerCase().split(":")[0];
+        if (host.endsWith(".ltp-soft.com")) {
+            const sub = host.slice(0, -".ltp-soft.com".length);
+            if (sub && !["progress", "www", "app", "admin"].includes(sub)) {
+                return sub.replace(/-(pm|progress)$/i, "");
+            }
+        }
+    } catch (e) {}
+    return "";
+}
+window.getHostSubdomain = getHostSubdomain;
 
 // Determine Department from Code In Prefix (Dynamic based on window.DEPARTMENTS)
 function getDeptFromCodeIn(codeIn) {
@@ -57,16 +71,30 @@ function decodeTokenPayloadSafe(tokenStr) {
     }
 }
 
+const DEFAULT_UNAUTH_USER = {
+    id: "",
+    username: "",
+    name: "Chưa đăng nhập",
+    pass: "",
+    role: "GUEST",
+    dept: "NONE",
+    prefix: "",
+    isBoss: false,
+    canEditAll: false,
+    isGuest: true
+};
+
 class AuthManager {
     constructor() {
-        const guestUser = ACCOUNTS_DB.find(u => u.role === "GUEST") || ACCOUNTS_DB[ACCOUNTS_DB.length - 1];
-        this.currentUser = guestUser;
+        this.currentUser = { ...DEFAULT_UNAUTH_USER };
         this.tenantInfo = null;
         this.directoryUsers = [];
         this.tenantDepartments = [];
         try {
             const cached = JSON.parse(localStorage.getItem("tenant_branding") || "null");
-            if (cached) {
+            const hostSub = getHostSubdomain();
+            const cachedSub = (cached?.subdomain || "").toLowerCase().replace(/-(pm|progress)$/i, "");
+            if (cached && (!hostSub || !cachedSub || cachedSub === hostSub)) {
                 this.tenantInfo = cached;
                 this.applyBrandingToHeader(cached);
             }
@@ -75,22 +103,41 @@ class AuthManager {
         this.loadPublicTenantBrand();
     }
 
-    loadSession() {
-        const guestUser = ACCOUNTS_DB.find(u => u.role === "GUEST") || ACCOUNTS_DB[ACCOUNTS_DB.length - 1];
-        this.adminDeptContext = "CONSTRUCTION";
+    clearLocalTenantCache() {
+        localStorage.removeItem("gantt_session_user");
+        localStorage.removeItem("gantt_auth_token");
+        localStorage.removeItem("ltp_jwt_token");
+        localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
+        localStorage.removeItem("gantt_live_workspace_v7");
+        localStorage.removeItem("gantt_tenant_departments");
+        localStorage.removeItem("tenant_branding");
+    }
 
-        // 1. Check Multi-Tenant V2 Session first (from landing.html / join.html / admin.html)
+    loadSession() {
+        this.adminDeptContext = (window.DEPARTMENTS && window.DEPARTMENTS[0]?.id) || "CONSTRUCTION";
+        const hostSub = getHostSubdomain();
+
+        // 1. Check Multi-Tenant V2 Session first (from landing.html / join.html / admin.html / index.html)
         const v2Raw = localStorage.getItem("CRYSTAL_ACTIVE_SESSION_V2");
         if (v2Raw) {
             try {
                 const v2 = JSON.parse(v2Raw);
-                if (v2 && (v2.username || v2.id)) {
+                const sessToken = v2?.token || localStorage.getItem("ltp_jwt_token") || "";
+                const decodedTok = decodeTokenPayloadSafe(sessToken);
+                const sessSub = (v2?.tenant?.subdomain || decodedTok?.subdomain || "").toLowerCase().replace(/-(pm|progress)$/i, "");
+
+                // Enforce strict subdomain lock: if visiting a specific company subdomain, reject sessions from other companies or unsigned legacy tokens
+                if ((hostSub && sessSub && sessSub !== hostSub) || (sessToken && !String(sessToken).includes("."))) {
+                    this.clearLocalTenantCache();
+                    this.currentUser = { ...DEFAULT_UNAUTH_USER };
+                    return;
+                }
+
+                if (v2 && (v2.username || v2.id) && String(sessToken).includes(".")) {
                     const mappedRole = v2.role === "SUPER_ADMIN" ? "ADMIN" : (v2.role || "STAFF");
-                    const primaryDept = (v2.department || v2.dept || "CONSTRUCTION").toUpperCase();
-                    if (v2.token) {
-                        localStorage.setItem("ltp_jwt_token", v2.token);
-                        localStorage.setItem("gantt_auth_token", v2.token);
-                    }
+                    const primaryDept = (v2.department || v2.dept || "ALL");
+                    localStorage.setItem("ltp_jwt_token", sessToken);
+                    localStorage.setItem("gantt_auth_token", sessToken);
                     if (v2.tenant) {
                         this.tenantInfo = v2.tenant;
                         this.applyBrandingToHeader(v2.tenant);
@@ -101,12 +148,13 @@ class AuthManager {
                         name: v2.name || v2.fullName || v2.username || v2.id,
                         pass: "",
                         role: mappedRole,
-                        dept: ["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(mappedRole) ? "ALL" : primaryDept,
+                        dept: ["ADMIN", "PROJECT_ADMIN"].includes(mappedRole) ? "ALL" : primaryDept,
                         deptTags: Array.isArray(v2.deptTags) ? v2.deptTags : [primaryDept],
-                        taskPermissionMode: v2.taskPermissionMode || (["ADMIN", "BOSS", "PROJECT_ADMIN", "DEPT_ADMIN"].includes(mappedRole) ? "AUTONOMOUS" : "REPORT_ONLY"),
+                        taskPermissionMode: v2.taskPermissionMode || (["ADMIN", "PROJECT_ADMIN", "DEPT_ADMIN"].includes(mappedRole) ? "AUTONOMOUS" : "REPORT_ONLY"),
                         avatarUrl: v2.avatarUrl || "",
-                        prefix: primaryDept === "MEP" ? "E" : "C",
-                        isBoss: mappedRole === "BOSS",
+                        prefix: v2.prefix || (primaryDept === "MEP" ? "E" : "C"),
+                        isBoss: false,
+                        isWaiting: Boolean(v2.isWaiting || mappedRole === "WAITING"),
                         canEditAll: mappedRole === "ADMIN" || mappedRole === "PROJECT_ADMIN",
                         isGuest: mappedRole === "GUEST",
                         tenant: v2.tenant || null
@@ -116,48 +164,49 @@ class AuthManager {
             } catch (e) {}
         }
 
-        // 2. Check JWT or Base64 token in ltp_jwt_token / gantt_auth_token
+        // 2. Check signed JWT token in ltp_jwt_token / gantt_auth_token
         const savedToken = localStorage.getItem("ltp_jwt_token") || localStorage.getItem("gantt_auth_token");
-        if (savedToken) {
+        if (savedToken && String(savedToken).includes(".")) {
             const decoded = decodeTokenPayloadSafe(savedToken);
+            const tokSub = (decoded?.subdomain || "").toLowerCase().replace(/-(pm|progress)$/i, "");
+            if (hostSub && tokSub && tokSub !== hostSub) {
+                this.clearLocalTenantCache();
+                this.currentUser = { ...DEFAULT_UNAUTH_USER };
+                return;
+            }
             if (decoded && (!decoded.exp || decoded.exp > Date.now())) {
-                const userId = decoded.username || decoded.id || decoded.sub || "Guest";
-                const mappedRole = decoded.role === "SUPER_ADMIN" ? "ADMIN" : (decoded.role || "STAFF");
-                const found = ACCOUNTS_DB.find(u => u.id.toLowerCase() === String(userId).toLowerCase());
-                const dept = decoded.department || decoded.dept || (found ? found.dept : "ALL");
-                this.currentUser = {
-                    id: userId,
-                    username: userId,
-                    name: decoded.fullName || decoded.name || userId,
-                    pass: found ? found.pass : "",
-                    role: mappedRole,
-                    dept: ["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(mappedRole) ? "ALL" : dept,
-                    deptTags: decoded.deptTags || [dept],
-                    taskPermissionMode: decoded.taskPermissionMode || (["ADMIN", "BOSS", "PROJECT_ADMIN", "DEPT_ADMIN"].includes(mappedRole) ? "AUTONOMOUS" : "REPORT_ONLY"),
-                    avatarUrl: decoded.avatarUrl || "",
-                    prefix: found ? found.prefix : (dept === "MEP" ? "E" : "C"),
-                    isBoss: mappedRole === "BOSS",
-                    canEditAll: mappedRole === "ADMIN" || mappedRole === "PROJECT_ADMIN",
-                    isGuest: mappedRole === "GUEST"
-                };
-                return;
+                const userId = decoded.username || decoded.id || decoded.sub || "";
+                if (userId) {
+                    const mappedRole = decoded.role === "SUPER_ADMIN" ? "ADMIN" : (decoded.role || "STAFF");
+                    const dept = decoded.department || decoded.dept || "ALL";
+                    this.currentUser = {
+                        id: userId,
+                        username: userId,
+                        name: decoded.fullName || decoded.name || userId,
+                        pass: "",
+                        role: mappedRole,
+                        dept: ["ADMIN", "PROJECT_ADMIN"].includes(mappedRole) ? "ALL" : dept,
+                        deptTags: decoded.deptTags || [dept],
+                        taskPermissionMode: decoded.taskPermissionMode || (["ADMIN", "PROJECT_ADMIN", "DEPT_ADMIN"].includes(mappedRole) ? "AUTONOMOUS" : "REPORT_ONLY"),
+                        avatarUrl: decoded.avatarUrl || "",
+                        prefix: decoded.prefix || (dept === "MEP" ? "E" : "C"),
+                        isBoss: false,
+                        isWaiting: Boolean(decoded.isWaiting || mappedRole === "WAITING"),
+                        canEditAll: mappedRole === "ADMIN" || mappedRole === "PROJECT_ADMIN",
+                        isGuest: mappedRole === "GUEST"
+                    };
+                    return;
+                }
             }
+        } else if (savedToken && !String(savedToken).includes(".")) {
+            this.clearLocalTenantCache();
         }
 
-        const saved = localStorage.getItem("gantt_session_user");
-        if (saved) {
-            const found = ACCOUNTS_DB.find(u => u.id.toLowerCase() === saved.toLowerCase());
-            if (found) {
-                this.currentUser = found;
-                return;
-            }
-        }
-
-        this.currentUser = guestUser;
+        this.currentUser = { ...DEFAULT_UNAUTH_USER };
     }
 
     getAdminDeptContext() {
-        return this.adminDeptContext || "CONSTRUCTION";
+        return this.adminDeptContext || (window.DEPARTMENTS && window.DEPARTMENTS[0]?.id) || "CONSTRUCTION";
     }
 
     setAdminDeptContext(dept) {
@@ -171,145 +220,140 @@ class AuthManager {
     async loginWithCredentials(username, password, subdomain = "") {
         const cleanUsername = (username || "").trim();
         const cleanPassword = (password || "").trim();
+        const targetSub = (subdomain || getHostSubdomain() || "").trim().toLowerCase();
 
         if (!cleanUsername || !cleanPassword) {
             throw new Error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
         }
 
-        const localFound = ACCOUNTS_DB.find(u => u.id.toLowerCase() === cleanUsername.toLowerCase() && u.pass === cleanPassword);
-
         const apiUrl = getApiUrl(`/api/auth/login?_t=${Date.now()}`);
+        const reqHeaders = { "Content-Type": "application/json" };
+        if (targetSub) reqHeaders["X-Tenant"] = targetSub;
+
+        let res;
         try {
-            const res = await fetch(apiUrl, {
+            res = await fetch(apiUrl, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: cleanUsername, password: cleanPassword, subdomain })
+                headers: reqHeaders,
+                body: JSON.stringify({ username: cleanUsername, password: cleanPassword, subdomain: targetSub })
             });
-
-            if (res.ok) {
-                const data = await res.json();
-                if (data && data.token && data.user) {
-                    const u = data.user;
-                    const mappedRole = u.role === "SUPER_ADMIN" ? "ADMIN" : u.role;
-                    const userId = u.username || u.id || cleanUsername;
-                    const primaryDept = u.department || u.dept || "ALL";
-
-                    localStorage.setItem("ltp_jwt_token", data.token);
-                    localStorage.setItem("gantt_auth_token", data.token);
-                    localStorage.setItem("gantt_session_user", userId);
-
-                    if (data.tenant) {
-                        this.tenantInfo = data.tenant;
-                    }
-
-                    const found = ACCOUNTS_DB.find(acc => acc.id.toLowerCase() === String(userId).toLowerCase());
-                    this.currentUser = {
-                        id: userId,
-                        username: userId,
-                        name: u.fullName || u.name || userId,
-                        pass: found ? found.pass : "",
-                        role: mappedRole,
-                        dept: ["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(mappedRole) ? "ALL" : primaryDept,
-                        deptTags: Array.isArray(u.deptTags) ? u.deptTags : [primaryDept],
-                        taskPermissionMode: u.taskPermissionMode || (["ADMIN", "BOSS", "PROJECT_ADMIN", "DEPT_ADMIN"].includes(mappedRole) ? "AUTONOMOUS" : "REPORT_ONLY"),
-                        avatarUrl: u.avatarUrl || "",
-                        prefix: found ? found.prefix : (primaryDept === "MEP" ? "E" : "C"),
-                        isBoss: mappedRole === "BOSS",
-                        canEditAll: mappedRole === "ADMIN" || mappedRole === "PROJECT_ADMIN",
-                        isGuest: mappedRole === "GUEST",
-                        tenant: data.tenant || null
-                    };
-
-                    localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
-                        id: this.currentUser.id,
-                        username: this.currentUser.username,
-                        name: this.currentUser.name,
-                        role: this.currentUser.role,
-                        department: primaryDept,
-                        deptTags: this.currentUser.deptTags,
-                        taskPermissionMode: this.currentUser.taskPermissionMode,
-                        avatarUrl: this.currentUser.avatarUrl,
-                        tenant: data.tenant || null,
-                        token: data.token,
-                        loginTime: new Date().toISOString()
-                    }));
-
-                    return this.currentUser;
-                }
-            } else {
-                const errData = await res.json().catch(() => ({}));
-                if (errData && errData.error && !localFound) {
-                    throw new Error(errData.error);
-                }
-            }
-        } catch (e) {
-            if (!localFound && e.message && !e.message.includes("Failed to fetch")) {
-                throw e;
-            }
-            console.warn("Server login API call error/offline:", e.message);
+        } catch (netErr) {
+            throw new Error("Không thể kết nối máy chủ xác thực. Vui lòng kiểm tra kết nối mạng!");
         }
 
-        // Local fallback for offline / legacy credentials in ACCOUNTS_DB
-        if (localFound) {
-            this.currentUser = localFound;
-            const tokenPayload = {
-                id: localFound.id,
-                username: localFound.id,
-                role: localFound.role,
-                dept: localFound.dept,
-                taskPermissionMode: localFound.taskPermissionMode || "AUTONOMOUS",
-                exp: Date.now() + 86400000
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.error || "Tên đăng nhập hoặc mật khẩu không đúng!");
+        }
+
+        if (data && data.token && data.user) {
+            const u = data.user;
+            const isWaitingUser = Boolean(data.isWaiting || data.statusLabel === "WAITING_ROOM" || u.role === "WAITING" || u.status === "WAITING_ROOM");
+            const mappedRole = isWaitingUser ? "WAITING" : (u.role === "SUPER_ADMIN" ? "ADMIN" : (u.role || "STAFF"));
+            const userId = u.username || u.id || cleanUsername;
+            const primaryDept = u.department || u.dept || "ALL";
+            const activeTenantSub = (data.tenant?.subdomain || targetSub || "").toLowerCase();
+
+            const prevTenantSub = localStorage.getItem("gantt_active_tenant_sub") || "";
+            if (prevTenantSub !== activeTenantSub) {
+                localStorage.removeItem("gantt_live_workspace_v7");
+                localStorage.removeItem("gantt_tenant_departments");
+            }
+            if (activeTenantSub) {
+                localStorage.setItem("gantt_active_tenant_sub", activeTenantSub);
+            }
+
+            localStorage.setItem("ltp_jwt_token", data.token);
+            localStorage.setItem("gantt_auth_token", data.token);
+            localStorage.setItem("gantt_session_user", userId);
+
+            if (data.tenant) {
+                this.tenantInfo = data.tenant;
+                this.applyBrandingToHeader(data.tenant);
+            }
+
+            this.currentUser = {
+                id: userId,
+                username: userId,
+                name: u.fullName || u.name || userId,
+                pass: "",
+                role: mappedRole,
+                dept: ["ADMIN", "PROJECT_ADMIN"].includes(mappedRole) ? "ALL" : primaryDept,
+                deptTags: Array.isArray(u.deptTags) ? u.deptTags : [primaryDept],
+                taskPermissionMode: u.taskPermissionMode || (["ADMIN", "PROJECT_ADMIN", "DEPT_ADMIN"].includes(mappedRole) ? "AUTONOMOUS" : "REPORT_ONLY"),
+                avatarUrl: u.avatarUrl || "",
+                prefix: u.prefix || (primaryDept === "MEP" ? "E" : "C"),
+                isBoss: false,
+                isWaiting: isWaitingUser,
+                canEditAll: mappedRole === "ADMIN" || mappedRole === "PROJECT_ADMIN",
+                isGuest: false,
+                tenant: data.tenant || null
             };
-            const token = btoa(JSON.stringify(tokenPayload));
-            localStorage.setItem("gantt_auth_token", token);
-            localStorage.setItem("ltp_jwt_token", token);
-            localStorage.setItem("gantt_session_user", localFound.id);
-            return localFound;
+
+            localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                id: this.currentUser.id,
+                username: this.currentUser.username,
+                name: this.currentUser.name,
+                role: this.currentUser.role,
+                isWaiting: isWaitingUser,
+                department: primaryDept,
+                dept: primaryDept,
+                deptTags: this.currentUser.deptTags,
+                prefix: this.currentUser.prefix,
+                taskPermissionMode: this.currentUser.taskPermissionMode,
+                avatarUrl: this.currentUser.avatarUrl,
+                tenant: data.tenant || null,
+                token: data.token,
+                loginTime: new Date().toISOString()
+            }));
+
+            return this.currentUser;
         }
 
-        throw new Error("Tên đăng nhập hoặc mật khẩu không đúng!");
+        throw new Error(data.error || "Tên đăng nhập hoặc mật khẩu không đúng!");
     }
 
     getAuthToken() {
         return localStorage.getItem("ltp_jwt_token") || localStorage.getItem("gantt_auth_token") || "";
     }
 
+    getToken() {
+        return this.getAuthToken();
+    }
+
     getAuthHeaders() {
         const token = this.getAuthToken();
+        const hostSub = getHostSubdomain();
         const headers = { "Content-Type": "application/json" };
         if (token) {
             headers["Authorization"] = "Bearer " + token;
+        }
+        if (hostSub) {
+            headers["X-Tenant"] = hostSub;
         }
         return headers;
     }
 
     getFileAuthHeaders() {
         const token = this.getAuthToken();
-        return token ? { "Authorization": "Bearer " + token } : {};
+        const hostSub = getHostSubdomain();
+        const headers = {};
+        if (token) headers["Authorization"] = "Bearer " + token;
+        if (hostSub) headers["X-Tenant"] = hostSub;
+        return headers;
     }
 
-    switchUser(username) {
-        const found = ACCOUNTS_DB.find(u => u.id === username);
-        if (found) {
-            this.currentUser = found;
-            const tokenPayload = { id: found.id, role: found.role, dept: found.dept, exp: Date.now() + 86400000 };
-            const tok = btoa(JSON.stringify(tokenPayload));
-            localStorage.setItem("gantt_auth_token", tok);
-            localStorage.setItem("ltp_jwt_token", tok);
-            localStorage.setItem("gantt_session_user", found.id);
-            return found;
-        }
+    switchUser() {
         return null;
     }
 
     logout() {
-        const guestUser = ACCOUNTS_DB.find(u => u.role === "GUEST") || ACCOUNTS_DB[ACCOUNTS_DB.length - 1];
-        this.currentUser = guestUser;
+        this.currentUser = { ...DEFAULT_UNAUTH_USER };
         localStorage.removeItem("gantt_session_user");
         localStorage.removeItem("gantt_auth_token");
         localStorage.removeItem("ltp_jwt_token");
         localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
-        return guestUser;
+        return this.currentUser;
     }
 
     getCurrentUser() {

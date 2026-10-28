@@ -96,17 +96,9 @@ const DEFAULT_DEPARTMENTS = [
 ];
 
 function isJunkOrDemoProject(p) {
-  if (!p) return true;
-  const jIds = ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'];
-  if (jIds.includes(p.id)) return true;
-  if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_') || p.id.startsWith('PRJ_179') || p.id.startsWith('PRJ_RPT_179') || p.id.startsWith('demo_'))) return true;
-  if (typeof p.name === 'string') {
-    const lower = p.name.toLowerCase();
-    if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád' || lower.includes('(copy)') || lower.includes('marketing plan') || lower.includes('woocen') || lower.includes('giám sát tháng 10')) {
-      return true;
-    }
-  }
-  return false;
+  if (!p || !p.id) return true;
+  // Only exact legacy demo IDs. Never match by timestamp prefix (PRJ_179...) — real new projects use it!
+  return ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'].includes(p.id) || String(p.id).startsWith('demo_');
 }
 
 // ============================================================================
@@ -145,14 +137,8 @@ async function signJwt(env, payload, ttlSeconds = 86400 * 7) {
 }
 
 async function verifyJwt(env, token) {
-  if (!token || typeof token !== "string") return null;
-  if (!token.includes(".")) {
-    try {
-      const legacy = JSON.parse(atob(token));
-      if (legacy && legacy.id) return { ...legacy, tenantId: legacy.tenantId || "tenant-demo" };
-    } catch (e) {}
-    return null;
-  }
+  // Only HMAC-signed tokens are accepted (unsigned legacy base64 tokens could be forged with any role).
+  if (!token || typeof token !== "string" || !token.includes(".")) return null;
   const [data, sig] = token.split(".");
   if (!data || !sig) return null;
   try {
@@ -563,65 +549,15 @@ async function ensureMultiTenantSchema(env) {
           VALUES (?, 'tenant-demo', ?, ?, ?, ?, ?)
         `).bind(`dept_demo_${d.code}`, d.code, d.name, d.prefix, d.color, i).run();
       }
-
-      // Seed default admin user into 'tenant-demo' if not exists
-      const demoUsers = [
-        { id: "Admin", username: "Admin", name: "Quản Trị Viên Tổng", pass: "Tpl@1234", role: "ADMIN", dept: "ALL", prefix: "C", mode: "AUTONOMOUS" }
-      ];
-      for (const u of demoUsers) {
-        await db.prepare(`
-          INSERT OR IGNORE INTO users (
-            id, tenant_id, username, full_name, pass, password_plain_hint, role, dept, dept_tags, prefix, task_permission_mode, is_active
-          ) VALUES (?, 'tenant-demo', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-        `).bind(u.id, u.username, u.name, u.pass, u.pass, u.role, u.dept, JSON.stringify([]), u.prefix, u.mode).run();
-      }
     }
 
-    // Purge legacy demo / orphan projects and tasks from before multi-tenancy
+    // NOTE: The old startup purge (DELETE ... WHERE id LIKE 'PRJ_179%' / 'PRJ_INT_%') was removed.
+    // New projects use "PRJ_" + Date.now() => "PRJ_179..." so that purge silently deleted every
+    // freshly created project and every non-admin user on each worker cold start.
+    // Only remove the legacy hardcoded demo account (known public password) if it still exists.
     try {
-      await db.prepare(`
-        DELETE FROM projects 
-        WHERE id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
-           OR id LIKE 'PRJ_INT_%'
-           OR id LIKE 'PRJ_179%'
-           OR id LIKE 'PRJ_RPT_179%'
-           OR name LIKE '%Project Week%'
-           OR name LIKE '%Quản Lý Công Thợ%'
-           OR name LIKE '%Shinhan%'
-           OR name LIKE '%HCM - CJ%'
-           OR name LIKE '%HCM - CA%'
-           OR name LIKE '%(Copy)%'
-           OR name LIKE '%Marketing plan%'
-           OR name LIKE '%WOOCEN%'
-           OR name LIKE '%GIÁM SÁT THÁNG 10%'
-           OR LOWER(name) = 'ád'
-           OR tenant_id = 'tenant-demo'
-           OR tenant_id IS NULL
-           OR tenant_id = 'demo_legacy'
-      `).run();
-
-      await db.prepare(`
-        DELETE FROM tasks 
-        WHERE project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
-           OR project_id LIKE 'PRJ_INT_%'
-           OR project_id LIKE 'PRJ_179%'
-           OR project_id LIKE 'PRJ_RPT_179%'
-           OR tenant_id = 'tenant-demo'
-           OR tenant_id IS NULL
-      `).run();
-
-      await db.prepare(`
-        DELETE FROM task_files 
-        WHERE project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
-           OR project_id LIKE 'PRJ_INT_%'
-           OR project_id LIKE 'PRJ_179%'
-           OR project_id LIKE 'PRJ_RPT_179%'
-           OR tenant_id = 'tenant-demo'
-           OR tenant_id IS NULL
-      `).run();
-
-      await db.prepare("DELETE FROM qr_invites WHERE tenant_id = 'tenant-demo'").run();
-      await db.prepare("DELETE FROM users WHERE (tenant_id = 'tenant-demo' OR tenant_id IS NULL) AND LOWER(username) NOT IN ('admin')").run();
+      await db.prepare("DELETE FROM users WHERE id = 'Admin' AND tenant_id = 'tenant-demo' AND pass = 'Tpl@1234'").run();
+      await db.prepare("DELETE FROM projects WHERE id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')").run();
     } catch (e) {}
 
     await db.prepare("INSERT OR IGNORE INTO coupons (code, discount_percent, is_active) VALUES ('LTPSOFT10', 10, 1), ('NAM10', 10, 1)").run();
@@ -633,42 +569,51 @@ async function ensureMultiTenantSchema(env) {
 // ============================================================================
 // TENANT RESOLUTION HELPER
 // ============================================================================
-async function resolveTenantContext(request, env, authUser) {
+// Resolve tenant strictly from the request Host (custom domain or <sub>[-pm].ROOT_DOMAIN).
+// Returns null when the request comes from the shared root/marketing domain.
+async function resolveHostTenant(request, env) {
+  if (!env.DB) return null;
   const url = new URL(request.url);
+  const host = (request.headers.get("x-forwarded-host") || request.headers.get("host") || url.hostname || "").toLowerCase().split(":")[0];
+  if (!host) return null;
+
+  const byCustom = await env.DB.prepare("SELECT * FROM tenants WHERE LOWER(custom_domain) = ?").bind(host).first();
+  if (byCustom) return byCustom;
+
+  const rootDomain = (env.ROOT_DOMAIN || "ltp-soft.com").toLowerCase();
+  if (host.endsWith(`.${rootDomain}`)) {
+    const sub = host.slice(0, -(rootDomain.length + 1));
+    if (sub && !["progress", "www", "app", "admin"].includes(sub)) {
+      const cleanBaseSub = sub.replace(/-(pm|progress)$/i, "");
+      const bySub = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR subdomain = ?").bind(sub, cleanBaseSub).first();
+      if (bySub) return bySub;
+    }
+  }
+  return null;
+}
+
+async function resolveTenantContext(request, env, authUser, hostTenant = undefined) {
+  // 1. TENANT LOCK: a company subdomain / custom domain always wins. No switching via JWT, query or header.
+  const locked = hostTenant !== undefined ? hostTenant : await resolveHostTenant(request, env);
+  if (locked) return locked;
+
+  // 2. Shared root domain: use the logged-in user's own tenant (from signed JWT), then explicit hint.
+  const url = new URL(request.url);
+  if (authUser && authUser.tenantId && env.DB) {
+    const t = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(authUser.tenantId).first();
+    if (t) return t;
+  }
+
   const explicitSub =
     url.searchParams.get("tenant") ||
     url.searchParams.get("subdomain") ||
     request.headers.get("X-Tenant") ||
     request.headers.get("x-tenant") ||
-    (authUser && authUser.subdomain) ||
     "";
-
   if (explicitSub && env.DB) {
     const clean = explicitSub.trim().toLowerCase().replace(/-(pm|progress)$/i, "");
     const t = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR id = ?").bind(clean, clean).first();
     if (t) return t;
-  }
-
-  if (authUser && authUser.tenantId && env.DB) {
-    const t = await env.DB.prepare("SELECT * FROM tenants WHERE id = ? OR subdomain = ?").bind(authUser.tenantId, authUser.tenantId).first();
-    if (t) return t;
-  }
-
-  // Check Custom Domain or Subdomain on Host header
-  const host = (request.headers.get("x-forwarded-host") || request.headers.get("host") || url.hostname || "").toLowerCase().split(":")[0];
-  if (host && env.DB) {
-    const byCustom = await env.DB.prepare("SELECT * FROM tenants WHERE LOWER(custom_domain) = ?").bind(host).first();
-    if (byCustom) return byCustom;
-
-    const rootDomain = (env.ROOT_DOMAIN || "ltp-soft.com").toLowerCase();
-    if (host.endsWith(`.${rootDomain}`)) {
-      const sub = host.slice(0, -(rootDomain.length + 1));
-      if (sub && sub !== "progress" && sub !== "www") {
-        const cleanBaseSub = sub.replace(/-(pm|progress)$/i, "");
-        const bySub = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR subdomain = ?").bind(sub, cleanBaseSub).first();
-        if (bySub) return bySub;
-      }
-    }
   }
 
   if (env.DB) {
@@ -721,14 +666,20 @@ export default {
     await ensureMultiTenantSchema(env);
 
     // Parse Auth User from Bearer token
-    let authUser = { role: "GUEST", dept: "NONE", id: "guest", tenantId: "tenant-demo" };
+    let authUser = { role: "GUEST", dept: "NONE", id: "guest", tenantId: "" };
     const authHeader = request.headers.get("Authorization") || request.headers.get("authorization") || "";
     if (authHeader.startsWith("Bearer ")) {
       const verified = await verifyJwt(env, authHeader.slice(7).trim());
       if (verified) authUser = verified;
     }
 
-    const tenant = await resolveTenantContext(request, env, authUser);
+    const hostTenant = await resolveHostTenant(request, env);
+    // TENANT LOCK: a token issued for company A is worthless on company B's domain.
+    if (hostTenant && authUser.tenantId && authUser.tenantId !== hostTenant.id && !authUser.is_super_admin) {
+      authUser = { role: "GUEST", dept: "NONE", id: "guest", tenantId: "", tenantMismatch: true };
+    }
+
+    const tenant = await resolveTenantContext(request, env, authUser, hostTenant);
     const tenantId = tenant.id || "tenant-demo";
 
     // ========================================================================
@@ -763,7 +714,7 @@ export default {
           themeConfig: JSON.parse(tenant.theme_config || "{}"),
           expiresAt: tenant.expires_at
         },
-        departments: depts.length > 0 ? depts : DEFAULT_DEPARTMENTS
+        departments: depts
       });
     }
 
@@ -2153,44 +2104,50 @@ export default {
         const { username, password, subdomain } = await request.json();
         const cleanUser = String(username || "").trim();
         const cleanPass = String(password || "").trim();
+        if (!cleanUser || !cleanPass) {
+          return jsonResp({ error: "Vui lòng nhập Tên đăng nhập và Mật khẩu!" }, 400);
+        }
 
-        let targetTenant = tenant;
-        if (subdomain) {
-          const t = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR id = ?").bind(subdomain.trim().toLowerCase(), subdomain.trim().toLowerCase()).first();
-          if (t) targetTenant = t;
+        // TENANT LOCK: on a company domain only that company's accounts can log in.
+        let targetTenant = hostTenant || null;
+        if (!targetTenant && subdomain) {
+          const cleanSub = String(subdomain).trim().toLowerCase().replace(/-(pm|progress)$/i, "");
+          targetTenant = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR id = ?").bind(cleanSub, cleanSub).first();
+        }
+
+        const matchSql = "(LOWER(username) = LOWER(?) OR LOWER(id) = LOWER(?) OR (email != '' AND LOWER(email) = LOWER(?)) OR (phone != '' AND phone = ?))";
+        let candidates = [];
+        if (targetTenant) {
+          const { results } = await env.DB.prepare(`SELECT * FROM users WHERE tenant_id = ? AND ${matchSql}`)
+            .bind(targetTenant.id, cleanUser, cleanUser, cleanUser, cleanUser).all();
+          candidates = results || [];
+        } else {
+          // Shared root domain (no company subdomain): look the account up across companies.
+          const { results } = await env.DB.prepare(`SELECT * FROM users WHERE ${matchSql}`)
+            .bind(cleanUser, cleanUser, cleanUser, cleanUser).all();
+          candidates = results || [];
         }
 
         let userRow = null;
-        if (env.DB) {
-          const { results } = await env.DB.prepare(
-            "SELECT * FROM users WHERE tenant_id = ? AND (LOWER(username) = LOWER(?) OR LOWER(id) = LOWER(?) OR LOWER(email) = LOWER(?))"
-          ).bind(targetTenant.id, cleanUser, cleanUser, cleanUser).all();
-
-          for (const candidate of results || []) {
-            if (await verifyPassword(cleanPass, candidate.password_hash, candidate.pass)) {
-              userRow = candidate;
-              break;
-            }
-          }
-
-          // If not found in targetTenant, also search by username or email across tenants (convenient login!)
-          if (!userRow) {
-            const { results: globalMatches } = await env.DB.prepare(
-              "SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(id) = LOWER(?) OR (LOWER(email) = LOWER(?) AND ? != '')"
-            ).bind(cleanUser, cleanUser, cleanUser, cleanUser.includes("@") ? cleanUser : "").all();
-            for (const candidate of globalMatches || []) {
-              if (await verifyPassword(cleanPass, candidate.password_hash, candidate.pass)) {
-                userRow = candidate;
-                const foundT = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(candidate.tenant_id).first();
-                if (foundT) targetTenant = foundT;
-                break;
-              }
-            }
+        for (const candidate of candidates) {
+          if (await verifyPassword(cleanPass, candidate.password_hash, candidate.pass)) {
+            userRow = candidate;
+            break;
           }
         }
 
         if (!userRow) {
-          return jsonResp({ error: "Tên đăng nhập hoặc mật khẩu không đúng!" }, 401);
+          if (candidates.length === 0) {
+            return jsonResp({ error: `Không tìm thấy tài khoản "${cleanUser}" trong công ty này. Kiểm tra lại Tên đăng nhập hoặc đường dẫn công ty!` }, 401);
+          }
+          return jsonResp({ error: "Mật khẩu không đúng!" }, 401);
+        }
+
+        if (!targetTenant || targetTenant.id !== userRow.tenant_id) {
+          targetTenant = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(userRow.tenant_id).first();
+        }
+        if (!targetTenant) {
+          return jsonResp({ error: "Tài khoản không thuộc công ty nào đang hoạt động!" }, 403);
         }
 
         if (Number(userRow.is_active) === 0) {
@@ -2212,7 +2169,7 @@ export default {
           prefix: userRow.prefix || "C",
           taskPermissionMode: userRow.task_permission_mode || "REPORT_ONLY",
           managedProjectIds: JSON.parse(userRow.managed_project_ids || "[]"),
-          isWaiting: Number(userRow.is_active) === 2 || userRow.role === "WAITING",
+          isWaiting: false,
           tenantId: targetTenant.id,
           subdomain: targetTenant.subdomain,
           companyName: targetTenant.company_name,
@@ -2220,7 +2177,19 @@ export default {
         };
 
         const token = await signJwt(env, sessionPayload);
-        return jsonResp({ status: "success", token, user: sessionPayload, tenant: targetTenant });
+        return jsonResp({
+          status: "success",
+          token,
+          user: sessionPayload,
+          tenant: {
+            id: targetTenant.id,
+            subdomain: targetTenant.subdomain,
+            companyName: targetTenant.company_name,
+            slogan: targetTenant.slogan || "",
+            logoUrl: targetTenant.logo_url || "./asset/Logo_white.png",
+            planType: targetTenant.plan_type
+          }
+        });
       } catch (err) {
         return jsonResp({ error: err.message }, 500);
       }
@@ -3463,7 +3432,18 @@ export default {
           "SELECT MAX(updated_at) as max_prj FROM projects WHERE tenant_id = ? AND (id = ? OR ? = '')"
         ).bind(tenantId, projectId, projectId).first();
         const lastUpdated = Math.max(Number(maxTaskRow?.max_updated || 0), Number(prjRow?.max_prj || 0));
-        return jsonResp({ projectId, version: lastUpdated });
+        // Signature of departments + active staff so Gantt auto-refreshes when Admin edits them
+        let metaSig = "";
+        try {
+          const dRow = await env.DB.prepare(
+            "SELECT COUNT(*) AS c, GROUP_CONCAT(code || ':' || name || ':' || IFNULL(color,''), '|') AS s FROM (SELECT code, name, color FROM departments WHERE tenant_id = ? ORDER BY order_index, code)"
+          ).bind(tenantId).first();
+          const uRow = await env.DB.prepare(
+            "SELECT COUNT(*) AS c, GROUP_CONCAT(id || ':' || IFNULL(full_name,'') || ':' || IFNULL(dept,'') || ':' || IFNULL(role,'') || ':' || is_active, '|') AS s FROM (SELECT id, full_name, dept, role, is_active FROM users WHERE tenant_id = ? ORDER BY id)"
+          ).bind(tenantId).first();
+          metaSig = `${dRow?.c || 0}#${dRow?.s || ""}#${uRow?.c || 0}#${uRow?.s || ""}`;
+        } catch (e) {}
+        return jsonResp({ projectId, version: lastUpdated, metaSig });
       } catch (err) {
         return jsonResp({ projectId, version: 0 });
       }
@@ -3615,7 +3595,7 @@ export default {
             planType: tenant.plan_type,
             themeConfig: JSON.parse(tenant.theme_config || "{}")
           },
-          departments: depts && depts.length > 0 ? depts : DEFAULT_DEPARTMENTS,
+          departments: depts || [],
           directoryUsers: (tenantUsers || []).map((u) => ({
             id: u.id,
             username: u.username,
@@ -3657,6 +3637,7 @@ export default {
                   start_range, end_range, staffs, updated_at, project_tags, category
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
+                  tenant_id = excluded.tenant_id,
                   name = excluded.name,
                   pin = excluded.pin,
                   creator_dept = excluded.creator_dept,
@@ -3681,6 +3662,52 @@ export default {
                 JSON.stringify(p.staffs || []), nowSec, JSON.stringify(p.projectTags || []),
                 p.category || (p.isDeptJob ? "DEPT_JOB" : "SHARED")
               ).run();
+
+              if (Array.isArray(p.tasks)) {
+                for (let idx = 0; idx < p.tasks.length; idx++) {
+                  const t = p.tasks[idx];
+                  if (!t || !t.id) continue;
+                  await env.DB.prepare(`
+                    INSERT INTO tasks (
+                      id, tenant_id, project_id, code_in, code_out, name, staff,
+                      dept, start_date, end_date, start_time, end_time,
+                      is_started, is_completed, progress_percent, last_progress_date,
+                      notes, is_deleted, updated_at, project_tag, order_index
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                      tenant_id = excluded.tenant_id,
+                      project_id = excluded.project_id,
+                      code_in = excluded.code_in,
+                      code_out = excluded.code_out,
+                      name = excluded.name,
+                      staff = excluded.staff,
+                      dept = excluded.dept,
+                      start_date = excluded.start_date,
+                      end_date = excluded.end_date,
+                      start_time = excluded.start_time,
+                      end_time = excluded.end_time,
+                      is_started = excluded.is_started,
+                      is_completed = excluded.is_completed,
+                      progress_percent = excluded.progress_percent,
+                      last_progress_date = excluded.last_progress_date,
+                      notes = excluded.notes,
+                      updated_at = excluded.updated_at,
+                      project_tag = excluded.project_tag,
+                      order_index = excluded.order_index
+                  `).bind(
+                    t.id, tenantId, p.id, t.codeIn || "C1001", t.codeOut || "",
+                    t.name || "Công việc", t.staff || "Chưa giao",
+                    t.dept || p.creatorDept || "CONSTRUCTION",
+                    t.start || p.startRange || "", t.end || p.endRange || "",
+                    t.startTime || "", t.endTime || "",
+                    t.isStarted ? 1 : 0, t.isCompleted ? 1 : 0,
+                    Number(t.progressPercent || 0), t.lastProgressDate || "",
+                    t.notes || "", nowSec,
+                    typeof t.projectTag === "object" ? (t.projectTag?.name || "") : (t.projectTag || ""),
+                    t.orderIndex !== undefined ? Number(t.orderIndex) : idx
+                  ).run();
+                }
+              }
             }
           }
         }

@@ -279,17 +279,6 @@
                     </div>
                     <div class="project-sublist" id="internal-projects-list"></div>
                 </div>
-
-                <!-- SECTION 4: ADMIN PORTAL SHORTCUT (ADMIN / BOSS ONLY) -->
-                <div class="sidebar-section section-admin-panel" id="section-admin-panel" style="margin-top: 6px; display: none;">
-                    <div class="menu-item" onclick="openAdminPortal()" style="cursor: pointer; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;" title="Vào Bảng Điều Khiển Quản Trị Hệ Thống">
-                        <div class="label" style="color: #38bdf8; font-weight: 700; display: flex; align-items: center; gap: 7px;">
-                            <i data-lucide="shield-check" size="15" style="color: #38bdf8;"></i>
-                            <span>⚙️ Quản Trị Hệ Thống</span>
-                        </div>
-                        <span class="menu-count" id="sidebar-waiting-badge" style="display:none; background: #f43f5e; color: #fff; font-weight: 800; font-size: 10px; padding: 1px 6px; border-radius: 999px;">0</span>
-                    </div>
-                </div>
             </nav>
 
             <!-- FIXED BOTTOM FOOTER CONTAINER (PROJECT CLOSED, THEME SWITCHER, MANUAL, COPYRIGHT) -->
@@ -1277,12 +1266,8 @@
             }
 
             const btnOpenAdmin = document.getElementById("btn-open-company-admin");
-            const sidebarAdminSec = document.getElementById("section-admin-panel");
             if (btnOpenAdmin) {
-                btnOpenAdmin.style.display = (isAdmin || isBoss || isDeptAdmin) ? "inline-flex" : "none";
-            }
-            if (sidebarAdminSec) {
-                sidebarAdminSec.style.display = (isAdmin || isBoss || isDeptAdmin) ? "block" : "none";
+                btnOpenAdmin.style.display = isAdmin ? "inline-flex" : "none";
             }
             if (isAdmin) {
                 fetch("/api/admin/overview", { headers: window.authMgr ? window.authMgr.getAuthHeaders() : {} })
@@ -1291,7 +1276,6 @@
                         if (data && Array.isArray(data.users)) {
                             const waitingCount = data.users.filter(u => u.status === "WAITING_ROOM" || u.isActive === 2 || u.role === "WAITING").length;
                             const badge = document.getElementById("index-waiting-badge");
-                            const sidebarBadge = document.getElementById("sidebar-waiting-badge");
                             if (badge) {
                                 if (waitingCount > 0) {
                                     badge.textContent = waitingCount;
@@ -1299,14 +1283,6 @@
                                     badge.title = `Có ${waitingCount} nhân sự đang trong phòng chờ duyệt!`;
                                 } else {
                                     badge.style.display = "none";
-                                }
-                            }
-                            if (sidebarBadge) {
-                                if (waitingCount > 0) {
-                                    sidebarBadge.textContent = waitingCount;
-                                    sidebarBadge.style.display = "inline-flex";
-                                } else {
-                                    sidebarBadge.style.display = "none";
                                 }
                             }
                         }
@@ -2245,9 +2221,11 @@
                 startRange: "2026-09-01",
                 endRange: "2026-10-15",
                 staffs: [pic],
-                tasks: []
+                tasks: [],
+                createdAt: Date.now()
             });
 
+            ganttCore.workspace.currentProjectId = newId;
             ganttCore.saveToLocalStorage();
             closeModal('new-project-modal');
             alert(`🎉 Đã tạo dự án [${name}] thành công!`);
@@ -2257,12 +2235,12 @@
         async function openManageDepartmentsModal() {
             const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
             if (user.role === "GUEST") {
-                alert("🔒 Tài khoản Khách không có quyền quản lý bộ phận!");
+                alert("🔒 Vui lòng đăng nhập để quản lý bộ phận!");
                 return;
             }
             const prj = ganttCore.getCurrentProject();
             if (!prj) return;
-            if (!ganttCore.isProjectOwner(prj) && user.role !== "ADMIN" && user.role !== "BOSS") {
+            if (!ganttCore.isProjectOwner(prj) && !window.authMgr.isAdmin()) {
                 alert("🔒 Chỉ Người tạo dự án hoặc Admin mới có quyền quản lý bộ phận!");
                 return;
             }
@@ -2285,6 +2263,9 @@
                             defaultTaskMode: d.defaultTaskMode || "REPORT_ONLY",
                             defaultExpanded: true
                         }));
+                        try {
+                            localStorage.setItem("gantt_tenant_departments", JSON.stringify(window.DEPARTMENTS));
+                        } catch (e) {}
                         if (window.ganttCore && window.ganttCore.updateDepartmentSelectors) {
                             window.ganttCore.updateDepartmentSelectors();
                         }
@@ -2300,7 +2281,10 @@
 
             container.innerHTML = depts.map(d => {
                 const deptIdentifier = d.id || d.code || d.name;
-                const isChecked = (invited.length === 0 || invited.includes(d.id) || invited.includes(d.code) || invited.includes(d.name)) ? "checked" : "";
+                const isExplicitlyExcluded = invited.includes("!" + d.id) || invited.includes("!" + d.code) || invited.includes("!" + d.name);
+                const isChecked = prj.isDeptReport
+                    ? ((invited.length === 0 || invited.includes(d.id) || invited.includes(d.code) || invited.includes(d.name)) ? "checked" : "")
+                    : (!isExplicitlyExcluded ? "checked" : "");
                 const deptColor = d.color || "#2563eb";
                 const isOwner = prj.creatorDept === d.id || prj.creatorDept === d.code || prj.creatorDept === d.name;
 
@@ -2325,23 +2309,30 @@
         function confirmUpdateProjectDepartments() {
             const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
             if (user.role === "GUEST") {
-                alert("🔒 Tài khoản Khách không có quyền quản lý hoặc xóa bộ phận!");
+                alert("🔒 Vui lòng đăng nhập để quản lý bộ phận!");
                 return;
             }
             const prj = ganttCore.getCurrentProject();
             if (!prj) return;
 
             const updatedInvitedDepts = [];
-            document.querySelectorAll(".manage-dept-chk:checked").forEach(chk => updatedInvitedDepts.push(chk.value));
+            const excludedDepts = [];
+            document.querySelectorAll(".manage-dept-chk").forEach(chk => {
+                if (chk.checked) {
+                    updatedInvitedDepts.push(chk.value);
+                } else {
+                    excludedDepts.push(chk.value);
+                }
+            });
 
             if (updatedInvitedDepts.length === 0) {
                 alert("Vui lòng chọn ít nhất 1 bộ phận tham gia dự án!");
                 return;
             }
 
-            ganttCore.updateProjectInvitedDepartments(prj.id, updatedInvitedDepts);
+            ganttCore.updateProjectInvitedDepartments(prj.id, updatedInvitedDepts, excludedDepts);
             closeModal('manage-depts-modal');
-            alert("Đã cập nhật danh sách bộ phận và làm sạch liên kết thành công!");
+            alert("Đã cập nhật danh sách bộ phận thành công!");
         }
 
         function updateProjectDateRange() {

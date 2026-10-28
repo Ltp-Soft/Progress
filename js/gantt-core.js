@@ -5,6 +5,20 @@
  * and Responsive Mobile/Tablet Touch Interaction.
  */
 
+function isJunkOrDemoProject(p) {
+    if (!p) return true;
+    const jIds = ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'];
+    if (jIds.includes(p.id)) return true;
+    if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_179') || p.id.startsWith('PRJ_179') || p.id.startsWith('demo_'))) return true;
+    if (typeof p.name === 'string') {
+        const lower = p.name.toLowerCase();
+        if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád') {
+            return true;
+        }
+    }
+    return false;
+}
+
 let DEPARTMENTS = [
     { id: "CONSTRUCTION", name: "CONSTRUCTION", code: "C", prefix: "C", class: "dept-construction", color: "#2563eb", defaultExpanded: true },
     { id: "DESIGNER", name: "DESIGNER", code: "G", prefix: "G", class: "dept-designer", color: "#7c3aed", defaultExpanded: true },
@@ -161,8 +175,8 @@ class GanttCore {
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (parsed && parsed.projects && Array.isArray(parsed.projects)) {
-                    parsed.projects = parsed.projects.filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
-                    if (['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(parsed.currentProjectId)) {
+                    parsed.projects = parsed.projects.filter(p => !isJunkOrDemoProject(p));
+                    if (parsed.projects.length === 0 || isJunkOrDemoProject({ id: parsed.currentProjectId })) {
                         parsed.currentProjectId = parsed.projects[0]?.id || "";
                     }
                     this.workspace = parsed;
@@ -177,7 +191,7 @@ class GanttCore {
             if (rawArch) {
                 const parsedArch = JSON.parse(rawArch);
                 if (Array.isArray(parsedArch)) {
-                    const cleanArch = parsedArch.filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
+                    const cleanArch = parsedArch.filter(p => !isJunkOrDemoProject(p));
                     localStorage.setItem("gantt_archived_projects", JSON.stringify(cleanArch));
                 }
             }
@@ -274,15 +288,19 @@ class GanttCore {
             if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
                 const data = await res.json();
                 if (data && data.projects && Array.isArray(data.projects)) {
+                    data.projects = data.projects.filter(p => !isJunkOrDemoProject(p));
+                    if (data.projects.length === 0 || isJunkOrDemoProject({ id: data.currentProjectId })) {
+                        data.currentProjectId = data.projects[0]?.id || "";
+                    }
                     loadedData = data;
-                    if (data.departments && Array.isArray(data.departments) && data.departments.length > 0) {
+                    if (data.departments && Array.isArray(data.departments)) {
                         window.DEPARTMENTS = data.departments.map(d => ({
                             id: d.code || d.id,
-                            code: d.prefix || d.code?.charAt(0) || "C",
-                            name: d.name || d.code,
-                            class: `dept-${(d.code || d.id).toLowerCase()}`,
+                            code: d.code || d.id,
+                            name: d.name || d.code || d.id,
+                            class: `dept-${(d.code || d.id).toLowerCase().replace(/[^a-z0-9]/g, '')}`,
                             color: d.color || "#2563eb",
-                            prefix: d.prefix || "C",
+                            prefix: d.prefix || (d.name ? d.name.charAt(0).toUpperCase() : "C"),
                             defaultTaskMode: d.defaultTaskMode || "REPORT_ONLY",
                             defaultExpanded: true
                         }));
@@ -605,10 +623,9 @@ class GanttCore {
         // 2. Toggle Links
         if (btnToggleLinks) btnToggleLinks.style.display = "inline-flex";
 
-        // 3. Add Project Tag Button: Department Jobs ONLY
+        // 3. Add Project Tag Button: Removed per user request
         if (btnAddTag) {
-            const canTag = isDeptJob && (this.ganttViewMode === 'TAG') && (isAdmin || isDeptAdmin || isOwner);
-            btnAddTag.style.display = canTag ? "inline-flex" : "none";
+            btnAddTag.style.display = "none";
         }
 
         // 4. Add Task Button: Admin, Dept Admin, or Staff in AUTONOMOUS mode (or unlocked PIN)
@@ -1774,13 +1791,15 @@ class GanttCore {
                 });
             }
         } else {
+            const allDepts = (window.DEPARTMENTS && window.DEPARTMENTS.length > 0) ? window.DEPARTMENTS : (DEPARTMENTS || []);
             const activeDepts = (prj.invitedDepts && Array.isArray(prj.invitedDepts) && prj.invitedDepts.length > 0)
-                ? DEPARTMENTS.filter(d => prj.invitedDepts.includes(d.id))
-                : DEPARTMENTS;
+                ? allDepts.filter(d => prj.invitedDepts.includes(d.id) || prj.invitedDepts.includes(d.code) || prj.invitedDepts.includes(d.name))
+                : allDepts;
             groups = activeDepts.map(d => ({
-                id: d.id,
-                name: d.name,
-                class: d.class,
+                id: d.id || d.code,
+                name: d.name || d.code || d.id,
+                class: d.class || `dept-${(d.code || d.id).toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+                color: d.color || "#2563eb",
                 isTag: false
             }));
         }
@@ -1836,8 +1855,10 @@ class GanttCore {
                         return String(tag).trim().toLowerCase() === String(group.id).trim().toLowerCase();
                     }
                 } else {
-                    const tDept = t.dept || getDeptFromCodeIn(t.codeIn);
-                    return tDept === group.id;
+                    const tDept = String(t.dept || getDeptFromCodeIn(t.codeIn) || "").toUpperCase();
+                    const gId = String(group.id || "").toUpperCase();
+                    const gName = String(group.name || "").toUpperCase();
+                    return tDept === gId || tDept === gName;
                 }
             });
 
@@ -2699,10 +2720,11 @@ class GanttCore {
 
         const container = document.getElementById("convert-bidding-depts-container");
         const currentInvited = prj.invitedDepts || [prj.creatorDept || "CONSTRUCTION"];
-        container.innerHTML = DEPARTMENTS.map(d => {
-            const isChecked = currentInvited.includes(d.id) ? "checked" : "";
+        const deptsList = (window.DEPARTMENTS && window.DEPARTMENTS.length > 0) ? window.DEPARTMENTS : (DEPARTMENTS || []);
+        container.innerHTML = deptsList.map(d => {
+            const isChecked = currentInvited.includes(d.id) || currentInvited.includes(d.code) ? "checked" : "";
             return `<label style="font-size:11px; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <input type="checkbox" class="convert-dept-chk" value="${d.id}" ${isChecked}>
+                <input type="checkbox" class="convert-dept-chk" value="${d.id || d.code}" ${isChecked} style="accent-color:#2563eb;">
                 ${d.name}
             </label>`;
         }).join('');

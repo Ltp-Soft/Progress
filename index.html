@@ -293,12 +293,6 @@
 
             <!-- FIXED BOTTOM FOOTER CONTAINER (PROJECT CLOSED, THEME SWITCHER, MANUAL, COPYRIGHT) -->
             <div class="sidebar-footer-fixed" style="margin-top: auto; flex-shrink: 0; border-top: 1px solid #1e293b; background: rgba(15, 23, 42, 0.95); padding: 6px 8px;">
-                <!-- SECTION 4: PROJECT CLOSED -->
-                <a href="archive.html" class="menu-item vault-link" style="margin: 2px 0 6px 0; text-decoration: none;" title="Kho Dự Án Đã Đóng Băng">
-                    <div class="label"><i data-lucide="archive" size="15"></i> Project Closed</div>
-                    <span class="menu-count" id="count-closed">0</span>
-                </a>
-
                 <!-- SINGLE COMPACT ROW UTILITIES: Mode: 2D/3D | Skin | HDSD -->
                 <div style="display: flex; align-items: center; justify-content: space-around; font-size: 10px; color: #94a3b8; background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 5px 6px;">
                     <div style="display: flex; align-items: center; gap: 4px;" title="Chuyển Chế Độ Giao Diện 2D/3D">
@@ -380,9 +374,6 @@
 
                         <!-- 2. ADMIN/EDIT ACTION TOOLS CONTAINER -->
                         <div id="admin-tools-container" style="display:flex; align-items:center; gap:6px;">
-                            <button class="btn-tool btn-green-accent" id="btn-add-project-tag" style="display:none;" onclick="promptAddProjectTag()" title="Thêm Tag Dự Án / Hạng Mục Công Việc Mới Nội Bộ">
-                                <i data-lucide="layers" size="14"></i>
-                            </button>
                             <button class="btn-tool btn-green-accent" id="btn-add-task" style="display:none;" onclick="openTaskModal()" title="Thêm công việc">
                                 <i data-lucide="plus" size="14"></i>
                             </button>
@@ -1822,9 +1813,10 @@
                 return;
             }
 
+            const allDepts = (window.DEPARTMENTS && window.DEPARTMENTS.length > 0) ? window.DEPARTMENTS : (DEPARTMENTS || []);
             container.innerHTML = links.map((link, idx) => {
-                const deptOptionsFrom = DEPARTMENTS.map(d => `<option value="${d.id}" ${d.id === link.fromDept ? 'selected' : ''}>${d.name}</option>`).join('');
-                const deptOptionsTo = DEPARTMENTS.map(d => `<option value="${d.id}" ${d.id === link.toDept ? 'selected' : ''}>${d.name}</option>`).join('');
+                const deptOptionsFrom = allDepts.map(d => `<option value="${d.id || d.code}" ${(d.id === link.fromDept || d.code === link.fromDept) ? 'selected' : ''}>${d.name}</option>`).join('');
+                const deptOptionsTo = allDepts.map(d => `<option value="${d.id || d.code}" ${(d.id === link.toDept || d.code === link.toDept) ? 'selected' : ''}>${d.name}</option>`).join('');
 
                 return `
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:999px; padding:6px 12px;">
@@ -2261,25 +2253,26 @@
                 return;
             }
 
-            const depts = window.DEPARTMENTS || DEPARTMENTS;
+            const depts = (window.DEPARTMENTS && window.DEPARTMENTS.length > 0) ? window.DEPARTMENTS : (DEPARTMENTS || []);
             const container = document.getElementById("manage-dept-checkbox-container");
             const invited = prj.invitedDepts || [];
 
             container.innerHTML = depts.map(d => {
+                const deptIdentifier = d.id || d.code;
                 const isChecked = (invited.length === 0 || invited.includes(d.id) || invited.includes(d.code) || invited.includes(d.name)) ? "checked" : "";
                 const deptColor = d.color || "#2563eb";
                 const isOwner = prj.creatorDept === d.id || prj.creatorDept === d.code || prj.creatorDept === d.name;
 
                 return `
                     <label style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:#f8fafc; border:1.5px solid ${isChecked ? deptColor : '#e2e8f0'}; border-radius:12px; cursor:pointer; transition:all 0.15s ease;">
-                        <input type="checkbox" class="manage-dept-chk" value="${d.id}" ${isChecked} ${isOwner ? 'disabled checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:${deptColor};">
+                        <input type="checkbox" class="manage-dept-chk" value="${deptIdentifier}" ${isChecked} ${isOwner ? 'disabled checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb !important;">
                         <span style="width:12px; height:12px; border-radius:50%; background-color:${deptColor}; flex-shrink:0;"></span>
                         <div style="flex:1;">
                             <div style="font-size:13.5px; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:6px;">
                                 <span>${d.name}</span>
                                 ${isOwner ? '<span style="font-size:10px; font-weight:800; background:#dbeafe; color:#1e40af; padding:1px 6px; border-radius:4px;">Chủ quản</span>' : ''}
                             </div>
-                            <div style="font-size:11px; color:#64748b; font-family:monospace;">Mã: ${d.id} • Ký hiệu task: [${d.prefix || d.code || 'C'}]</div>
+                            <div style="font-size:11px; color:#64748b; font-family:monospace;">Mã: ${d.code || d.id} • Ký hiệu task: [${d.prefix || d.code || 'C'}]</div>
                         </div>
                     </label>
                 `;

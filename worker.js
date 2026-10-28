@@ -565,9 +565,41 @@ async function ensureMultiTenantSchema(env) {
 
     // Purge legacy demo / orphan projects and tasks from before multi-tenancy
     try {
-      await db.prepare("DELETE FROM projects WHERE tenant_id = 'tenant-demo' OR tenant_id IS NULL OR tenant_id = 'demo_legacy' OR id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
-      await db.prepare("DELETE FROM tasks WHERE tenant_id = 'tenant-demo' OR tenant_id IS NULL OR project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
-      await db.prepare("DELETE FROM task_files WHERE tenant_id = 'tenant-demo' OR tenant_id IS NULL").run();
+      await db.prepare(`
+        DELETE FROM projects 
+        WHERE id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
+           OR id LIKE 'PRJ_INT_%'
+           OR id LIKE 'PRJ_179%'
+           OR name LIKE '%Project Week%'
+           OR name LIKE '%Quản Lý Công Thợ%'
+           OR name LIKE '%Shinhan%'
+           OR name LIKE '%HCM - CJ%'
+           OR name LIKE '%HCM - CA%'
+           OR name LIKE '%(Copy)%'
+           OR name = 'ád'
+           OR tenant_id = 'tenant-demo'
+           OR tenant_id IS NULL
+           OR tenant_id = 'demo_legacy'
+      `).run();
+
+      await db.prepare(`
+        DELETE FROM tasks 
+        WHERE project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
+           OR project_id LIKE 'PRJ_INT_%'
+           OR project_id LIKE 'PRJ_179%'
+           OR tenant_id = 'tenant-demo'
+           OR tenant_id IS NULL
+      `).run();
+
+      await db.prepare(`
+        DELETE FROM task_files 
+        WHERE project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
+           OR project_id LIKE 'PRJ_INT_%'
+           OR project_id LIKE 'PRJ_179%'
+           OR tenant_id = 'tenant-demo'
+           OR tenant_id IS NULL
+      `).run();
+
       await db.prepare("DELETE FROM qr_invites WHERE tenant_id = 'tenant-demo'").run();
       await db.prepare("DELETE FROM users WHERE (tenant_id = 'tenant-demo' OR tenant_id IS NULL) AND LOWER(username) NOT IN ('admin')").run();
     } catch (e) {}
@@ -2663,15 +2695,6 @@ export default {
       ]);
 
       let departments = deptsRes.results || [];
-      if (departments.length === 0) {
-        for (let i = 0; i < DEFAULT_DEPARTMENTS.length; i++) {
-          const d = DEFAULT_DEPARTMENTS[i];
-          await env.DB.prepare("INSERT OR IGNORE INTO departments (id, tenant_id, code, name, prefix, color, order_index) VALUES (?, ?, ?, ?, ?, ?, ?)")
-            .bind(`dept_${tenantId}_${d.code}`, tenantId, d.code, d.name, d.prefix, d.color, i).run();
-        }
-        const retry = await env.DB.prepare("SELECT * FROM departments WHERE tenant_id = ? ORDER BY order_index ASC").bind(tenantId).all();
-        departments = retry.results || [];
-      }
 
       const fileMap = {};
       let totalTenantBytes = 0;

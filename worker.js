@@ -565,9 +565,11 @@ async function ensureMultiTenantSchema(env) {
 
     // Purge legacy demo / orphan projects and tasks from before multi-tenancy
     try {
-      await db.prepare("DELETE FROM projects WHERE tenant_id IS NULL OR tenant_id = 'demo_legacy' OR id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
-      await db.prepare("DELETE FROM tasks WHERE tenant_id IS NULL OR project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
-      await db.prepare("DELETE FROM projects WHERE tenant_id = 'tenant-demo' AND status = 'ARCHIVED'").run();
+      await db.prepare("DELETE FROM projects WHERE tenant_id = 'tenant-demo' OR tenant_id IS NULL OR tenant_id = 'demo_legacy' OR id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
+      await db.prepare("DELETE FROM tasks WHERE tenant_id = 'tenant-demo' OR tenant_id IS NULL OR project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO')").run();
+      await db.prepare("DELETE FROM task_files WHERE tenant_id = 'tenant-demo' OR tenant_id IS NULL").run();
+      await db.prepare("DELETE FROM qr_invites WHERE tenant_id = 'tenant-demo'").run();
+      await db.prepare("DELETE FROM users WHERE (tenant_id = 'tenant-demo' OR tenant_id IS NULL) AND LOWER(username) NOT IN ('admin')").run();
     } catch (e) {}
 
     await db.prepare("INSERT OR IGNORE INTO coupons (code, discount_percent, is_active) VALUES ('LTPSOFT10', 10, 1), ('NAM10', 10, 1)").run();
@@ -2813,7 +2815,8 @@ export default {
     // WAITING ROOM APPROVE OR REJECT (WITH SLOT RESTORATION)
     if (url.pathname === "/api/admin/waiting-room" && request.method === "POST") {
       if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
-      const { action, userId, dept = "CONSTRUCTION", deptTags = [], role = "STAFF", taskPermissionMode = "REPORT_ONLY" } = await request.json();
+      const body = await request.json();
+      const { action, userId, dept = "CONSTRUCTION", deptTags = [], role = "STAFF", taskPermissionMode = "REPORT_ONLY" } = body;
 
       if (action === "REJECT") {
         const scan = await env.DB.prepare("SELECT * FROM qr_invite_scans WHERE user_id = ? AND tenant_id = ?").bind(userId, tenantId).first();
@@ -3188,7 +3191,7 @@ export default {
         }
         await env.DB.prepare("DELETE FROM task_files WHERE project_id = ?").bind(projectId).run();
         await env.DB.prepare("DELETE FROM tasks WHERE project_id = ?").bind(projectId).run();
-        await env.DB.prepare("DELETE FROM projects WHERE id = ? AND tenant_id = ?").bind(projectId, tenantId).run();
+        await env.DB.prepare("DELETE FROM projects WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL OR tenant_id = 'tenant-demo' OR tenant_id = 'demo_legacy')").bind(projectId, tenantId).run();
         await env.DB.prepare("UPDATE tenants SET storage_used_bytes = MAX(0, COALESCE(storage_used_bytes, 0) - ?) WHERE id = ?").bind(freedBytes, tenantId).run();
 
         return jsonResp({ status: "success", message: "Đã xóa vĩnh viễn dự án và toàn bộ dữ liệu!" });

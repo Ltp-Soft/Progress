@@ -214,14 +214,7 @@
             </button>
 
             <select id="admin-dept-select" style="display:none; font-size:11px; padding:3px 8px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:6px; cursor:pointer;" onchange="switchAdminDeptContext(this.value)">
-                <option value="CONSTRUCTION">Phòng CONSTRUCTION (Thi Công)</option>
-                <option value="DESIGNER">Phòng DESIGNER (Thiết Kế)</option>
-                <option value="PLANNING">Phòng PLANNING (Kế Hoạch)</option>
-                <option value="FACTORY">Phòng FACTORY (Xưởng Sản Xuất)</option>
-                <option value="MEP">Phòng MEP (Cơ Điện)</option>
-                <option value="STORAGE">Phòng STORAGE (Kho)</option>
-                <option value="PURCHASING">Phòng PURCHASING (Mua Hàng)</option>
-                <option value="ACCOUNTANT">Phòng ACCOUNTANT (Kế Toán)</option>
+                <option value="">-- Đang nạp danh sách phòng ban... --</option>
             </select>
             
             <div class="role-badge" id="user-role-badge-container">
@@ -486,14 +479,7 @@
             <div class="form-group">
                 <label>Bộ Phận Chủ Quản / Quản Lý Dự Án:</label>
                 <select class="form-control" id="new-proj-owner-dept">
-                    <option value="CONSTRUCTION">Phòng CONSTRUCTION (Thi Công)</option>
-                    <option value="DESIGNER">Phòng DESIGNER (Thiết Kế)</option>
-                    <option value="PLANNING">Phòng PLANNING (Kế Hoạch)</option>
-                    <option value="FACTORY">Phòng FACTORY (Xưởng Sản Xuất)</option>
-                    <option value="MEP">Phòng MEP (Cơ Điện)</option>
-                    <option value="STORAGE">Phòng STORAGE (Kho)</option>
-                    <option value="PURCHASING">Phòng PURCHASING (Mua Hàng)</option>
-                    <option value="ACCOUNTANT">Phòng ACCOUNTANT (Kế Toán)</option>
+                    <option value="">-- Đang nạp danh sách phòng ban... --</option>
                 </select>
             </div>
 
@@ -526,18 +512,28 @@
 
     <!-- MODAL QUẢN LÝ BỘ PHẬN THAM GIA -->
     <div class="modal" id="manage-depts-modal">
-        <div class="modal-card">
-            <h3 style="margin-bottom:12px; color:#2563eb;">⚙️ Quản Lý Các Bộ Phận Tham Gia Dự Án</h3>
-            <p style="font-size:12px; color:#64748b; margin-bottom:12px;">
-                Tích chọn để mời thêm bộ phận hoặc bỏ chọn để xóa bộ phận khỏi dự án.
-                <br><b style="color:#ef4444;">⚠️ Lưu ý: Khi xóa bộ phận, các đường nối liên kết tới task của bộ phận đó sẽ tự động bị cắt sạch.</b>
-            </p>
+        <div class="modal-card" style="width: 720px; max-width: 95vw; padding: 26px; border-radius: 18px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+                <div>
+                    <h3 style="margin:0; color:#1e293b; font-size:18px; font-weight:800; display:flex; align-items:center; gap:8px;">
+                        🏷️ Quản Lý Các Thẻ Phòng Ban / Bộ Phận Tham Gia Dự Án
+                    </h3>
+                    <p style="font-size:13px; color:#64748b; margin:6px 0 0 0;">
+                        Tích chọn để mời thêm phòng ban hoặc bỏ chọn để loại bỏ phòng ban khỏi dự án này.
+                    </p>
+                </div>
+                <button type="button" onclick="closeModal('manage-depts-modal')" style="background:transparent; border:none; font-size:22px; color:#94a3b8; cursor:pointer; padding:2px 8px; line-height:1;">✕</button>
+            </div>
+            
+            <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:12.5px; color:#e11d48; font-weight:600;">
+                ⚠️ Lưu ý: Khi bỏ chọn bộ phận, các đường nối liên kết (phụ thuộc task) liên quan đến bộ phận đó sẽ tự động được làm sạch để tránh xung đột dữ liệu.
+            </div>
 
-            <div class="dept-checkbox-grid" id="manage-dept-checkbox-container"></div>
+            <div id="manage-dept-checkbox-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:12px; max-height:55vh; overflow-y:auto; padding:4px;"></div>
 
-            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:15px;">
-                <button class="btn btn-secondary" onclick="closeModal('manage-depts-modal')">Hủy</button>
-                <button class="btn btn-primary" onclick="confirmUpdateProjectDepartments()">Lưu Thay Đổi</button>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #e2e8f0; padding-top:16px;">
+                <button class="btn btn-secondary" onclick="closeModal('manage-depts-modal')" style="padding:8px 18px; font-size:13px; font-weight:600;">Hủy</button>
+                <button class="btn btn-primary" onclick="confirmUpdateProjectDepartments()" style="padding:8px 22px; font-size:13px; font-weight:700; background:#2563eb; color:#ffffff;">Lưu Thay Đổi</button>
             </div>
         </div>
     </div>
@@ -2260,16 +2256,33 @@
             }
             const prj = ganttCore.getCurrentProject();
             if (!prj) return;
-            if (!ganttCore.isProjectOwner(prj) && user.role !== "ADMIN") {
+            if (!ganttCore.isProjectOwner(prj) && user.role !== "ADMIN" && user.role !== "BOSS") {
                 alert("🔒 Chỉ Người tạo dự án hoặc Admin mới có quyền quản lý bộ phận!");
                 return;
             }
 
             const depts = window.DEPARTMENTS || DEPARTMENTS;
             const container = document.getElementById("manage-dept-checkbox-container");
+            const invited = prj.invitedDepts || [];
+
             container.innerHTML = depts.map(d => {
-                const isChecked = prj.invitedDepts && prj.invitedDepts.includes(d.id) ? "checked" : "";
-                return `<label><input type="checkbox" class="manage-dept-chk" value="${d.id}" ${isChecked}> ${d.name}</label>`;
+                const isChecked = (invited.length === 0 || invited.includes(d.id) || invited.includes(d.code) || invited.includes(d.name)) ? "checked" : "";
+                const deptColor = d.color || "#2563eb";
+                const isOwner = prj.creatorDept === d.id || prj.creatorDept === d.code || prj.creatorDept === d.name;
+
+                return `
+                    <label style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:#f8fafc; border:1.5px solid ${isChecked ? deptColor : '#e2e8f0'}; border-radius:12px; cursor:pointer; transition:all 0.15s ease;">
+                        <input type="checkbox" class="manage-dept-chk" value="${d.id}" ${isChecked} ${isOwner ? 'disabled checked' : ''} style="width:18px; height:18px; cursor:pointer; accent-color:${deptColor};">
+                        <span style="width:12px; height:12px; border-radius:50%; background-color:${deptColor}; flex-shrink:0;"></span>
+                        <div style="flex:1;">
+                            <div style="font-size:13.5px; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:6px;">
+                                <span>${d.name}</span>
+                                ${isOwner ? '<span style="font-size:10px; font-weight:800; background:#dbeafe; color:#1e40af; padding:1px 6px; border-radius:4px;">Chủ quản</span>' : ''}
+                            </div>
+                            <div style="font-size:11px; color:#64748b; font-family:monospace;">Mã: ${d.id} • Ký hiệu task: [${d.prefix || d.code || 'C'}]</div>
+                        </div>
+                    </label>
+                `;
             }).join('');
 
             document.getElementById("manage-depts-modal").style.display = "flex";
@@ -2294,7 +2307,7 @@
 
             ganttCore.updateProjectInvitedDepartments(prj.id, updatedInvitedDepts);
             closeModal('manage-depts-modal');
-            alert("Đã cập nhật danh sách bộ phận và cắt bỏ các liên kết dư thừa thành công!");
+            alert("Đã cập nhật danh sách bộ phận và làm sạch liên kết thành công!");
         }
 
         function updateProjectDateRange() {

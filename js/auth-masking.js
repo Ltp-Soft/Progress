@@ -366,6 +366,10 @@ class AuthManager {
     validateAdminPassword(enteredPass) {
         if (!enteredPass) return false;
         const clean = String(enteredPass).trim();
+        const cur = this.getCurrentUser();
+        if (cur && (cur.role === "ADMIN" || cur.role === "PROJECT_ADMIN" || cur.role === "BOSS")) {
+            if (cur.pass && cur.pass === clean) return true;
+        }
         return ACCOUNTS_DB.some(u => u.role === "ADMIN" && u.pass === clean);
     }
 

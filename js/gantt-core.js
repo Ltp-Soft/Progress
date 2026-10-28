@@ -82,7 +82,10 @@ class GanttCore {
     }
 
     updateDepartmentSelectors() {
-        const depts = window.DEPARTMENTS || DEPARTMENTS;
+        const depts = window.DEPARTMENTS || DEPARTMENTS || [];
+        if (!depts.length) return;
+
+        // 1. Task form department select
         const taskDeptSelect = document.getElementById("task-dept");
         if (taskDeptSelect) {
             const curVal = taskDeptSelect.value;
@@ -90,6 +93,40 @@ class GanttCore {
             if (curVal && depts.some(d => d.id === curVal)) {
                 taskDeptSelect.value = curVal;
             }
+        }
+
+        // 2. New Project Owner Dept select
+        const ownerDeptSelect = document.getElementById("new-proj-owner-dept");
+        if (ownerDeptSelect) {
+            const curVal = ownerDeptSelect.value;
+            ownerDeptSelect.innerHTML = depts.map(d => `<option value="${d.id}">Phòng ${d.name}</option>`).join("");
+            if (curVal && depts.some(d => d.id === curVal)) {
+                ownerDeptSelect.value = curVal;
+            }
+        }
+
+        // 3. Admin Header Dept switcher
+        const adminDeptSelect = document.getElementById("admin-dept-select");
+        if (adminDeptSelect) {
+            const curVal = adminDeptSelect.value;
+            adminDeptSelect.innerHTML = depts.map(d => `<option value="${d.id}">Phòng ${d.name}</option>`).join("");
+            if (curVal && depts.some(d => d.id === curVal)) {
+                adminDeptSelect.value = curVal;
+            }
+        }
+
+        // 4. New Project Invited Departments Checkboxes
+        const invitedContainer = document.getElementById("new-proj-invited-depts-container");
+        if (invitedContainer) {
+            const curOwner = ownerDeptSelect ? ownerDeptSelect.value : (depts[0]?.id || "CONSTRUCTION");
+            invitedContainer.innerHTML = depts.map(d => {
+                const isOwner = d.id === curOwner;
+                return `<label style="font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; cursor:pointer; padding:4px 8px; background:#f1f5f9; border-radius:6px;">
+                    <input type="checkbox" class="new-proj-bidding-chk" value="${d.id}" ${isOwner ? 'checked disabled' : 'checked'}>
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${d.color || '#2563eb'};"></span>
+                    ${d.name}
+                </label>`;
+            }).join('');
         }
     }
 

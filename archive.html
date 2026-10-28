@@ -99,7 +99,7 @@
                     if (rawWs) {
                         const ws = JSON.parse(rawWs);
                         if (ws && Array.isArray(ws.projects)) {
-                            archivedProjects = ws.projects.filter(p => p.status === "ARCHIVED");
+                            archivedProjects = ws.projects.filter(p => p.status === "ARCHIVED" && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
                         }
                     }
                 } catch (e) {}
@@ -109,10 +109,16 @@
                 try {
                     const raw = localStorage.getItem("gantt_archived_projects");
                     if (raw) {
-                        archivedProjects = JSON.parse(raw);
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed)) {
+                            archivedProjects = parsed.filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
+                        }
                     }
                 } catch (e) {}
             }
+
+            // Always strip junk demo projects
+            archivedProjects = archivedProjects.filter(p => p && !['PRJ_01', 'PRJ_02', 'PRJ_DEMO'].includes(p.id));
 
             renderVaultGrid();
         }
@@ -305,19 +311,19 @@
             renderVaultGrid();
         }
 
-        function confirmPermanentDeleteProject(projId, forcePurge = false) {
+        async function confirmPermanentDeleteProject(projId, forcePurge = false) {
             const targetId = projId || (currentViewingProj ? currentViewingProj.id : null);
             const p = archivedProjects.find(x => x.id === targetId);
             if (!p) return;
 
             if (!forcePurge) {
                 const currentUser = window.authMgr ? window.authMgr.getCurrentUser() : null;
-                const isAdmin = currentUser && (currentUser.role === "ADMIN" || currentUser.role === "PROJECT_ADMIN");
+                const isAdmin = currentUser && (currentUser.role === "ADMIN" || currentUser.role === "PROJECT_ADMIN" || currentUser.role === "BOSS");
                 if (!isAdmin) {
                     const pass = prompt(`⚠️ XÁC NHẬN XÓA VĨNH VIỄN DỰ ÁN [${p.name}]\nHành động này không thể hoàn tác! Vui lòng nhập Mật Khẩu Admin để xóa:`);
                     if (!pass) return;
                     if (!window.authMgr || !window.authMgr.validateAdminPassword(pass)) {
-                        alert("❌ Mật khẩu Admin không đúng! Chỉ Admin tối cao mới có quyền xóa vĩnh viễn dự án.");
+                        alert("❌ Mật khẩu Admin không đúng! Chỉ Admin mới có quyền xóa vĩnh viễn dự án.");
                         return;
                     }
                 } else {
@@ -325,16 +331,24 @@
                 }
             }
 
-            // Remove from local workspace and D1
+            // Remove from D1 database and local workspace
             try {
                 const actionUrl = window.getApiUrl ? window.getApiUrl("/api/admin/project-action") : "/api/admin/project-action";
                 const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
-                fetch(actionUrl, {
+                const res = await fetch(actionUrl, {
                     method: "POST",
                     headers,
                     body: JSON.stringify({ action: "DELETE", projectId: p.id })
-                }).catch(() => {});
+                });
+                const resData = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    console.warn("Delete project on server returned:", resData);
+                }
+            } catch (e) {
+                console.error("Error deleting project on server:", e);
+            }
 
+            try {
                 const rawWs = localStorage.getItem("gantt_live_workspace_v7");
                 if (rawWs) {
                     const ws = JSON.parse(rawWs);
@@ -348,8 +362,8 @@
 
             archivedProjects = archivedProjects.filter(x => x.id !== p.id);
             localStorage.setItem("gantt_archived_projects", JSON.stringify(archivedProjects));
-            if (closeModal) closeModal("readonly-gantt-modal");
-            alert(`🗑️ Đã xóa vĩnh viễn dự án [${p.name}] khỏi hệ thống Vault!`);
+            if (typeof closeModal === "function") closeModal("readonly-gantt-modal");
+            alert(`🗑️ Đã xóa vĩnh viễn dự án [${p.name}] khỏi hệ thống!`);
             renderVaultGrid();
         }
 

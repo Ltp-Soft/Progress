@@ -263,14 +263,14 @@
                             <button id="btn-dept-headcount-toggle" onclick="toggleDeptHeadcountDropdown()" type="button" class="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs text-sky-400 font-bold transition flex items-center gap-1.5">
                                 <span id="btn-dept-headcount-label">👥 Quân số phòng ban ▾</span>
                             </button>
-                            <div id="dept-headcount-dropdown" class="hidden absolute left-0 top-full mt-1.5 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2.5 z-50 space-y-1.5">
+                            <div id="dept-headcount-dropdown" class="hidden absolute left-0 top-full mt-1.5 w-80 sm:w-96 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-3 z-50 space-y-2">
                                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 px-1">
                                     <span class="text-xs font-bold text-white">Quân số theo phòng ban</span>
                                     <button onclick="openDeptManagerModal(); toggleDeptHeadcountDropdown(false);" class="text-[11px] text-sky-400 hover:underline font-semibold">
                                         ⚙️ Sửa phòng ban
                                     </button>
                                 </div>
-                                <div id="dept-headcount-items" class="max-h-60 overflow-y-auto space-y-1">
+                                <div id="dept-headcount-items" class="max-h-72 overflow-y-auto space-y-1.5 pr-1">
                                     <!-- Dynamic headcount options -->
                                 </div>
                             </div>
@@ -286,16 +286,16 @@
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                <div class="overflow-x-auto pb-4">
+                    <table class="w-full min-w-[1100px] text-left border-collapse">
                         <thead>
-                            <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50">
-                                <th class="py-3 px-4">Nhân sự & Tài khoản</th>
-                                <th class="py-3 px-3">Mật khẩu</th>
-                                <th class="py-3 px-3">Bộ phận (Thẻ)</th>
-                                <th class="py-3 px-3">Vai trò</th>
-                                <th class="py-3 px-3">Quyền hạn trên Task (Chạm để đổi)</th>
-                                <th class="py-3 px-4 text-right">Trạng thái ghế</th>
+                            <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50 whitespace-nowrap">
+                                <th class="py-3.5 px-4 min-w-[220px]">Nhân sự & Tài khoản</th>
+                                <th class="py-3.5 px-3 min-w-[160px]">Mật khẩu</th>
+                                <th class="py-3.5 px-3 min-w-[170px]">Bộ phận (Thẻ)</th>
+                                <th class="py-3.5 px-3 min-w-[150px]">Vai trò</th>
+                                <th class="py-3.5 px-3 min-w-[260px]">Quyền hạn trên Task (Chạm để đổi)</th>
+                                <th class="py-3.5 px-4 text-right min-w-[160px]">Trạng thái ghế</th>
                             </tr>
                         </thead>
                         <tbody id="users-table-body" class="divide-y divide-slate-800/70 text-xs"></tbody>
@@ -1277,7 +1277,7 @@
 
                 return `
                     <tr class="hover:bg-slate-900/40 transition ${isLocked ? "opacity-50" : ""}">
-                        <td class="py-3 px-4">
+                        <td class="py-3.5 px-4 whitespace-nowrap">
                             <div class="flex items-center gap-3">
                                 <img src="${avatar}" class="w-9 h-9 rounded-xl object-cover border border-slate-700 shrink-0" alt="">
                                 <div>
@@ -1291,7 +1291,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="py-3 px-3">
+                        <td class="py-3.5 px-3 whitespace-nowrap">
                             <div class="flex items-center gap-1.5">
                                 <span id="pw-mask-${u.id}" class="font-mono text-amber-300 text-xs">••••••</span>
                                 <button onclick="togglePasswordReveal('${u.id}', '${(u.plainPasswordHint || "123456").replace(/'/g, "")}')"
@@ -1300,13 +1300,13 @@
                                         class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300" title="Đặt mật khẩu mới">Đổi</button>
                             </div>
                         </td>
-                        <td class="py-3 px-3">
+                        <td class="py-3.5 px-3 whitespace-nowrap">
                             <select onchange="quickUpdateUser('${u.id}', { department: this.value, deptTags: [this.value] })"
                                     class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
                                 ${deptOptions}
                             </select>
                         </td>
-                        <td class="py-3 px-3">
+                        <td class="py-3.5 px-3 whitespace-nowrap">
                             <select onchange="quickUpdateUser('${u.id}', { role: this.value })"
                                     class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
                                 <option value="STAFF" ${u.role === "STAFF" ? "selected" : ""}>Nhân viên</option>
@@ -1315,22 +1315,22 @@
                                 <option value="ADMIN" ${u.role === "ADMIN" || u.role === "BOSS" ? "selected" : ""}>Admin Tổng</option>
                             </select>
                         </td>
-                        <td class="py-3 px-3">
+                        <td class="py-3.5 px-3 whitespace-nowrap">
                             ${["ADMIN", "BOSS"].includes(u.role)
                                 ? `<span class="text-[11px] font-bold text-amber-300">👑 Toàn quyền Quản trị</span>`
                                 : `<button onclick="quickUpdateUser('${u.id}', { taskPermissionMode: '${isReportOnly ? "AUTONOMOUS" : "REPORT_ONLY"}' })"
-                                           class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition ${isReportOnly ? "perm-pill-report" : "perm-pill-auto"}">
+                                           class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition whitespace-nowrap ${isReportOnly ? "perm-pill-report" : "perm-pill-auto"}">
                                        ${isReportOnly
                                            ? "🔒 Chỉ báo cáo tiến độ & up file (Khóa xóa/ngày)"
                                            : "🔓 Tự chủ tạo, sửa ngày & xóa việc của mình"}
                                    </button>`
                             }
                         </td>
-                        <td class="py-3 px-4 text-right">
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
                             ${["ADMIN", "BOSS"].includes(u.role)
                                 ? `<span class="text-[11px] text-emerald-400 font-bold">Mặc định</span>`
                                 : `<button onclick="quickUpdateUser('${u.id}', { status: '${isLocked ? "ACTIVE" : "LOCKED"}' })"
-                                           class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                           class="px-3 py-1.5 rounded-xl text-xs font-bold border transition whitespace-nowrap ${
                                                isLocked
                                                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                                                    : "bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border-slate-700"

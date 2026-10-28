@@ -1912,30 +1912,39 @@
             const taskPermissionMode = document.getElementById("manual-user-perm").value;
 
             if (!fullName || !username) {
-                alert("Vui lòng nhập Họ tên và Mã đăng nhập.");
+                alert("Vui lòng nhập Họ tên và Mã đăng nhập (Username).");
                 return;
             }
-            const res = await fetch("/api/admin/users", {
-                method: "POST",
-                headers: getAuthHeaders(),
-                body: JSON.stringify({
-                    action: "CREATE",
-                    fullName,
-                    username,
-                    password,
-                    department,
-                    deptTags: [department],
-                    role,
-                    taskPermissionMode
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                alert(data.error || "Không thể thêm nhân sự.");
-                return;
+            try {
+                const res = await fetch("/api/admin/users", {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        action: "CREATE",
+                        fullName,
+                        username,
+                        password: password || "123456",
+                        department,
+                        dept: department,
+                        deptTags: [department],
+                        role,
+                        taskPermissionMode
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.error || "Không thể thêm nhân sự.");
+                    return;
+                }
+                alert(`✅ Đã thêm nhân sự "${fullName}" (${username}) thành công!`);
+                document.getElementById("add-user-modal").classList.add("hidden");
+                document.getElementById("manual-user-fullname").value = "";
+                document.getElementById("manual-user-username").value = "";
+                document.getElementById("manual-user-password").value = "123456";
+                await loadAdminOverview();
+            } catch (err) {
+                alert("Lỗi kết nối khi thêm nhân sự: " + err.message);
             }
-            document.getElementById("add-user-modal").classList.add("hidden");
-            await loadAdminOverview();
         }
 
         // VietQR Checkout for Add-on Storage, Add-on Personnel Seats or Plan Upgrade

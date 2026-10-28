@@ -9,10 +9,10 @@ function isJunkOrDemoProject(p) {
     if (!p) return true;
     const jIds = ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'];
     if (jIds.includes(p.id)) return true;
-    if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_179') || p.id.startsWith('PRJ_179') || p.id.startsWith('demo_'))) return true;
+    if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_') || p.id.startsWith('PRJ_179') || p.id.startsWith('PRJ_RPT_179') || p.id.startsWith('demo_'))) return true;
     if (typeof p.name === 'string') {
         const lower = p.name.toLowerCase();
-        if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád') {
+        if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád' || lower.includes('(copy)') || lower.includes('marketing plan') || lower.includes('woocen') || lower.includes('giám sát tháng 10')) {
             return true;
         }
     }
@@ -231,10 +231,6 @@ class GanttCore {
 
     // REALTIME LOCALSTORAGE & SERVER SQL SYNC
     saveToLocalStorage() {
-        if (this.syncQuantumTasks) {
-            try { this.syncQuantumTasks(); } catch (e) { console.warn("Quantum sync error:", e); }
-        }
-
         if (this.workspace && Array.isArray(this.workspace.d2dLinks)) {
             try {
                 localStorage.setItem("gantt_d2d_links_v1", JSON.stringify(this.workspace.d2dLinks));
@@ -2810,242 +2806,23 @@ class GanttCore {
     }
 
     syncQuantumTaskUpdate(taskData, sourceProjectId) {
-        if (!taskData || !taskData.quantumId || !this.workspace || !Array.isArray(this.workspace.projects)) return;
-        this.workspace.projects.forEach(p => {
-            if (p.id === sourceProjectId) return;
-            if (!p.tasks || !Array.isArray(p.tasks)) return;
-            const twin = p.tasks.find(t => t.quantumId === taskData.quantumId);
-            if (twin) {
-                twin.name = taskData.name;
-                twin.start = taskData.start;
-                twin.startTime = taskData.startTime || "";
-                twin.end = taskData.end;
-                twin.endTime = taskData.endTime || "";
-                twin.duration = taskData.duration || twin.duration;
-                twin.isStarted = taskData.isStarted;
-                twin.isCompleted = taskData.isCompleted;
-                twin.progressPercent = taskData.progressPercent;
-                twin.lastProgressDate = taskData.lastProgressDate || "";
-                twin.notes = taskData.notes;
-                twin.staff = taskData.staff;
-                if (taskData.attachments) twin.attachments = [...taskData.attachments];
-                twin.hasFiles = taskData.hasFiles;
-                twin.fileCount = taskData.fileCount;
-            }
-        });
+        // Redundant cross-project sync removed: Tasks are self-contained with designated department & staff
+        return;
     }
 
     deleteQuantumTaskAcrossProjects(quantumId, sourceProjectId) {
-        if (!quantumId || !this.workspace || !Array.isArray(this.workspace.projects)) return;
-        this.workspace.projects.forEach(p => {
-            if (p.id === sourceProjectId) return;
-            if (!p.tasks || !Array.isArray(p.tasks)) return;
-            p.tasks = p.tasks.filter(t => t.quantumId !== quantumId);
-        });
+        // Redundant cross-project sync removed
+        return;
     }
 
     handleQuantumTaskCreate(taskData, currentProj) {
-        if (!currentProj || !this.workspace) return;
-        const links = this.getQuantumSyncLinks();
-
-        if (currentProj.isDeptJob) {
-            const tag = taskData.projectTag || (currentProj.projectTags && currentProj.projectTags[0]);
-            const tagName = typeof tag === 'object' ? tag.name : String(tag || "");
-            const link = links.find(l => l.internalProjectId === currentProj.id && l.internalTagName && l.internalTagName.trim().toLowerCase() === tagName.trim().toLowerCase());
-            if (link) {
-                const targetShared = this.workspace.projects.find(p => p.id === link.sharedProjectId);
-                if (targetShared) {
-                    taskData.quantumId = "QTM_" + Date.now() + "_" + Math.floor(Math.random()*10000);
-                    targetShared.tasks = targetShared.tasks || [];
-                    targetShared.tasks.push({
-                        id: "TASK_" + Date.now() + "_" + Math.floor(Math.random()*10000),
-                        quantumId: taskData.quantumId,
-                        name: taskData.name,
-                        codeIn: taskData.codeIn || (link.dept.slice(0, 3) + Math.floor(1000 + Math.random()*9000)),
-                        codeOut: "",
-                        staff: taskData.staff || link.dept,
-                        dept: link.dept,
-                        projectTag: tagName,
-                        start: taskData.start,
-                        startTime: taskData.startTime || "",
-                        end: taskData.end,
-                        endTime: taskData.endTime || "",
-                        isStarted: taskData.isStarted || false,
-                        isCompleted: taskData.isCompleted || false,
-                        progressPercent: taskData.progressPercent || 0,
-                        lastProgressDate: taskData.lastProgressDate || "",
-                        notes: taskData.notes || "",
-                        orderIndex: targetShared.tasks.length,
-                        attachments: taskData.attachments ? [...taskData.attachments] : []
-                    });
-                }
-            }
-        } else {
-            const dept = taskData.dept || getDeptFromCodeIn(taskData.codeIn);
-            const link = links.find(l => l.sharedProjectId === currentProj.id && l.dept === dept);
-            if (link) {
-                const targetInternal = this.workspace.projects.find(p => p.id === link.internalProjectId);
-                if (targetInternal) {
-                    taskData.quantumId = "QTM_" + Date.now() + "_" + Math.floor(Math.random()*10000);
-                    targetInternal.tasks = targetInternal.tasks || [];
-                    targetInternal.tasks.push({
-                        id: "TASK_INT_" + Date.now() + "_" + Math.floor(Math.random()*10000),
-                        quantumId: taskData.quantumId,
-                        name: taskData.name,
-                        codeIn: taskData.codeIn,
-                        codeOut: "",
-                        staff: taskData.staff || dept,
-                        dept: dept,
-                        projectTag: link.internalTagName,
-                        start: taskData.start,
-                        startTime: taskData.startTime || "",
-                        end: taskData.end,
-                        endTime: taskData.endTime || "",
-                        isStarted: taskData.isStarted || false,
-                        isCompleted: taskData.isCompleted || false,
-                        progressPercent: taskData.progressPercent || 0,
-                        lastProgressDate: taskData.lastProgressDate || "",
-                        notes: taskData.notes || "",
-                        orderIndex: targetInternal.tasks.length,
-                        attachments: taskData.attachments ? [...taskData.attachments] : []
-                    });
-                }
-            }
-        }
+        // Redundant cross-project sync removed
+        return;
     }
 
     syncQuantumTasks() {
-        if (!this.workspace || !Array.isArray(this.workspace.projects)) return;
-        const links = this.getQuantumSyncLinks();
-
-        // TỰ ĐỘNG KHÔI PHỤC LIÊN KẾT CHO DỰ ÁN RESTORE TỪ VAULT HOẶC CÓ TASK ĐÃ KẾT NỐI
-        this.workspace.projects.forEach(p => {
-            if (p.status === "ARCHIVED" || p.isDeptJob) return;
-            const sharedProj = p;
-            (sharedProj.tasks || []).forEach(st => {
-                if (!st.quantumId) return;
-                const dept = st.dept || getDeptFromCodeIn(st.codeIn);
-                const intProj = this.workspace.projects.find(ip => ip.isDeptJob && ip.creatorDept === dept && ip.status !== "ARCHIVED");
-                if (intProj) {
-                    const intTwin = (intProj.tasks || []).find(it => it.quantumId === st.quantumId || (it.name && st.name && it.name.trim().toLowerCase() === st.name.trim().toLowerCase()));
-                    if (intTwin) {
-                        intTwin.quantumId = st.quantumId;
-                        const tagName = intTwin.projectTag || (intProj.projectTags && intProj.projectTags[0]) || sharedProj.name;
-                        const tagNameStr = typeof tagName === 'object' ? tagName.name : String(tagName);
-                        const existingLink = links.find(l => l.sharedProjectId === sharedProj.id && l.dept === dept);
-                        if (!existingLink) {
-                            links.push({
-                                id: "QSYNC_RESTORED_" + Date.now() + "_" + Math.floor(Math.random()*1000),
-                                dept: dept,
-                                sharedProjectId: sharedProj.id,
-                                internalProjectId: intProj.id,
-                                internalTagName: tagNameStr,
-                                createdAt: new Date().toISOString()
-                            });
-                        }
-                    }
-                }
-            });
-        });
-
-        if (links.length === 0) return;
-
-        links.forEach(link => {
-            const sharedProj = this.workspace.projects.find(p => p.id === link.sharedProjectId);
-            const intProj = this.workspace.projects.find(p => p.id === link.internalProjectId);
-            if (!sharedProj || !intProj) return;
-
-            const sharedTasks = (sharedProj.tasks || []).filter(t => (t.dept || getDeptFromCodeIn(t.codeIn)) === link.dept);
-            const intTasks = (intProj.tasks || []).filter(t => (t.projectTag || (intProj.projectTags && intProj.projectTags[0])) === link.internalTagName);
-
-            sharedTasks.forEach(st => {
-                if (!st.quantumId) return;
-                let it = intTasks.find(x => x.quantumId === st.quantumId);
-                if (!it && st.name) {
-                    it = intTasks.find(x => x.name && x.name.trim().toLowerCase() === st.name.trim().toLowerCase());
-                    if (it) {
-                        it.quantumId = st.quantumId;
-                    }
-                }
-
-                if (it) {
-                    it.name = st.name;
-                    it.start = st.start;
-                    it.startTime = st.startTime || "";
-                    it.end = st.end;
-                    it.endTime = st.endTime || "";
-                    it.duration = st.duration || it.duration;
-                    it.isStarted = st.isStarted;
-                    it.isCompleted = st.isCompleted;
-                    it.progressPercent = st.progressPercent;
-                    it.lastProgressDate = st.lastProgressDate || "";
-                    it.notes = st.notes;
-                    it.staff = st.staff;
-                    if (st.attachments) it.attachments = [...st.attachments];
-                    it.hasFiles = st.hasFiles;
-                    it.fileCount = st.fileCount;
-                } else {
-                    intProj.tasks = intProj.tasks || [];
-                    intProj.tasks.push({
-                        id: "TASK_INT_" + Date.now() + "_" + Math.floor(Math.random()*10000),
-                        quantumId: st.quantumId,
-                        name: st.name,
-                        codeIn: st.codeIn,
-                        codeOut: "",
-                        staff: st.staff || link.dept,
-                        dept: link.dept,
-                        projectTag: link.internalTagName,
-                        start: st.start,
-                        startTime: st.startTime || "",
-                        end: st.end,
-                        endTime: st.endTime || "",
-                        isStarted: st.isStarted || false,
-                        isCompleted: st.isCompleted || false,
-                        progressPercent: st.progressPercent || 0,
-                        lastProgressDate: st.lastProgressDate || "",
-                        notes: st.notes || "",
-                        orderIndex: intProj.tasks.length,
-                        attachments: st.attachments ? [...st.attachments] : []
-                    });
-                }
-            });
-
-            intTasks.forEach(it => {
-                if (!it.quantumId) return;
-                let st = sharedTasks.find(x => x.quantumId === it.quantumId);
-                if (!st && it.name) {
-                    st = sharedTasks.find(x => x.name && x.name.trim().toLowerCase() === it.name.trim().toLowerCase());
-                    if (st) {
-                        st.quantumId = it.quantumId;
-                    }
-                }
-
-                if (!st) {
-                    sharedProj.tasks = sharedProj.tasks || [];
-                    sharedProj.tasks.push({
-                        id: "TASK_" + Date.now() + "_" + Math.floor(Math.random()*10000),
-                        quantumId: it.quantumId,
-                        name: it.name,
-                        codeIn: it.codeIn || (link.dept.slice(0, 3) + Math.floor(1000 + Math.random()*9000)),
-                        codeOut: "",
-                        staff: it.staff || link.dept,
-                        dept: link.dept,
-                        projectTag: link.internalTagName,
-                        start: it.start,
-                        startTime: it.startTime || "",
-                        end: it.end,
-                        endTime: it.endTime || "",
-                        isStarted: it.isStarted || false,
-                        isCompleted: it.isCompleted || false,
-                        progressPercent: it.progressPercent || 0,
-                        lastProgressDate: it.lastProgressDate || "",
-                        notes: it.notes || "",
-                        orderIndex: sharedProj.tasks.length,
-                        attachments: it.attachments ? [...it.attachments] : []
-                    });
-                }
-            });
-        });
+        // Redundant cross-project sync removed: Tasks are self-contained with designated department & staff
+        return;
     }
 }
 

@@ -90,10 +90,10 @@
             if (!p) return true;
             const jIds = ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'];
             if (jIds.includes(p.id)) return true;
-            if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_179') || p.id.startsWith('PRJ_179') || p.id.startsWith('demo_'))) return true;
+            if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_') || p.id.startsWith('PRJ_179') || p.id.startsWith('PRJ_RPT_179') || p.id.startsWith('demo_'))) return true;
             if (typeof p.name === 'string') {
                 const lower = p.name.toLowerCase();
-                if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád') {
+                if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád' || lower.includes('(copy)') || lower.includes('marketing plan') || lower.includes('woocen') || lower.includes('giám sát tháng 10')) {
                     return true;
                 }
             }
@@ -144,6 +144,18 @@
             // Always strip junk demo projects and clean localStorage
             archivedProjects = archivedProjects.filter(p => !isJunkOrDemoProject(p));
             localStorage.setItem("gantt_archived_projects", JSON.stringify(archivedProjects));
+
+            try {
+                const rawWs = localStorage.getItem("gantt_live_workspace_v7");
+                if (rawWs) {
+                    const ws = JSON.parse(rawWs);
+                    if (ws && Array.isArray(ws.projects)) {
+                        ws.projects = ws.projects.filter(p => !isJunkOrDemoProject(p));
+                        if (isJunkOrDemoProject({ id: ws.currentProjectId })) ws.currentProjectId = ws.projects[0]?.id || "";
+                        localStorage.setItem("gantt_live_workspace_v7", JSON.stringify(ws));
+                    }
+                }
+            } catch (e) {}
 
             renderVaultGrid();
         }

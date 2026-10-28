@@ -95,6 +95,20 @@ const DEFAULT_DEPARTMENTS = [
   { code: "ACCOUNTANT", name: "Kế Toán (Accountant)", prefix: "A", color: "#db2777" }
 ];
 
+function isJunkOrDemoProject(p) {
+  if (!p) return true;
+  const jIds = ['PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01'];
+  if (jIds.includes(p.id)) return true;
+  if (typeof p.id === 'string' && (p.id.startsWith('PRJ_INT_') || p.id.startsWith('PRJ_179') || p.id.startsWith('PRJ_RPT_179') || p.id.startsWith('demo_'))) return true;
+  if (typeof p.name === 'string') {
+    const lower = p.name.toLowerCase();
+    if (lower.includes('project week') || lower.includes('công thợ') || lower.includes('shinhan') || lower.includes('hcm - cj') || lower.includes('hcm - ca') || lower === 'ád' || lower.includes('(copy)') || lower.includes('marketing plan') || lower.includes('woocen') || lower.includes('giám sát tháng 10')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // ============================================================================
 // CRYPTO & AUTH HELPERS (HMAC-SHA256 + PBKDF2)
 // ============================================================================
@@ -570,13 +584,17 @@ async function ensureMultiTenantSchema(env) {
         WHERE id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
            OR id LIKE 'PRJ_INT_%'
            OR id LIKE 'PRJ_179%'
+           OR id LIKE 'PRJ_RPT_179%'
            OR name LIKE '%Project Week%'
            OR name LIKE '%Quản Lý Công Thợ%'
            OR name LIKE '%Shinhan%'
            OR name LIKE '%HCM - CJ%'
            OR name LIKE '%HCM - CA%'
            OR name LIKE '%(Copy)%'
-           OR name = 'ád'
+           OR name LIKE '%Marketing plan%'
+           OR name LIKE '%WOOCEN%'
+           OR name LIKE '%GIÁM SÁT THÁNG 10%'
+           OR LOWER(name) = 'ád'
            OR tenant_id = 'tenant-demo'
            OR tenant_id IS NULL
            OR tenant_id = 'demo_legacy'
@@ -587,6 +605,7 @@ async function ensureMultiTenantSchema(env) {
         WHERE project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
            OR project_id LIKE 'PRJ_INT_%'
            OR project_id LIKE 'PRJ_179%'
+           OR project_id LIKE 'PRJ_RPT_179%'
            OR tenant_id = 'tenant-demo'
            OR tenant_id IS NULL
       `).run();
@@ -596,6 +615,7 @@ async function ensureMultiTenantSchema(env) {
         WHERE project_id IN ('PRJ_01', 'PRJ_02', 'PRJ_DEMO', 'PRJ_INT_01')
            OR project_id LIKE 'PRJ_INT_%'
            OR project_id LIKE 'PRJ_179%'
+           OR project_id LIKE 'PRJ_RPT_179%'
            OR tenant_id = 'tenant-demo'
            OR tenant_id IS NULL
       `).run();
@@ -2751,7 +2771,7 @@ export default {
           taskCount: pTasks.length,
           completedTaskCount: completedCount
         };
-      });
+      }).filter(p => !isJunkOrDemoProject(p));
 
       const activeSeats = allUsers.filter((u) => u.isActive === 1 && u.role !== "ADMIN" && u.role !== "GUEST").length;
       const waitingUsers = allUsers.filter((u) => u.isActive === 2 || u.role === "WAITING");
@@ -2883,16 +2903,17 @@ export default {
     // MANAGE DEPARTMENTS (DYNAMIC DEPARTMENT TAGS & EDITING)
     if (url.pathname === "/api/admin/departments" && request.method === "POST") {
       if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
-      const { action = "SAVE", id, deptId, code, name, prefix = "C", color = "#2563eb", defaultTaskMode = "REPORT_ONLY" } = await request.json();
+      const { action = "SAVE", id, deptId, code, name, currentName, prefix = "C", color = "#2563eb", defaultTaskMode = "REPORT_ONLY" } = await request.json();
       const targetId = id || deptId;
 
       if (action === "DELETE") {
-        await env.DB.prepare("DELETE FROM departments WHERE (id = ? OR code = ?) AND tenant_id = ?").bind(targetId || code, code || targetId, tenantId).run();
+        await env.DB.prepare("DELETE FROM departments WHERE (id = ? OR code = ? OR name = ?) AND tenant_id = ?")
+          .bind(targetId || code || name, code || targetId || name, name || code || targetId, tenantId).run();
         return jsonResp({ status: "deleted" });
       }
 
       if (action === "EDIT" || action === "UPDATE") {
-        if (!targetId && !code) return jsonResp({ error: "Thiếu thông tin phòng ban cần chỉnh sửa!" }, 400);
+        if (!targetId && !code && !name) return jsonResp({ error: "Thiếu thông tin phòng ban cần chỉnh sửa!" }, 400);
         const newName = String(name || "").trim();
         if (!newName) return jsonResp({ error: "Tên phòng ban không được để trống!" }, 400);
 
@@ -2901,15 +2922,17 @@ export default {
           SET name = ?,
               prefix = COALESCE(?, prefix),
               color = COALESCE(?, color)
-          WHERE (id = ? OR code = ?) AND tenant_id = ?
-        `).bind(newName, prefix || null, color || null, targetId || code, code || targetId, tenantId).run();
+          WHERE (id = ? OR code = ? OR name = ?) AND tenant_id = ?
+        `).bind(newName, prefix || null, color || null, targetId || code, code || targetId, currentName || name || targetId, tenantId).run();
 
         return jsonResp({ status: "success", message: "Đã cập nhật tên phòng ban thành công!" });
       }
 
-      const cleanCode = String(code || name || "").trim().toUpperCase().replace(/[^A-Z0-9_]/g, "") || `DEPT_${Date.now().toString(36).toUpperCase()}`;
-      const finalDeptId = targetId || `dept_${tenantId}_${cleanCode}`;
-      const cleanPrefix = String(prefix || cleanCode.charAt(0) || "C").trim().toUpperCase().charAt(0);
+      const rawName = String(name || code || "").trim();
+      if (!rawName) return jsonResp({ error: "Vui lòng nhập tên phòng ban!" }, 400);
+      const cleanCode = String(code || "").trim().toUpperCase().replace(/[^A-Z0-9_]/g, "") || `DEPT_${Date.now().toString(36).toUpperCase()}`;
+      const finalDeptId = targetId || `dept_${tenantId}_${Date.now().toString(36)}_${cleanCode.slice(0, 8)}`;
+      const cleanPrefix = String(prefix || rawName.charAt(0) || "C").trim().toUpperCase().charAt(0);
 
       await env.DB.prepare(`
         INSERT INTO departments (id, tenant_id, code, name, prefix, color, default_task_mode)
@@ -2919,14 +2942,14 @@ export default {
           prefix = excluded.prefix,
           color = excluded.color,
           default_task_mode = excluded.default_task_mode
-      `).bind(finalDeptId, tenantId, cleanCode, name || cleanCode, cleanPrefix, color, defaultTaskMode).run();
+      `).bind(finalDeptId, tenantId, cleanCode, rawName, cleanPrefix, color, defaultTaskMode).run();
 
       // If admin toggles default_task_mode for department, optionally sync to members of that department
       if (defaultTaskMode) {
         await env.DB.prepare("UPDATE users SET task_permission_mode = ? WHERE tenant_id = ? AND dept = ? AND role = 'STAFF'").bind(defaultTaskMode, tenantId, cleanCode).run();
       }
 
-      return jsonResp({ status: "success", code: cleanCode });
+      return jsonResp({ status: "success", code: cleanCode, id: finalDeptId });
     }
 
     // MANAGE USERS (CREATE, EDIT, TOGGLE PERMISSION MODE, LOCK/REVOKE SEAT)
@@ -3044,13 +3067,20 @@ export default {
       const cleanUsername = String(username || "").trim();
       if (!cleanUsername) return jsonResp({ error: "Vui lòng nhập Tên đăng nhập (Username)!" }, 400);
 
-      const finalTags = Array.isArray(deptTags) && deptTags.length > 0 ? deptTags : [dept];
-      const primaryDept = finalTags[0] || "CONSTRUCTION";
-      const deptRow = await env.DB.prepare("SELECT prefix FROM departments WHERE tenant_id = ? AND code = ?").bind(tenantId, primaryDept).first();
-      const prefix = deptRow?.prefix || "C";
+      const primaryDept = department || dept || (Array.isArray(deptTags) && deptTags[0]) || "CONSTRUCTION";
+      const finalTags = Array.isArray(deptTags) && deptTags.length > 0 ? deptTags : [primaryDept];
+      const deptRow = await env.DB.prepare("SELECT prefix FROM departments WHERE tenant_id = ? AND (code = ? OR name = ?)").bind(tenantId, primaryDept, primaryDept).first();
+      const prefix = deptRow?.prefix || primaryDept.charAt(0).toUpperCase() || "C";
 
-      const userId = id || `usr_${tenantId}_${cleanUsername.toLowerCase().replace(/[^a-z0-9]/g, "")}_${Date.now().toString(36).slice(-3)}`;
-      const existingU = id ? await env.DB.prepare("SELECT * FROM users WHERE id = ? AND tenant_id = ?").bind(id, tenantId).first() : null;
+      const userId = targetUserId || body.id || `usr_${tenantId}_${cleanUsername.toLowerCase().replace(/[^a-z0-9]/g, "")}_${Date.now().toString(36).slice(-3)}`;
+      const existingU = (targetUserId || body.id) ? await env.DB.prepare("SELECT * FROM users WHERE id = ? AND tenant_id = ?").bind(targetUserId || body.id, tenantId).first() : null;
+
+      if (!existingU) {
+        const dupUser = await env.DB.prepare("SELECT id FROM users WHERE tenant_id = ? AND LOWER(username) = ?").bind(tenantId, cleanUsername.toLowerCase()).first();
+        if (dupUser) {
+          return jsonResp({ error: `Tên đăng nhập "${cleanUsername}" đã tồn tại trong công ty!` }, 400);
+        }
+      }
 
       const finalPass = password ? String(password).trim() : (existingU?.password_plain_hint || existingU?.pass || "123456");
       const pwHash = await hashPassword(finalPass);
@@ -3559,6 +3589,8 @@ export default {
           };
         });
 
+        const cleanProjects = formattedProjects.filter(p => !isJunkOrDemoProject(p));
+
         return jsonResp({
           tenant: {
             id: tenant.id,
@@ -3581,9 +3613,9 @@ export default {
             prefix: u.prefix || "C",
             taskPermissionMode: u.task_permission_mode || "REPORT_ONLY"
           })),
-          currentProjectId: formattedProjects[0]?.id || "",
-          projects: formattedProjects,
-          d2dLinks,
+          currentProjectId: cleanProjects[0]?.id || "",
+          projects: cleanProjects,
+          d2dLinks: [],
           serverTime: Date.now()
         });
       } catch (err) {

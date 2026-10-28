@@ -88,6 +88,13 @@
                 <button id="admin-gate-submit-btn" type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2">
                     <span>Xác Thực & Vào Quản Trị</span>
                 </button>
+
+                <div class="pt-3 border-t border-slate-800 text-center">
+                    <a href="index.html" class="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-semibold transition">
+                        <span>📊 Vào Bảng Tiến Độ Gantt (Nhân viên & Dự án)</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                </div>
             </form>
         </div>
     </div>
@@ -198,6 +205,10 @@
                 <img src="asset/icons/admin-sliders.svg" alt="" class="w-3.5 h-3.5 invert opacity-75">
                 <span>4. Thương Hiệu Logo & Gói Cước</span>
             </button>
+            <a href="archive.html" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-900 text-sky-400 hover:text-sky-300 border border-slate-800 transition inline-flex items-center gap-2" title="Kho Lưu Trữ Dự Án Đã Đóng Băng">
+                <img src="asset/icons/vault-lock.svg" alt="" class="w-3.5 h-3.5 invert opacity-75">
+                <span>5. 🔒 Kho Dự Án Đã Lưu (Vault)</span>
+            </a>
         </div>
 
         <!-- ============================================================================
@@ -873,10 +884,28 @@
                 }
 
                 if (!["ADMIN", "BOSS", "PROJECT_ADMIN"].includes(data.user?.role)) {
-                    errBox.textContent = "Tài khoản này không có quyền truy cập trang Quản Trị Admin.";
-                    errBox.classList.remove("hidden");
-                    btn.disabled = false;
-                    btn.innerHTML = `<span>Xác Thực & Vào Quản Trị</span>`;
+                    // Non-admin account (STAFF / DEPT_ADMIN) logged in via admin page -> save credentials & route straight to Gantt!
+                    if (data.token) {
+                        localStorage.setItem("ltp_jwt_token", data.token);
+                        localStorage.setItem("gantt_auth_token", data.token);
+                        localStorage.setItem("gantt_session_user", data.user?.username || data.user?.id);
+                    }
+                    localStorage.setItem("CRYSTAL_ACTIVE_SESSION_V2", JSON.stringify({
+                        id: data.user.id || data.user.username,
+                        username: data.user.username,
+                        name: data.user.fullName || data.user.name,
+                        role: data.user.role || "STAFF",
+                        dept: data.user.dept || "ALL",
+                        department: data.user.dept || "ALL",
+                        deptTags: data.user.deptTags || [data.user.dept || "ALL"],
+                        prefix: data.user.prefix || "C",
+                        taskPermissionMode: data.user.taskPermissionMode || "REPORT_ONLY",
+                        avatarUrl: data.user.avatarUrl || "",
+                        tenant: data.tenant || null,
+                        token: data.token,
+                        loginTime: new Date().toISOString()
+                    }));
+                    window.location.href = "index.html";
                     return;
                 }
 

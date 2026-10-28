@@ -187,6 +187,7 @@
                         <div class="vault-card-footer" style="flex-wrap:wrap; gap:6px;">
                             <span style="font-size:11px; color:#f59e0b; font-weight:bold; width:100%; margin-bottom:4px;">Còn [${daysLeft}] ngày cloud purge</span>
                             <button class="ltp-btn ltp-btn-dark" style="padding:4px 10px; font-size:11px;" onclick="openReadOnlyGantt('${p.id}')">Xem chi tiết</button>
+                            <button class="ltp-btn ltp-btn-dark" style="padding:4px 10px; font-size:11px;" onclick="downloadVaultBackup('${p.id}')"><img src="./asset/icons/excel-template.svg" class="ltp-ico" alt=""> Tải</button>
                             <button class="ltp-btn ltp-btn-dark" style="padding:4px 10px; font-size:11px;" onclick="promptRestoreProjectPin('${p.id}')"><img src="./asset/icons/vault-lock.svg" class="ltp-ico" alt=""> Khôi Phục</button>
                             <button class="ltp-btn ltp-btn-danger-outline" style="padding:4px 10px; font-size:11px;" onclick="confirmPermanentDeleteProject('${p.id}')"><img src="./asset/icons/trash-minimal.svg" class="ltp-ico" alt=""> Xóa</button>
                         </div>
@@ -346,6 +347,49 @@
             localStorage.setItem("gantt_archived_projects", JSON.stringify(archivedProjects));
             closeModal("readonly-gantt-modal");
             renderVaultGrid();
+        }
+
+        async function downloadVaultBackup(projId) {
+            const p = archivedProjects.find(x => x.id === projId);
+            if (!p) return;
+            try {
+                const actionUrl = window.getApiUrl ? window.getApiUrl("/api/admin/project-action") : "/api/admin/project-action";
+                const headers = window.authMgr ? window.authMgr.getAuthHeaders() : { "Content-Type": "application/json" };
+                const res = await fetch(actionUrl, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ action: "EXPORT_BACKUP", projectId: p.id })
+                });
+                const data = await res.json();
+                if (res.ok && data.backup) {
+                    const blob = new Blob([JSON.stringify(data.backup, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Backup_${(p.name || p.id).replace(/[^a-zA-Z0-9_-]/g, "_")}_${new Date().toISOString().slice(0, 10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    alert(`📥 Đã tải thành công file sao lưu dự án [${p.name}]!`);
+                    return;
+                }
+            } catch (e) {
+                console.warn("Server backup export error, fallback to local export:", e);
+            }
+            if (window.lifecycleMgr && typeof window.lifecycleMgr.exportProjectBackup === "function") {
+                window.lifecycleMgr.exportProjectBackup(p, p.tasks || []);
+            } else {
+                const blob = new Blob([JSON.stringify(p, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Backup_${(p.name || p.id).replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
         }
 
         async function confirmPermanentDeleteProject(projId, forcePurge = false) {

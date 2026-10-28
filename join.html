@@ -97,18 +97,6 @@
                 </div>
             </div>
 
-            <!-- Fast Google Sign-In for Instant Avatar + Name -->
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-slate-300 mb-2 text-center">Cách 1: Lấy tự động Tên & Ảnh đại diện (1 chạm)</div>
-                <div id="google-btn-wrapper" class="flex justify-center"></div>
-            </div>
-
-            <div class="relative flex py-2 items-center mb-4">
-                <div class="flex-grow border-t border-slate-800"></div>
-                <span class="flex-shrink mx-3 text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Hoặc điền nhanh 5 giây</span>
-                <div class="flex-grow border-t border-slate-800"></div>
-            </div>
-
             <!-- Avatar Picker + Form -->
             <form id="qr-join-form" onsubmit="submitJoinForm(event)" class="space-y-4">
                 <div class="flex items-center gap-4">
@@ -116,41 +104,53 @@
                         <img id="avatar-preview" src="https://ui-avatars.com/api/?name=NV&background=0284c7&color=fff&bold=true"
                              class="w-16 h-16 rounded-2xl object-cover border-2 border-sky-400/60 shadow-md" alt="Avatar">
                         <span class="absolute -bottom-1 -right-1 bg-sky-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow">
-                            📷 Ảnh
+                            📷 Chọn ảnh
                         </span>
                         <input id="avatar-input" type="file" accept="image/*" class="hidden" onchange="handleAvatarFile(event)">
                     </label>
                     <div class="text-xs text-slate-300 leading-relaxed">
-                        <div class="font-bold text-white mb-0.5">Ảnh đại diện hiển thị trên Gantt</div>
-                        <div class="text-slate-400">Chạm vào khung ảnh để chọn ảnh đại diện Zalo / chân dung của bạn.</div>
+                        <div class="font-bold text-white mb-0.5">Ảnh đại diện & Họ tên nhân sự</div>
+                        <div class="text-slate-400">Chọn ảnh chân dung hoặc ảnh Zalo để hiển thị chuyên nghiệp trên Bảng Tiến Độ.</div>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1.5">Họ và Tên của bạn <span class="text-rose-400">*</span></label>
                     <input id="input-fullname" type="text" required placeholder="VD: Nguyễn Văn Minh"
-                           oninput="updateDefaultAvatar(this.value)"
+                           oninput="updateDefaultAvatar(this.value); autoSuggestUsername(this.value);"
                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Số điện thoại / Zalo <span class="text-rose-400">*</span></label>
-                        <input id="input-phone" type="tel" required placeholder="VD: 0909123456"
-                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Tên đăng nhập tự chọn (Username) <span class="text-rose-400">*</span></label>
+                        <input id="input-username" type="text" required placeholder="VD: minh.nv (viết liền, không dấu)"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400 font-mono">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Mật khẩu tự chọn</label>
-                        <input id="input-password" type="text" placeholder="Để trống = tự cấp"
-                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">Mật khẩu tự chọn <span class="text-rose-400">*</span></label>
+                        <input id="input-password" type="text" required placeholder="Tự chọn mật khẩu (tối thiểu 6 số/chữ)"
+                               value="123456"
+                               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400 font-mono">
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Số điện thoại / Zalo <span class="text-slate-400 font-normal">(không bắt buộc)</span></label>
+                    <input id="input-phone" type="tel" placeholder="VD: 0909123456"
+                           class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
+                </div>
+
+                <!-- Optional Google button for convenience only -->
+                <div class="pt-1">
+                    <div id="google-btn-wrapper" class="flex justify-center"></div>
                 </div>
 
                 <div id="join-error-msg" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300 font-medium"></div>
 
                 <button id="btn-submit-join" type="submit"
                         class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2">
-                    <span>✨ Nhận Tài Khoản & Vào Phòng Chờ</span>
+                    <span>✨ Đăng Ký Tài Khoản & Vào Phòng Chờ</span>
                 </button>
             </form>
         </div>
@@ -160,14 +160,17 @@
             <div class="text-center mb-5">
                 <img id="success-avatar" src="" class="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 mx-auto mb-2.5 shadow-lg" alt="Avatar">
                 <h2 class="text-lg font-extrabold text-white">Chào mừng <span id="success-name" class="text-sky-400"></span>!</h2>
-                <p id="success-status-badge" class="text-xs text-emerald-300 mt-1 font-medium">
-                    Tài khoản của bạn đã được tạo thành công. Hãy lưu lại thông tin đăng nhập dưới đây:
+                <div class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    ⏳ Đang trong Phòng Chờ duyệt của Admin
+                </div>
+                <p id="success-status-badge" class="text-xs text-slate-300 mt-2 font-medium">
+                    Tài khoản của bạn đã được gửi tới Admin. Hãy lưu lại thông tin đăng nhập dưới đây:
                 </p>
             </div>
 
             <div class="bg-slate-900/95 border border-sky-500/30 rounded-2xl p-4 mb-5 space-y-3">
                 <div class="flex justify-between items-center">
-                    <span class="text-xs text-slate-400">Mã đăng nhập (Username):</span>
+                    <span class="text-xs text-slate-400">Tên đăng nhập (Username):</span>
                     <span id="success-username" class="font-mono font-extrabold text-base text-sky-400"></span>
                 </div>
                 <div class="flex justify-between items-center">
@@ -175,18 +178,18 @@
                     <span id="success-password" class="font-mono font-extrabold text-base text-amber-300"></span>
                 </div>
                 <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
-                    <span class="text-[11px] text-slate-400">Bộ phận mặc định:</span>
-                    <span id="success-dept" class="text-xs font-bold text-white"></span>
+                    <span class="text-[11px] text-slate-400">Bộ phận:</span>
+                    <span id="success-dept" class="text-xs font-bold text-white">Chờ Admin phê duyệt</span>
                 </div>
             </div>
 
             <div class="flex flex-col gap-2.5">
                 <button onclick="copyCredentials()" id="btn-copy-cred" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition">
-                    📋 Sao chép Mã đăng nhập & Mật khẩu
+                    📋 Sao chép Tên đăng nhập & Mật khẩu
                 </button>
-                <button onclick="goToWorkspace()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 transition">
-                    🚀 Mở Bảng Tiến Độ Ngay
-                </button>
+                <a href="index.html" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 transition text-center block">
+                    🚀 Mở Bảng Tiến Độ Gantt Ngay
+                </a>
             </div>
         </div>
     </div>
@@ -368,11 +371,35 @@
             } catch (e) {}
         }
 
+        function autoSuggestUsername(fullName) {
+            const uInput = document.getElementById("input-username");
+            if (!uInput || uInput.dataset.manualEdited === "true") return;
+            const slug = (fullName || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/đ/gi, "d")
+                .toLowerCase()
+                .replace(/[^a-z0-9]/g, "");
+            if (slug) {
+                uInput.value = slug;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const uInput = document.getElementById("input-username");
+            if (uInput) {
+                uInput.addEventListener("input", () => {
+                    uInput.dataset.manualEdited = "true";
+                });
+            }
+        });
+
         function handleGoogleCredential(response) {
             try {
                 const payload = JSON.parse(atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
                 if (payload.name) {
                     document.getElementById("input-fullname").value = payload.name;
+                    autoSuggestUsername(payload.name);
                 }
                 if (payload.picture) {
                     currentAvatarDataUrl = payload.picture;
@@ -384,14 +411,31 @@
         async function submitJoinForm(e) {
             e.preventDefault();
             const fullName = document.getElementById("input-fullname").value.trim();
+            const username = (document.getElementById("input-username")?.value || "").trim();
             const phone = document.getElementById("input-phone").value.trim();
             const password = document.getElementById("input-password").value.trim();
             const errBox = document.getElementById("join-error-msg");
             const btn = document.getElementById("btn-submit-join");
 
+            if (!fullName) {
+                errBox.textContent = "Vui lòng nhập Họ và Tên.";
+                errBox.classList.remove("hidden");
+                return;
+            }
+            if (!username) {
+                errBox.textContent = "Vui lòng nhập Tên đăng nhập (Username).";
+                errBox.classList.remove("hidden");
+                return;
+            }
+            if (password && password.length < 6) {
+                errBox.textContent = "Mật khẩu tự chọn phải có từ 6 ký tự trở lên.";
+                errBox.classList.remove("hidden");
+                return;
+            }
+
             errBox.classList.add("hidden");
             btn.disabled = true;
-            btn.innerHTML = `<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> <span>Đang cấp tài khoản...</span>`;
+            btn.innerHTML = `<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> <span>Đang đăng ký vào phòng chờ...</span>`;
 
             try {
                 const avatarToUse = currentAvatarDataUrl || document.getElementById("avatar-preview").src;
@@ -401,6 +445,7 @@
                     body: JSON.stringify({
                         inviteCode,
                         fullName,
+                        username,
                         phone,
                         password,
                         avatarUrl: avatarToUse,

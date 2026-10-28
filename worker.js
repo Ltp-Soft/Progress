@@ -2173,10 +2173,12 @@ export default {
             }
           }
 
-          // If not found in targetTenant, also search by email across tenants (convenient login by email!)
-          if (!userRow && cleanUser.includes("@")) {
-            const { results: emailMatches } = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?)").bind(cleanUser).all();
-            for (const candidate of emailMatches || []) {
+          // If not found in targetTenant, also search by username or email across tenants (convenient login!)
+          if (!userRow) {
+            const { results: globalMatches } = await env.DB.prepare(
+              "SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(id) = LOWER(?) OR (LOWER(email) = LOWER(?) AND ? != '')"
+            ).bind(cleanUser, cleanUser, cleanUser, cleanUser.includes("@") ? cleanUser : "").all();
+            for (const candidate of globalMatches || []) {
               if (await verifyPassword(cleanPass, candidate.password_hash, candidate.pass)) {
                 userRow = candidate;
                 const foundT = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(candidate.tenant_id).first();
@@ -2193,6 +2195,10 @@ export default {
 
         if (Number(userRow.is_active) === 0) {
           return jsonResp({ error: "Tài khoản này đã bị Admin tạm khóa hoặc thu hồi. Vui lòng liên hệ Quản trị viên!" }, 403);
+        }
+
+        if (Number(userRow.is_active) === 2 || userRow.role === "WAITING") {
+          return jsonResp({ error: `Tài khoản "${userRow.full_name || userRow.username}" đang trong phòng chờ duyệt. Vui lòng liên hệ Admin phê duyệt để vào Bảng Tiến Độ!` }, 403);
         }
 
         const sessionPayload = {
@@ -2555,10 +2561,6 @@ export default {
           }
         }
 
-        if (invite.require_google && !googleId) {
-          return jsonResp({ error: "Admin yêu cầu bấm nút Xác thực Google 1 chạm để lấy tên và ảnh đại diện thật!" }, 400);
-        }
-
         if (!finalName) {
           return jsonResp({ error: "Vui lòng nhập Họ và Tên của bạn!" }, 400);
         }
@@ -2611,18 +2613,29 @@ export default {
           }
         }
 
-        // Generate clean Employee Username & Password
-        const seqNum = invite.used_count + 1;
-        const baseSlug = finalName
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/đ/gi, "d")
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, "")
-          .slice(0, 8) || "nv";
-        const generatedUsername = `${baseSlug}${String(seqNum).padStart(2, "0")}_${Math.floor(10 + Math.random() * 89)}`;
+        // Employee Username & Password (User custom username or auto slug)
+        let finalUsername = "";
+        const userProvidedUsername = String(body.username || "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+        if (userProvidedUsername && userProvidedUsername.length >= 3) {
+          const dupUser = await env.DB.prepare("SELECT id FROM users WHERE tenant_id = ? AND LOWER(username) = LOWER(?) LIMIT 1").bind(invite.tenant_id, userProvidedUsername).first();
+          if (dupUser) {
+            return jsonResp({ error: `Tên đăng nhập "${userProvidedUsername}" đã được sử dụng. Vui lòng chọn tên đăng nhập khác!` }, 400);
+          }
+          finalUsername = userProvidedUsername;
+        } else {
+          const seqNum = invite.used_count + 1;
+          const baseSlug = finalName
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/gi, "d")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "")
+            .slice(0, 8) || "nv";
+          finalUsername = `${baseSlug}${String(seqNum).padStart(2, "0")}_${Math.floor(10 + Math.random() * 89)}`;
+        }
+
         const userProvidedPass = String(password || "").trim();
-        const generatedPass = userProvidedPass && userProvidedPass.length >= 6 ? userProvidedPass : String(Math.floor(100000 + Math.random() * 900000));
+        const generatedPass = userProvidedPass && userProvidedPass.length >= 6 ? userProvidedPass : (userProvidedPass.length > 0 ? userProvidedPass : "123456");
         const pwHash = await hashPassword(generatedPass);
         const newUserId = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
@@ -2631,8 +2644,8 @@ export default {
         }
 
         const assignedDept = invite.default_dept || "WAITING";
-        const initialRole = invite.default_dept ? "STAFF" : "WAITING";
-        const initialActive = invite.default_dept ? 1 : 2; // 2 = Waiting Room for Admin to assign dept tag
+        const initialRole = "WAITING";
+        const initialActive = 2; // Always 2 = Waiting Room for Admin approval and department assignment
 
         await env.DB.prepare(`
           INSERT INTO users (
@@ -2641,7 +2654,7 @@ export default {
             prefix, task_permission_mode, managed_project_ids, is_active, device_fingerprint, google_id
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'C', 'REPORT_ONLY', ?, ?, ?, ?)
         `).bind(
-          newUserId, invite.tenant_id, generatedUsername, finalEmail, cleanPhone, finalName, finalAvatar,
+          newUserId, invite.tenant_id, finalUsername, finalEmail, cleanPhone, finalName, finalAvatar,
           generatedPass, pwHash, generatedPass, initialRole, assignedDept,
           JSON.stringify(invite.default_dept ? [invite.default_dept] : []),
           JSON.stringify(invite.project_id ? [invite.project_id] : []),
@@ -2659,7 +2672,7 @@ export default {
 
         const payload = {
           id: newUserId,
-          username: generatedUsername,
+          username: finalUsername,
           fullName: finalName,
           avatarUrl: finalAvatar,
           role: initialRole,
@@ -2879,8 +2892,9 @@ export default {
           return jsonResp({ error: `Công ty đã chạm giới hạn ${effectiveMaxUsers} tài khoản nhân sự (${tenant.max_users} gốc + ${tenant.addon_users || 0} add-on) của gói ${tenant.plan_type}. Vui lòng khóa bớt nhân sự cũ hoặc mua thêm gói +10 Nhân Sự!` }, 400);
         }
 
-        const finalTags = Array.isArray(deptTags) && deptTags.length > 0 ? deptTags : [dept];
-        const deptRow = await env.DB.prepare("SELECT prefix FROM departments WHERE tenant_id = ? AND code = ?").bind(tenantId, finalTags[0]).first();
+        const chosenDept = body.department || body.dept || "CONSTRUCTION";
+        const finalTags = (Array.isArray(body.deptTags) && body.deptTags.length > 0) ? body.deptTags : [chosenDept];
+        const deptRow = await env.DB.prepare("SELECT prefix FROM departments WHERE tenant_id = ? AND (code = ? OR name = ? OR id = ?)").bind(tenantId, finalTags[0], finalTags[0], finalTags[0]).first();
         const prefix = deptRow?.prefix || "C";
         const newFullName = String(body.fullName || body.full_name || "").trim();
 
@@ -2890,10 +2904,10 @@ export default {
               full_name = CASE WHEN ? != '' THEN ? ELSE full_name END,
               is_active = 1
           WHERE id = ? AND tenant_id = ?
-        `).bind(role, finalTags[0], JSON.stringify(finalTags), prefix, taskPermissionMode, newFullName, newFullName, userId, tenantId).run();
+        `).bind(role || "STAFF", finalTags[0], JSON.stringify(finalTags), prefix, taskPermissionMode, newFullName, newFullName, userId, tenantId).run();
 
         if (role === "DEPT_ADMIN") {
-          await env.DB.prepare("UPDATE departments SET leader_user_id = ? WHERE tenant_id = ? AND code = ?").bind(userId, tenantId, finalTags[0]).run();
+          await env.DB.prepare("UPDATE departments SET leader_user_id = ? WHERE tenant_id = ? AND (code = ? OR name = ? OR id = ?)").bind(userId, tenantId, finalTags[0], finalTags[0], finalTags[0]).run();
         }
 
         return jsonResp({ status: "approved", userId });

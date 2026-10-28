@@ -306,6 +306,14 @@ class GanttCore {
                     if (data.directoryUsers && Array.isArray(data.directoryUsers)) {
                         this.directoryUsers = data.directoryUsers;
                         window.directoryUsers = data.directoryUsers;
+                        const dirNames = data.directoryUsers.map(u => u.fullName || u.username).filter(Boolean);
+                        if (data.projects && Array.isArray(data.projects)) {
+                            data.projects.forEach(p => {
+                                if (p && Array.isArray(p.staffs)) {
+                                    p.staffs = Array.from(new Set([...p.staffs, ...dirNames])).filter(Boolean);
+                                }
+                            });
+                        }
                     }
                     if (data.tenant) {
                         this.updateWorkspaceBranding(data.tenant);

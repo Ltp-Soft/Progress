@@ -280,13 +280,14 @@
                     <div class="project-sublist" id="internal-projects-list"></div>
                 </div>
 
-                <!-- SECTION 3.5: D2D DEPARTMENT LINK (ADMIN ONLY) -->
-                <div class="sidebar-section section-d2d" id="section-d2d-wrapper" style="margin-top: 4px; display: none;">
-                    <div class="menu-item" id="btn-open-d2d-modal" onclick="openD2DModal()" title="Cấu hình liên kết 1 chiều phòng ban D2D" style="cursor: pointer;">
-                        <div class="label" style="color: #38bdf8;">
-                            <i data-lucide="git-commit" size="16" style="color: #38bdf8;"></i> D2D Link Dept
+                <!-- SECTION 4: ADMIN PORTAL SHORTCUT (ADMIN / BOSS ONLY) -->
+                <div class="sidebar-section section-admin-panel" id="section-admin-panel" style="margin-top: 6px; display: none;">
+                    <div class="menu-item" onclick="openAdminPortal()" style="cursor: pointer; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 7px 10px; display: flex; align-items: center; justify-content: space-between;" title="Vào Bảng Điều Khiển Quản Trị Hệ Thống">
+                        <div class="label" style="color: #38bdf8; font-weight: 700; display: flex; align-items: center; gap: 7px;">
+                            <i data-lucide="shield-check" size="15" style="color: #38bdf8;"></i>
+                            <span>⚙️ Quản Trị Hệ Thống</span>
                         </div>
-                        <span class="menu-count" id="count-d2d-links" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: 700; font-size: 10px; padding: 1px 6px; border-radius: 999px;">0</span>
+                        <span class="menu-count" id="sidebar-waiting-badge" style="display:none; background: #f43f5e; color: #fff; font-weight: 800; font-size: 10px; padding: 1px 6px; border-radius: 999px;">0</span>
                     </div>
                 </div>
             </nav>
@@ -1276,28 +1277,41 @@
             }
 
             const btnOpenAdmin = document.getElementById("btn-open-company-admin");
+            const sidebarAdminSec = document.getElementById("section-admin-panel");
             if (btnOpenAdmin) {
                 btnOpenAdmin.style.display = (isAdmin || isBoss || isDeptAdmin) ? "inline-flex" : "none";
-                if (isAdmin) {
-                    fetch("/api/admin/overview", { headers: window.authMgr ? window.authMgr.getAuthHeaders() : {} })
-                        .then(r => r.ok ? r.json() : null)
-                        .then(data => {
-                            if (data && Array.isArray(data.users)) {
-                                const waitingCount = data.users.filter(u => u.status === "WAITING_ROOM" || u.isActive === 2 || u.role === "WAITING").length;
-                                const badge = document.getElementById("index-waiting-badge");
-                                if (badge) {
-                                    if (waitingCount > 0) {
-                                        badge.textContent = waitingCount;
-                                        badge.style.display = "inline-flex";
-                                        badge.title = `Có ${waitingCount} nhân sự đang trong phòng chờ duyệt!`;
-                                    } else {
-                                        badge.style.display = "none";
-                                    }
+            }
+            if (sidebarAdminSec) {
+                sidebarAdminSec.style.display = (isAdmin || isBoss || isDeptAdmin) ? "block" : "none";
+            }
+            if (isAdmin) {
+                fetch("/api/admin/overview", { headers: window.authMgr ? window.authMgr.getAuthHeaders() : {} })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                        if (data && Array.isArray(data.users)) {
+                            const waitingCount = data.users.filter(u => u.status === "WAITING_ROOM" || u.isActive === 2 || u.role === "WAITING").length;
+                            const badge = document.getElementById("index-waiting-badge");
+                            const sidebarBadge = document.getElementById("sidebar-waiting-badge");
+                            if (badge) {
+                                if (waitingCount > 0) {
+                                    badge.textContent = waitingCount;
+                                    badge.style.display = "inline-flex";
+                                    badge.title = `Có ${waitingCount} nhân sự đang trong phòng chờ duyệt!`;
+                                } else {
+                                    badge.style.display = "none";
                                 }
                             }
-                        })
-                        .catch(() => {});
-                }
+                            if (sidebarBadge) {
+                                if (waitingCount > 0) {
+                                    sidebarBadge.textContent = waitingCount;
+                                    sidebarBadge.style.display = "inline-flex";
+                                } else {
+                                    sidebarBadge.style.display = "none";
+                                }
+                            }
+                        }
+                    })
+                    .catch(() => {});
             }
 
             if (isAdmin) {
@@ -2823,7 +2837,9 @@
             const user = window.authMgr.getCurrentUser();
 
             const staffSelect = document.getElementById("task-staff-select");
-            staffSelect.innerHTML = `<option value="">-- Chọn danh sách --</option>` + prj.staffs.map(s => `<option value="${s}">${s}</option>`).join('');
+            const directoryNames = (window.directoryUsers || []).map(u => u.fullName || u.username).filter(Boolean);
+            const combinedStaffs = Array.from(new Set([...(prj.staffs || []), ...directoryNames])).filter(Boolean);
+            staffSelect.innerHTML = `<option value="">-- Chọn danh sách --</option>` + combinedStaffs.map(s => `<option value="${s}">${s}</option>`).join('');
 
             const btnDelete = document.getElementById("btn-delete-task");
             const btnSave = document.getElementById("btn-save-task");

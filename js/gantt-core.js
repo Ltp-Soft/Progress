@@ -258,6 +258,10 @@ class GanttCore {
         }).catch(err => console.warn("Server sync save error:", err));
     }
 
+    async loadWorkspace(silent = false) {
+        return this.loadFromCloudflareD1(silent);
+    }
+
     async loadFromCloudflareD1(silent = false) {
         let localData = null;
         try {

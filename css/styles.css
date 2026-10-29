@@ -1265,8 +1265,6 @@ body { display: flex; flex-direction: column; height: 100vh; background: var(--b
     display: block !important;
     animation: fadeInDropdown 0.15s ease-out;
 }
-    animation: fadeInDropdown 0.15s ease-out;
-}
 @keyframes fadeInDropdown {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
@@ -2128,10 +2126,19 @@ body { display: flex; flex-direction: column; height: 100vh; background: var(--b
     user-select: none;
 }
 
-#app-splash.fade-out {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+#app-splash.fade-out,
+#app-splash.hidden,
+#app-splash[style*="display: none"],
+#app-login-screen.hidden,
+#app-login-screen[style*="display: none"],
+#app-login-screen[style*="opacity: 0"],
+#waiting-room-screen.hidden,
+#waiting-room-screen[style*="display: none"] {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
 }
 
 .splash-content {

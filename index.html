@@ -1422,22 +1422,46 @@
                 if (loggedUser && loggedUser.role && loggedUser.role !== "GUEST") {
                     const loginScreen = document.getElementById("app-login-screen");
                     if (loginScreen) {
-                        loginScreen.style.transition = "opacity 0.2s ease";
-                        loginScreen.style.opacity = "0";
-                        setTimeout(() => { loginScreen.style.display = "none"; }, 200);
+                        loginScreen.style.display = "none";
+                        loginScreen.style.pointerEvents = "none";
+                        loginScreen.style.visibility = "hidden";
+                        loginScreen.classList.add("hidden");
                     }
+                    const splashScreen = document.getElementById("app-splash");
+                    if (splashScreen) {
+                        splashScreen.style.display = "none";
+                        splashScreen.style.pointerEvents = "none";
+                        splashScreen.style.visibility = "hidden";
+                        splashScreen.classList.add("hidden");
+                    }
+                    const waitingScreen = document.getElementById("waiting-room-screen");
+                    if (waitingScreen) {
+                        waitingScreen.style.display = "none";
+                        waitingScreen.style.pointerEvents = "none";
+                        waitingScreen.classList.add("hidden");
+                    }
+
                     updateRoleBadge(loggedUser);
+
                     if (window.ganttCore) {
-                        window.ganttCore.loadWorkspace().then(() => {
+                        try {
+                            if (typeof window.ganttCore.loadWorkspace === "function") {
+                                await window.ganttCore.loadWorkspace();
+                            } else if (typeof window.ganttCore.loadFromCloudflareD1 === "function") {
+                                await window.ganttCore.loadFromCloudflareD1();
+                            }
+                        } catch (loadErr) {
+                            console.warn("loadWorkspace error:", loadErr);
+                        }
+                        try {
                             window.ganttCore.renderProjectsSidebar();
                             window.ganttCore.renderGantt();
-                        }).catch(() => {
-                            window.ganttCore.renderProjectsSidebar();
-                            window.ganttCore.renderGantt();
-                        });
+                        } catch (renderErr) {
+                            console.warn("renderGantt error:", renderErr);
+                        }
                     }
                     if (window.authMgr && window.authMgr.syncTenantWorkspaceMeta) {
-                        window.authMgr.syncTenantWorkspaceMeta();
+                        try { window.authMgr.syncTenantWorkspaceMeta(); } catch(e) {}
                     }
                     return;
                 } else {
@@ -3890,27 +3914,50 @@
 
             const dismissSplash = () => {
                 const splashEl = document.getElementById("app-splash");
-                if (splashEl && splashEl.style.display !== "none") {
-                    splashEl.classList.add("fade-out");
-                    setTimeout(() => {
-                        splashEl.style.display = "none";
-                    }, 500);
+                if (splashEl) {
+                    splashEl.classList.add("fade-out", "hidden");
+                    splashEl.style.display = "none";
+                    splashEl.style.pointerEvents = "none";
+                    splashEl.style.visibility = "hidden";
                 }
             };
 
             if (!isLoggedIn) {
-                if (splashScreen) splashScreen.style.display = "none";
-                if (loginScreen) loginScreen.style.display = "flex";
+                if (splashScreen) {
+                    splashScreen.style.display = "none";
+                    splashScreen.style.pointerEvents = "none";
+                    splashScreen.classList.add("hidden");
+                }
+                if (loginScreen) {
+                    loginScreen.style.display = "flex";
+                    loginScreen.style.pointerEvents = "auto";
+                    loginScreen.classList.remove("hidden");
+                }
             } else if (user.isWaiting || user.role === "WAITING") {
-                if (splashScreen) splashScreen.style.display = "none";
-                if (loginScreen) loginScreen.style.display = "none";
+                if (splashScreen) {
+                    splashScreen.style.display = "none";
+                    splashScreen.style.pointerEvents = "none";
+                    splashScreen.classList.add("hidden");
+                }
+                if (loginScreen) {
+                    loginScreen.style.display = "none";
+                    loginScreen.style.pointerEvents = "none";
+                    loginScreen.classList.add("hidden");
+                }
                 showWaitingRoomScreen(user);
             } else {
-                if (loginScreen) loginScreen.style.display = "none";
+                // AUTHENTICATED USER: Instantly purge all blocking overlays
+                if (loginScreen) {
+                    loginScreen.style.display = "none";
+                    loginScreen.style.pointerEvents = "none";
+                    loginScreen.style.visibility = "hidden";
+                    loginScreen.classList.add("hidden");
+                }
                 if (splashScreen) {
-                    splashScreen.style.display = "flex";
-                    setTimeout(dismissSplash, 1200);
-                    setTimeout(dismissSplash, 3000); // Fail-safe fallback
+                    splashScreen.style.display = "none";
+                    splashScreen.style.pointerEvents = "none";
+                    splashScreen.style.visibility = "hidden";
+                    splashScreen.classList.add("hidden");
                 }
 
                 try {

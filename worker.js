@@ -2321,6 +2321,7 @@ export default {
       if (!invite) return jsonResp({ error: "Mã QR mời nhân sự không tồn tại hoặc đã bị khóa!" }, 404);
 
       const t = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(invite.tenant_id).first();
+      const deptsRes = await env.DB.prepare("SELECT id, code, name, color, prefix FROM departments WHERE tenant_id = ? ORDER BY order_index ASC, rowid ASC").bind(invite.tenant_id).all();
 
       // Check if this hardware device already scanned this QR
       let existingUser = null;
@@ -2367,6 +2368,7 @@ export default {
           companyName: t?.company_name || "Doanh Nghiệp",
           logoUrl: t?.logo_url || "./asset/Logo_white.png"
         },
+        departments: deptsRes.results || [],
         alreadyScannedUser: existingUser
       });
     }
@@ -2612,7 +2614,7 @@ export default {
           finalAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(finalName)}&background=0284c7&color=fff&bold=true`;
         }
 
-        const assignedDept = invite.default_dept || "WAITING";
+        const assignedDept = String(body.department || body.dept || invite.default_dept || "WAITING").trim();
         const initialRole = "WAITING";
         const initialActive = 2; // Always 2 = Waiting Room for Admin approval and department assignment
 
@@ -2625,7 +2627,7 @@ export default {
         `).bind(
           newUserId, invite.tenant_id, finalUsername, finalEmail, cleanPhone, finalName, finalAvatar,
           generatedPass, pwHash, generatedPass, initialRole, assignedDept,
-          JSON.stringify(invite.default_dept ? [invite.default_dept] : []),
+          JSON.stringify([assignedDept]),
           JSON.stringify(invite.project_id ? [invite.project_id] : []),
           initialActive, cleanHw, googleId
         ).run();
@@ -2644,11 +2646,11 @@ export default {
           username: finalUsername,
           fullName: finalName,
           avatarUrl: finalAvatar,
-          role: initialRole,
+          role: "WAITING",
           dept: assignedDept,
-          deptTags: invite.default_dept ? [invite.default_dept] : [],
+          deptTags: [assignedDept],
           taskPermissionMode: "REPORT_ONLY",
-          isWaiting: initialActive === 2,
+          isWaiting: true,
           tenantId: invite.tenant_id,
           subdomain: targetTenant?.subdomain || "demo"
         };
@@ -2669,7 +2671,9 @@ export default {
             password: generatedPass,
             passwordHint: generatedPass,
             department: assignedDept,
-            status: initialActive === 2 ? "WAITING_ROOM" : "ACTIVE"
+            status: "WAITING_ROOM",
+            isWaiting: true,
+            role: "WAITING"
           }
         });
       } catch (err) {
@@ -2679,13 +2683,14 @@ export default {
 
     // ========================================================================
     // 4. ADMIN PORTAL ENDPOINTS (/api/admin/*)
+    // Strictly restricted to ADMIN & SUPER_ADMIN only (Never DEPT_ADMIN or STAFF)
     // ========================================================================
-    const isAdminOrSubAdmin = authUser.role === "ADMIN" || authUser.role === "BOSS" || authUser.role === "PROJECT_ADMIN" || authUser.role === "DEPT_ADMIN";
+    const isCompanyAdmin = authUser.role === "ADMIN" || authUser.role === "SUPER_ADMIN";
+    if (!isCompanyAdmin) {
+      return jsonResp({ error: "🔒 Chỉ Quản trị viên (Admin) mới có quyền truy cập trang quản trị hệ thống!" }, 403);
+    }
 
     if (url.pathname === "/api/admin/overview" && request.method === "GET") {
-      if (!isAdminOrSubAdmin) {
-        return jsonResp({ error: "Chỉ Quản trị viên (Admin / Trưởng Ban QLDA) mới có quyền truy cập trang Quản trị!" }, 403);
-      }
 
       const [deptsRes, usersRes, projectsRes, tasksRes, filesRes, invitesRes] = await Promise.all([
         env.DB.prepare("SELECT * FROM departments WHERE tenant_id = ? ORDER BY order_index ASC, rowid ASC").bind(tenantId).all(),
@@ -2797,7 +2802,7 @@ export default {
 
     // CREATE / MANAGE QR INVITE FOR WAITING ROOM
     if (url.pathname === "/api/admin/qr-invite" && request.method === "POST") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const {
         action = "CREATE", id, title,
         maxUses = 10, maxScans,
@@ -2839,7 +2844,7 @@ export default {
 
     // WAITING ROOM APPROVE OR REJECT (WITH SLOT RESTORATION)
     if (url.pathname === "/api/admin/waiting-room" && request.method === "POST") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const body = await request.json();
       const { action, userId, dept = "CONSTRUCTION", deptTags = [], role = "STAFF", taskPermissionMode = "REPORT_ONLY" } = body;
 
@@ -2885,7 +2890,7 @@ export default {
 
     // MANAGE DEPARTMENTS (DYNAMIC DEPARTMENT TAGS & EDITING)
     if (url.pathname === "/api/admin/departments" && request.method === "POST") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const { action = "SAVE", id, deptId, code, name, currentName, prefix = "C", color = "#2563eb", defaultTaskMode = "REPORT_ONLY" } = await request.json();
       const targetId = id || deptId;
 
@@ -2937,7 +2942,7 @@ export default {
 
     // MANAGE USERS (CREATE, EDIT, TOGGLE PERMISSION MODE, LOCK/REVOKE SEAT)
     if (url.pathname === "/api/admin/users" && request.method === "POST") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const body = await request.json();
       const targetUserId = body.id || body.userId;
       const { action = "SAVE", username, fullName, password, newPassword, phone, email, role = "STAFF", dept = "CONSTRUCTION", department, deptTags = [], taskPermissionMode = "REPORT_ONLY", managedProjectIds = [], isActive = 1, avatarUrl = "", status } = body;
@@ -3102,7 +3107,7 @@ export default {
 
     // UPDATE COMPANY BRANDING (LOGO, NAME, SLOGAN, CUSTOM DOMAIN, THEME)
     if (url.pathname === "/api/admin/branding" && request.method === "POST") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const { companyName, slogan, logoUrl, customDomain, themeConfig } = await request.json();
 
       await env.DB.prepare(`
@@ -3127,7 +3132,7 @@ export default {
 
     // PROJECT LIFECYCLE & STORAGE HYGIENE (BACKUP DOWNLOAD, ARCHIVE, CLEAN R2 FILES, QUOTA)
     if (url.pathname === "/api/admin/project-action" && request.method === "POST") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const { action, projectId, storageQuotaMb, projectAdminId, allowedUserIds } = await request.json();
 
       if (action === "BACKUP") {
@@ -3236,7 +3241,7 @@ export default {
 
     // EMPLOYEE & DEPARTMENT PERFORMANCE ANALYTICS (BY PROJECT, MONTH, YEAR)
     if (url.pathname === "/api/admin/analytics" && request.method === "GET") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const filterProject = url.searchParams.get("projectId") || "ALL";
       const filterMonth = url.searchParams.get("month") || "ALL"; // 01..12 or ALL
       const filterYear = url.searchParams.get("year") || "ALL";   // 2026 or ALL
@@ -3337,7 +3342,7 @@ export default {
 
     // CREATE VIETQR ORDER FOR RENEWAL, UPGRADE, STORAGE (+10GB) OR PERSONNEL SEATS (+10 NHÂN SỰ)
     if (url.pathname === "/api/admin/create-order" && request.method === "POST") {
-      if (!isAdminOrSubAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
+      if (!isCompanyAdmin) return jsonResp({ error: "Không có quyền!" }, 403);
       const {
         orderType = "RENEWAL",
         planType,
@@ -3750,11 +3755,26 @@ export default {
             t.staffUserId = authUser.id;
             t.createdByUserId = authUser.id;
           } else {
+            const staffLower = (existingTask.staff || "").toLowerCase().trim();
+            const myNameLower = (authUser.fullName || "").toLowerCase().trim();
+            const myUserLower = (authUser.username || "").toLowerCase().trim();
+            const isUnassigned = !staffLower || staffLower === "chưa giao" || staffLower === "chưa gán" || staffLower === "chưa phân công";
+            const isSameDept = existingTask.dept && (
+              existingTask.dept.toLowerCase() === (authUser.dept || "").toLowerCase() ||
+              (Array.isArray(authUser.deptTags) && authUser.deptTags.some(dt => String(dt).toLowerCase() === existingTask.dept.toLowerCase()))
+            );
+
             const isOwnTask =
               existingTask.staff_user_id === authUser.id ||
               existingTask.created_by_user_id === authUser.id ||
-              (existingTask.staff || "").toLowerCase() === (authUser.fullName || "").toLowerCase() ||
-              (existingTask.staff || "").toLowerCase() === (authUser.username || "").toLowerCase();
+              (myNameLower && (staffLower.includes(myNameLower) || myNameLower.includes(staffLower))) ||
+              (myUserLower && (staffLower.includes(myUserLower) || myUserLower.includes(staffLower))) ||
+              (isUnassigned && isSameDept);
+
+            if (isUnassigned && isSameDept && (!t.staff || t.staff === "Chưa giao")) {
+              t.staff = authUser.fullName || authUser.username;
+              t.staffUserId = authUser.id;
+            }
 
             // If not own task, Staff can ONLY add/edit notes on linked tasks!
             if (!isOwnTask) {

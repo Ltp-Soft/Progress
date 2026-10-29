@@ -2848,7 +2848,7 @@
                 const taskDept = t.dept || getDeptFromCodeIn(t.codeIn);
                 const deptEdit = ganttCore.canUserEditTaskInDept(taskDept, prj);
 
-                if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN" || user.role === "DEPT_ADMIN") {
+                if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN" || user.role === "SUPER_ADMIN" || user.role === "DEPT_ADMIN") {
                     canFullEdit = deptEdit;
                     canReportOnly = deptEdit;
                 } else if (user.role === "STAFF") {
@@ -2857,8 +2857,8 @@
                         .filter(Boolean)
                         .map(s => String(s).trim().toLowerCase());
                     const staffVal = String(t.staff || "").trim().toLowerCase();
-                    const isMyTask = userNames.some(n => n && (staffVal.includes(n) || n.includes(staffVal))) || t.createdBy === user.username || t.createdBy === user.id;
-                    if (isAutonomous && isMyTask && deptEdit) {
+                    const isMyTask = userNames.some(n => n && (staffVal.includes(n) || n.includes(staffVal))) || t.createdBy === user.username || t.createdBy === user.id || t.createdByUserId === user.id;
+                    if (isAutonomous && (isMyTask || deptEdit)) {
                         canFullEdit = true;
                         canReportOnly = true;
                     } else if (ganttCore.canUserReportOnTask(t, prj)) {
@@ -2950,7 +2950,7 @@
                 }
             } else {
                 let targetDept = "CONSTRUCTION";
-                if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") {
+                if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "PROJECT_ADMIN") {
                     targetDept = window.authMgr.getAdminDeptContext();
                 } else if (user && user.dept && user.dept !== "ALL" && user.dept !== "NONE") {
                     targetDept = user.dept;
@@ -2959,9 +2959,8 @@
                 canFullEdit = ganttCore.canUserEditTaskInDept(targetDept, prj);
                 canReportOnly = canFullEdit;
 
-                const depts = window.DEPARTMENTS || DEPARTMENTS;
-                const deptObj = depts.find(d => d.id === targetDept) || depts[0];
-                const prefix = deptObj ? (deptObj.prefix || deptObj.code) : "C";
+                const deptObj = (typeof window.resolveDept === "function" ? window.resolveDept(targetDept) : null) || (window.DEPARTMENTS && window.DEPARTMENTS[0]);
+                const prefix = deptObj ? (deptObj.prefix || deptObj.code?.charAt(0) || deptObj.name?.charAt(0) || "C") : "C";
 
                 document.getElementById("task-id").value = "";
                 document.getElementById("task-name").value = "";
@@ -3118,7 +3117,7 @@
                 if (existing && existing.dept) { taskDept = existing.dept; }
             } else {
                 const user = window.authMgr.getCurrentUser();
-                if (user.role === "ADMIN") {
+                if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
                     taskDept = window.authMgr.getAdminDeptContext();
                 } else if (user && user.dept && user.dept !== "ALL" && user.dept !== "NONE") {
                     taskDept = user.dept;
@@ -3141,6 +3140,7 @@
 
             const startTimeVal = document.getElementById("task-start-time") ? document.getElementById("task-start-time").value : "";
             const endTimeVal = document.getElementById("task-end-time") ? document.getElementById("task-end-time").value : "";
+            const curUser = window.authMgr ? window.authMgr.getCurrentUser() : {};
 
             const taskData = {
                 id: id || "T_" + Date.now(),
@@ -3149,6 +3149,8 @@
                 codeOut: document.getElementById("task-code-out").value.trim(),
                 staff: staffValue,
                 dept: taskDept,
+                createdBy: existingTask?.createdBy || curUser.username || curUser.id || "",
+                createdByUserId: existingTask?.createdByUserId || curUser.id || "",
                 projectTag: selectedProjectTag || (existingTask ? existingTask.projectTag : undefined),
                 start: start,
                 startTime: startTimeVal,

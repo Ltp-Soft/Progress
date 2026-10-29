@@ -541,8 +541,11 @@ class GanttCore {
     isProjectOwner(project) {
         if (!project) return false;
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
-        if (user.role === "ADMIN") return true;
-        return user.dept === project.creatorDept && user.role === "DEPT_ADMIN";
+        if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") return true;
+        const isMatch = (typeof window.areDeptsMatching === "function") 
+            ? window.areDeptsMatching(user.dept, project.creatorDept) 
+            : (String(user.dept || '').toUpperCase() === String(project.creatorDept || '').toUpperCase());
+        return isMatch && user.role === "DEPT_ADMIN";
     }
 
     getProjectCategory(project) {
@@ -577,10 +580,10 @@ class GanttCore {
         if (minaFab) minaFab.style.display = canUseAi ? "flex" : "none";
         if (!canUseAi && minaChat) minaChat.style.display = "none";
 
-        // Show Company Admin Portal button for ADMIN / PROJECT_ADMIN / BOSS / DEPT_ADMIN
+        // Show Company Admin Portal button STRICTLY for ADMIN / SUPER_ADMIN only
         const btnCompanyAdmin = document.getElementById("btn-open-company-admin");
         if (btnCompanyAdmin) {
-            btnCompanyAdmin.style.display = (isAdmin || isBoss || isDeptAdmin) ? "inline-flex" : "none";
+            btnCompanyAdmin.style.display = (user.role === "ADMIN" || user.role === "SUPER_ADMIN") ? "inline-flex" : "none";
         }
 
 
@@ -937,44 +940,40 @@ class GanttCore {
     // Trưởng phòng (DEPT_ADMIN) phân công và quản trị toàn bộ task phòng mình. Nhân viên chỉ nhận việc và báo cáo.
     canUserEditTaskInDept(deptId, project) {
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
-        if (user.role === "BOSS" || user.role === "GUEST") return false;
-        if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") return true;
+        if (!user || user.role === "BOSS" || user.role === "GUEST" || user.role === "WAITING") return false;
+        if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "PROJECT_ADMIN") return true;
+        if (!project) return false;
 
-        const isBidding = Boolean(project.isDeptReport || project.category === "REPORT" || project.category === "BIDDING" || (project.id && project.id.startsWith("PRJ_RPT_")));
-        const userDept = (user.dept || "").toUpperCase();
-        const targetDept = (deptId || "").toUpperCase();
-        const creatorDept = (project.creatorDept || "").toUpperCase();
-        const invited = (project.invitedDepts || []).map(d => String(d).toUpperCase());
+        const areMatch = typeof window.areDeptsMatching === "function" 
+            ? window.areDeptsMatching 
+            : (a, b) => String(a || '').toUpperCase() === String(b || '').toUpperCase();
 
-        if (isBidding) {
-            if (!invited.includes(userDept) && creatorDept !== userDept) return false;
+        const isUserInDept = areMatch(deptId, user.dept) || 
+            (Array.isArray(user.deptTags) && user.deptTags.some(t => areMatch(deptId, t)));
+        const isProjectCreatorDept = areMatch(project.creatorDept, user.dept);
+
+        const isDeptJob = Boolean(project.isDeptJob || project.category === "DEPT_JOB" || (project.id && project.id.startsWith("PRJ_INT_")));
+
+        if (isDeptJob) {
             if (user.role === "DEPT_ADMIN") {
-                return userDept === targetDept || userDept === creatorDept;
+                return isProjectCreatorDept || isUserInDept;
             }
             if (user.role === "STAFF") {
                 const isAuto = user.taskPermissionMode === "AUTONOMOUS" || (window.authMgr && window.authMgr.isStaffAutonomous && window.authMgr.isStaffAutonomous());
-                if (isAuto) {
-                    return userDept === targetDept || (user.deptTags && user.deptTags.some(t => String(t).toUpperCase() === targetDept));
-                }
+                return Boolean(isAuto && (isProjectCreatorDept || isUserInDept));
             }
             return false;
         }
 
-        if (project.isShared && (!invited.includes(userDept) && creatorDept !== userDept)) {
-            return false;
-        }
-
+        // Shared / Under Construction / Bidding:
         if (user.role === "DEPT_ADMIN") {
-            return userDept === targetDept || userDept === creatorDept;
+            return isUserInDept || isProjectCreatorDept;
         }
 
         // Staff in AUTONOMOUS mode can add & edit tasks in their assigned department
         if (user.role === "STAFF") {
             const isAuto = user.taskPermissionMode === "AUTONOMOUS" || (window.authMgr && window.authMgr.isStaffAutonomous && window.authMgr.isStaffAutonomous());
-            if (isAuto) {
-                return userDept === targetDept || (user.deptTags && user.deptTags.some(t => String(t).toUpperCase() === targetDept));
-            }
-            return false;
+            return Boolean(isAuto && isUserInDept);
         }
 
         return false;
@@ -985,10 +984,15 @@ class GanttCore {
     canUserReportOnTask(task, project) {
         if (!task || !project) return false;
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
-        if (user.role === "BOSS" || user.role === "GUEST") return false;
-        if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") return true;
+        if (!user || user.role === "BOSS" || user.role === "GUEST" || user.role === "WAITING") return false;
+        if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "PROJECT_ADMIN") return true;
+
+        const areMatch = typeof window.areDeptsMatching === "function" 
+            ? window.areDeptsMatching 
+            : (a, b) => String(a || '').toUpperCase() === String(b || '').toUpperCase();
+
+        const taskDept = task.dept || getDeptFromCodeIn(task.codeIn);
         if (user.role === "DEPT_ADMIN") {
-            const taskDept = task.dept || getDeptFromCodeIn(task.codeIn);
             return this.canUserEditTaskInDept(taskDept, project);
         }
 
@@ -997,35 +1001,42 @@ class GanttCore {
                 .filter(Boolean)
                 .map(s => String(s).trim().toLowerCase());
             const staffLower = String(task.staff || "").trim().toLowerCase();
-            const taskDept = (task.dept || getDeptFromCodeIn(task.codeIn) || "").toUpperCase();
-            const userDept = (user.dept || "").toUpperCase();
-            const isMyDept = userDept === taskDept || (user.deptTags && user.deptTags.some(t => String(t).toUpperCase() === taskDept));
+            const isMyDept = areMatch(taskDept, user.dept) || 
+                (Array.isArray(user.deptTags) && user.deptTags.some(t => areMatch(taskDept, t)));
 
-            // Match assigned staff directly
+            // 1. Match assigned staff directly
             if (userNames.some(n => n && (staffLower.includes(n) || n.includes(staffLower)))) return true;
+            // 2. Task created by this staff member
             if (task.createdBy && (task.createdBy === user.username || task.createdBy === user.id)) return true;
-            // Or unassigned task within their department
+            if (task.createdByUserId && task.createdByUserId === user.id) return true;
+            // 3. Or unassigned task within their department
             if ((!task.staff || task.staff === "Chưa giao" || task.staff === "Chưa gán" || task.staff === "Chưa Phân Công") && isMyDept) return true;
+            // 4. Or general task within their department
+            if (isMyDept) return true;
         }
 
         return false;
     }
 
-    // ONLY ADMIN & DEPARTMENT HEAD (DEPT_ADMIN) CAN DELETE TASKS
+    // ONLY ADMIN & DEPARTMENT HEAD (DEPT_ADMIN) OR OWNER STAFF CAN DELETE TASKS
     canUserDeleteTask(task, project) {
-        const user = window.authMgr.getCurrentUser();
-        if (user.role === "BOSS" || user.role === "GUEST" || user.role === "STAFF") return false;
-        if (user.role === "ADMIN" || user.role === "PROJECT_ADMIN") return true;
+        const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
+        if (!user || user.role === "BOSS" || user.role === "GUEST" || user.role === "WAITING") return false;
+        if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "PROJECT_ADMIN") return true;
 
-        const isBidding = Boolean(project.isDeptReport || project.category === "REPORT" || project.category === "BIDDING" || (project.id && project.id.startsWith("PRJ_RPT_")));
         const taskDept = task.dept || getDeptFromCodeIn(task.codeIn);
-
-        if (isBidding) {
-            return user.role === "DEPT_ADMIN" && user.dept === taskDept;
+        if (user.role === "DEPT_ADMIN") {
+            return this.canUserEditTaskInDept(taskDept, project);
         }
 
-        if (this.isProjectOwner(project)) return true;
-        return this.canUserEditTaskInDept(taskDept, project);
+        if (user.role === "STAFF") {
+            const isAuto = user.taskPermissionMode === "AUTONOMOUS" || (window.authMgr && window.authMgr.isStaffAutonomous && window.authMgr.isStaffAutonomous());
+            const isOwn = (task.createdBy && (task.createdBy === user.username || task.createdBy === user.id)) ||
+                          (task.createdByUserId && task.createdByUserId === user.id);
+            return Boolean(isAuto && isOwn);
+        }
+
+        return false;
     }
 
     renameCurrentProject(newName) {

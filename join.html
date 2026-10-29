@@ -121,6 +121,14 @@
                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
                 </div>
 
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Bộ phận / Phòng ban công tác <span class="text-rose-400">*</span></label>
+                    <select id="input-department" required
+                            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-white text-sm focus:outline-none focus:border-sky-400">
+                        <option value="">-- Đang tải danh sách phòng ban... --</option>
+                    </select>
+                </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1.5">Tên đăng nhập tự chọn (Username) <span class="text-rose-400">*</span></label>
@@ -187,8 +195,8 @@
                 <button onclick="copyCredentials()" id="btn-copy-cred" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition">
                     📋 Sao chép Tên đăng nhập & Mật khẩu
                 </button>
-                <a href="index.html" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 transition text-center block">
-                    🚀 Mở Bảng Tiến Độ Gantt Ngay
+                <a href="index.html" class="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 font-extrabold text-sm border border-slate-700 transition text-center block">
+                    ⏳ Vào Phòng Chờ & Chờ Admin Phê Duyệt
                 </a>
             </div>
         </div>
@@ -342,8 +350,16 @@
                 }
 
                 document.getElementById("invite-title").textContent = inv.title || "Phòng chờ nhân sự mới";
-                document.getElementById("invite-dept").textContent = `Bộ phận mặc định: ${inv.defaultDepartment || "Chờ Admin phân bổ"}`;
+                document.getElementById("invite-dept").textContent = `Bộ phận mặc định: ${inv.defaultDepartment || "Tự chọn"}`;
                 document.getElementById("invite-slots").textContent = `Còn ${inv.remainingSlots}/${inv.maxScans} suất`;
+
+                const deptSelect = document.getElementById("input-department");
+                if (deptSelect && Array.isArray(data.departments) && data.departments.length > 0) {
+                    deptSelect.innerHTML = `<option value="">-- Chọn bộ phận làm việc trong công ty --</option>` +
+                        data.departments.map(d => `<option value="${d.name}" ${inv.defaultDepartment === d.name ? "selected" : ""}>${d.name}</option>`).join("");
+                } else if (deptSelect) {
+                    deptSelect.innerHTML = `<option value="Thi công">Thi công</option><option value="Thiết kế">Thiết kế</option><option value="Văn phòng">Văn phòng</option>`;
+                }
 
                 showState("state-form");
                 initGoogleButton();
@@ -411,6 +427,7 @@
         async function submitJoinForm(e) {
             e.preventDefault();
             const fullName = document.getElementById("input-fullname").value.trim();
+            const department = (document.getElementById("input-department")?.value || "").trim();
             const username = (document.getElementById("input-username")?.value || "").trim();
             const phone = document.getElementById("input-phone").value.trim();
             const password = document.getElementById("input-password").value.trim();
@@ -419,6 +436,11 @@
 
             if (!fullName) {
                 errBox.textContent = "Vui lòng nhập Họ và Tên.";
+                errBox.classList.remove("hidden");
+                return;
+            }
+            if (!department) {
+                errBox.textContent = "Vui lòng chọn Bộ phận / Phòng ban công tác trong công ty.";
                 errBox.classList.remove("hidden");
                 return;
             }
@@ -445,6 +467,7 @@
                     body: JSON.stringify({
                         inviteCode,
                         fullName,
+                        department,
                         username,
                         phone,
                         password,

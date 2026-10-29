@@ -24,6 +24,58 @@ function getHostSubdomain() {
 }
 window.getHostSubdomain = getHostSubdomain;
 
+// Resolve full department object from id, code, or name
+function resolveDept(deptIdentifier) {
+    if (!deptIdentifier) return (window.DEPARTMENTS && window.DEPARTMENTS[0]) || null;
+    const s = String(deptIdentifier).trim().toUpperCase();
+    const depts = (typeof window !== "undefined" && Array.isArray(window.DEPARTMENTS)) ? window.DEPARTMENTS : [];
+    return depts.find(d => 
+        String(d.id || "").toUpperCase() === s ||
+        String(d.code || "").toUpperCase() === s ||
+        String(d.name || "").toUpperCase() === s
+    ) || null;
+}
+window.resolveDept = resolveDept;
+
+// Universal Department Matching Helper (Matches across id, code, name, prefix)
+function areDeptsMatching(deptA, deptB) {
+    if (!deptA || !deptB) return false;
+    const sA = String(deptA).trim().toUpperCase();
+    const sB = String(deptB).trim().toUpperCase();
+    if (sA === sB) return true;
+    if (sA === "ALL" || sB === "ALL") return true;
+
+    const depts = (typeof window !== "undefined" && Array.isArray(window.DEPARTMENTS)) ? window.DEPARTMENTS : [];
+    const objA = depts.find(d => 
+        String(d.id || "").toUpperCase() === sA ||
+        String(d.code || "").toUpperCase() === sA ||
+        String(d.name || "").toUpperCase() === sA
+    );
+    const objB = depts.find(d => 
+        String(d.id || "").toUpperCase() === sB ||
+        String(d.code || "").toUpperCase() === sB ||
+        String(d.name || "").toUpperCase() === sB
+    );
+
+    if (objA && objB) {
+        return (objA.id && objA.id === objB.id) ||
+               (objA.code && objA.code.toUpperCase() === objB.code.toUpperCase()) ||
+               (objA.name && objA.name.toUpperCase() === objB.name.toUpperCase());
+    }
+    if (objA) {
+        return String(objA.id || "").toUpperCase() === sB ||
+               String(objA.code || "").toUpperCase() === sB ||
+               String(objA.name || "").toUpperCase() === sB;
+    }
+    if (objB) {
+        return String(objB.id || "").toUpperCase() === sA ||
+               String(objB.code || "").toUpperCase() === sA ||
+               String(objB.name || "").toUpperCase() === sA;
+    }
+    return false;
+}
+window.areDeptsMatching = areDeptsMatching;
+
 // Determine Department from Code In Prefix (Dynamic based on window.DEPARTMENTS)
 function getDeptFromCodeIn(codeIn) {
     if (!codeIn) return (window.DEPARTMENTS && window.DEPARTMENTS[0]?.id) || "CONSTRUCTION";
@@ -361,7 +413,7 @@ class AuthManager {
     }
 
     isAdmin() {
-        return this.currentUser.role === "ADMIN" || this.currentUser.role === "PROJECT_ADMIN";
+        return this.currentUser.role === "ADMIN" || this.currentUser.role === "SUPER_ADMIN";
     }
 
     isSuperTenantAdmin() {

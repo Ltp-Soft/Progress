@@ -239,10 +239,6 @@
 
         <!-- LEFT SIDEBAR (TEMPLE STYLE) -->
         <aside class="sidebar" id="project-sidebar-el">
-            <!-- FLOATING MOBILE SIDEBAR EDGE CLOSE BUTTON -->
-            <button class="mobile-sidebar-close-edge-btn" onclick="closeMobileSidebar()" title="Đóng Sidebar">
-                <i data-lucide="x" size="16"></i>
-            </button>
 
             <div style="padding: 10px 12px 6px 12px;">
                 <button class="btn" id="btn-create-proj" style="width:100%; padding:9px 12px; font-size:12.5px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:700; background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; box-shadow:0 2px 4px rgba(0,0,0,0.15); transition:all 0.2s;" onclick="openNewProjectModal()" title="Khởi Tạo Dự Án Mới">
@@ -3696,9 +3692,19 @@
                 hideSettingsDropdown();
             }
         });
+        window.addEventListener("pointerdown", (e) => {
+            const wrapper = document.querySelector(".settings-dropdown-wrapper");
+            if (wrapper && !wrapper.contains(e.target)) {
+                hideSettingsDropdown();
+            }
+        });
 
-        function closeModal(id) { document.getElementById(id).style.display = "none"; }
+        function closeModal(id) { 
+            const el = document.getElementById(id);
+            if (el) el.style.display = "none"; 
+        }
         function openModal(id) {
+            hideSettingsDropdown();
             closeMobileSidebar();
             const el = document.getElementById(id);
             if (el) {
@@ -3770,18 +3776,17 @@
         }
 
         function checkMobileViewportMode() {
-            const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            const isLandscape = window.innerWidth > window.innerHeight;
-            const isSmallHeight = window.innerHeight <= 650;
-            const isMobileDevice = isTouch || window.innerWidth <= 1024 || isSmallHeight;
+            const isMobileDevice = window.innerWidth <= 768;
 
             if (isMobileDevice) {
                 document.body.classList.add("is-mobile-mode");
             } else {
                 document.body.classList.remove("is-mobile-mode");
+                closeMobileSidebar();
             }
 
-            if ((isTouch && isLandscape) || (isLandscape && (window.innerWidth <= 1100 || isSmallHeight))) {
+            const isLandscapeMobile = isMobileDevice && (window.innerWidth > window.innerHeight);
+            if (isLandscapeMobile) {
                 document.body.classList.add("is-mobile-landscape");
             } else {
                 document.body.classList.remove("is-mobile-landscape");
@@ -4050,6 +4055,9 @@
             const selectEl = document.getElementById("ui-theme-mode-select");
             if (selectEl && selectEl.value !== mode) {
                 selectEl.value = mode;
+            }
+            if (window.ganttCore && typeof window.ganttCore.renderGantt === "function") {
+                try { window.ganttCore.renderGantt(); } catch(e) {}
             }
         };
 

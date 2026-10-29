@@ -1448,7 +1448,7 @@ body { display: flex; flex-direction: column; height: 100vh; background: var(--b
 }
 
 .mobile-sidebar-close-edge-btn {
-    display: none;
+    display: none !important;
 }
 
 /* 2. Generic Mobile & Touch Screen Base Styles (Portrait & Landscape) */
@@ -1544,30 +1544,9 @@ body { display: flex; flex-direction: column; height: 100vh; background: var(--b
         left: 0 !important;
     }
 
-    /* Floating Red Edge Close Button - ONLY for mobile drawer when actively expanded */
-    .mobile-sidebar-close-edge-btn {
-        display: none !important;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        top: 10px;
-        right: -36px;
-        width: 36px;
-        height: 36px;
-        background: #ef4444;
-        color: #ffffff;
-        border: none;
-        border-radius: 0 8px 8px 0;
-        box-shadow: 4px 0 10px rgba(0,0,0,0.25);
-        cursor: pointer;
-        z-index: 10000;
-        transition: background 0.15s;
-    }
+    .mobile-sidebar-close-edge-btn,
     .sidebar.mobile-expanded .mobile-sidebar-close-edge-btn {
-        display: flex !important;
-    }
-    .mobile-sidebar-close-edge-btn:hover {
-        background: #dc2626;
+        display: none !important;
     }
 
     /* Mobile Compact Sidebar Typography & Sizing */
@@ -2681,40 +2660,47 @@ body.theme-pill-capsule .alert-dot-predecessor {
 body.theme-3d-glass .gantt-body-scroll,
 body.theme-3d-liquid .gantt-body-scroll,
 body.theme-2d-classic .gantt-body-scroll,
+body.theme-pill-capsule .gantt-body-scroll,
 body.theme-3d-glass #gantt-unified-container,
 body.theme-3d-liquid #gantt-unified-container,
-body.theme-2d-classic #gantt-unified-container {
+body.theme-2d-classic #gantt-unified-container,
+body.theme-pill-capsule #gantt-unified-container {
     background: linear-gradient(180deg, #0b0f19 0%, #0f172a 100%) !important;
 }
 
 body.theme-3d-glass .gantt-unified-row,
 body.theme-3d-liquid .gantt-unified-row,
-body.theme-2d-classic .gantt-unified-row {
+body.theme-2d-classic .gantt-unified-row,
+body.theme-pill-capsule .gantt-unified-row {
     border-bottom-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 body.theme-3d-glass .gantt-unified-row:hover,
 body.theme-3d-liquid .gantt-unified-row:hover,
-body.theme-2d-classic .gantt-unified-row:hover {
+body.theme-2d-classic .gantt-unified-row:hover,
+body.theme-pill-capsule .gantt-unified-row:hover {
     background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
 body.theme-3d-glass .day-cell,
 body.theme-3d-liquid .day-cell,
-body.theme-2d-classic .day-cell {
+body.theme-2d-classic .day-cell,
+body.theme-pill-capsule .day-cell {
     border-right-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 body.theme-3d-glass .day-cell.is-weekend,
 body.theme-3d-liquid .day-cell.is-weekend,
-body.theme-2d-classic .day-cell.is-weekend {
+body.theme-2d-classic .day-cell.is-weekend,
+body.theme-pill-capsule .day-cell.is-weekend {
     background-color: rgba(239, 68, 68, 0.14) !important;
     color: #fca5a5 !important;
 }
 
 body.theme-3d-glass .task-title-cell,
 body.theme-3d-liquid .task-title-cell,
-body.theme-2d-classic .task-title-cell {
+body.theme-2d-classic .task-title-cell,
+body.theme-pill-capsule .task-title-cell {
     background: #0f172a !important;
     color: #f8fafc !important;
     border-right: 1px solid #1e293b !important;
@@ -2723,14 +2709,16 @@ body.theme-2d-classic .task-title-cell {
 
 body.theme-3d-glass .task-title-cell span:not(.mirror-dept-badge),
 body.theme-3d-liquid .task-title-cell span:not(.mirror-dept-badge),
-body.theme-2d-classic .task-title-cell span:not(.mirror-dept-badge) {
+body.theme-2d-classic .task-title-cell span:not(.mirror-dept-badge),
+body.theme-pill-capsule .task-title-cell span:not(.mirror-dept-badge) {
     color: #f8fafc !important;
     font-weight: 700 !important;
 }
 
 body.theme-3d-glass .task-title-cell small,
 body.theme-3d-liquid .task-title-cell small,
-body.theme-2d-classic .task-title-cell small {
+body.theme-2d-classic .task-title-cell small,
+body.theme-pill-capsule .task-title-cell small {
     color: #94a3b8 !important;
     border-left-color: #1e293b !important;
 }
@@ -2738,34 +2726,42 @@ body.theme-2d-classic .task-title-cell small {
 body.theme-3d-glass .gantt-header,
 body.theme-3d-liquid .gantt-header,
 body.theme-2d-classic .gantt-header,
+body.theme-pill-capsule .gantt-header,
 body.theme-3d-glass .gantt-task-head,
 body.theme-3d-liquid .gantt-task-head,
-body.theme-2d-classic .gantt-task-head {
+body.theme-2d-classic .gantt-task-head,
+body.theme-pill-capsule .gantt-task-head {
     background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
     color: #38bdf8 !important;
     border-bottom: 2px solid #334155 !important;
 }
-
 
 /* ==========================================================================
    MOBILE RESPONSIVE OVERRIDES FOR ALL UI THEME MODES
    ENSURES TASK BARS NEVER OVERFLOW ROW HEIGHT ON MOBILE PORTRAIT OR LANDSCAPE
    ========================================================================== */
 
-/* 1. Mobile Portrait Override (Max-Width 1024px or Mobile Mode) */
-@media screen and (max-width: 1024px), screen and (max-height: 650px), screen and (pointer: coarse), body.is-mobile-mode {
+/* 1. Mobile Portrait Override (Max-Width 768px or Mobile Mode) */
+@media screen and (max-width: 768px) {
     body .task-bar,
     body.theme-3d-glass .task-bar,
     body.theme-2d-flat .task-bar,
     body.theme-3d-liquid .task-bar,
-    body.theme-2d-classic .task-bar,
-    body.theme-pill-capsule .task-bar {
+    body.theme-2d-classic .task-bar {
         height: 20px !important;
         top: 5px !important;
         border-radius: 10px !important;
         font-size: 9px !important;
         padding: 0 6px !important;
         line-height: 20px !important;
+    }
+    body.theme-pill-capsule .task-bar {
+        height: 22px !important;
+        top: 4px !important;
+        border-radius: 9999px !important;
+        font-size: 9.5px !important;
+        padding: 0 10px !important;
+        line-height: 22px !important;
     }
 
     body .task-bar .handle,
@@ -2793,22 +2789,27 @@ body.theme-2d-classic .gantt-task-head {
     }
 }
 
-/* 2. Mobile Landscape Override (Max-Height 600px or Landscape Mobile Mode) */
-@media screen and (orientation: landscape) and (max-height: 600px),
-       screen and (orientation: landscape) and (pointer: coarse),
-       body.is-mobile-landscape {
+/* 2. Mobile Landscape Override (Max-Width 900px and landscape) */
+@media screen and (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
     body .task-bar,
     body.theme-3d-glass .task-bar,
     body.theme-2d-flat .task-bar,
     body.theme-3d-liquid .task-bar,
-    body.theme-2d-classic .task-bar,
-    body.theme-pill-capsule .task-bar {
+    body.theme-2d-classic .task-bar {
         height: 16px !important;
         top: 4px !important;
         border-radius: 8px !important;
         font-size: 8.5px !important;
         padding: 0 4px !important;
         line-height: 16px !important;
+    }
+    body.theme-pill-capsule .task-bar {
+        height: 18px !important;
+        top: 3px !important;
+        border-radius: 9999px !important;
+        font-size: 8.5px !important;
+        padding: 0 6px !important;
+        line-height: 18px !important;
     }
 
     body .task-bar .handle,
@@ -2951,18 +2952,26 @@ body.theme-2d-classic .gantt-task-head {
     z-index: 10001 !important;
 }
 #settings-dropdown-menu.settings-dropdown-menu {
+    display: none !important;
     position: absolute !important;
-    top: 100% !important;
+    top: calc(100% + 6px) !important;
     right: 0 !important;
-    margin-top: 6px !important;
+    margin-top: 0 !important;
     background: #ffffff !important;
     color: #0f172a !important;
     border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.25) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08) !important;
     z-index: 999999 !important;
-    min-width: 230px !important;
+    width: 240px !important;
+    min-width: 240px !important;
+    max-width: 250px !important;
     overflow: hidden !important;
+    padding: 4px 0 !important;
+}
+#settings-dropdown-menu.settings-dropdown-menu.show {
+    display: block !important;
+    animation: fadeInDropdown 0.15s ease-out !important;
 }
 #settings-dropdown-menu .settings-dropdown-item {
     padding: 8px 14px !important;
@@ -2974,10 +2983,11 @@ body.theme-2d-classic .gantt-task-head {
     color: #0f172a !important;
     background: #ffffff !important;
     cursor: pointer !important;
-    border-bottom: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    transition: background 0.15s, color 0.15s !important;
 }
 #settings-dropdown-menu .settings-dropdown-item:last-child {
     border-bottom: none !important;

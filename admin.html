@@ -828,18 +828,24 @@
             }
         }
 
+        const RESERVED_SUBDOMAINS = ["progress", "www", "app", "admin", "staging", "dev", "api", "mail", "cdn", "localhost"];
         function getSubdomainFromHost() {
             const urlParams = new URLSearchParams(window.location.search);
             const explicit = (urlParams.get("tenant") || urlParams.get("subdomain") || "").trim().toLowerCase();
             if (explicit) return explicit.replace(/-(pm|progress)$/i, "");
             const host = window.location.hostname.toLowerCase();
+            if (host.endsWith(".ltp-soft.com")) {
+                const sub = host.slice(0, -".ltp-soft.com".length);
+                if (sub && !RESERVED_SUBDOMAINS.includes(sub)) {
+                    return sub.replace(/-(pm|progress)$/i, "");
+                }
+            }
             const parts = host.split(".");
             if (parts.length >= 3) {
                 const sub = parts[0];
-                if (sub === "www" || sub === "progress" || sub === "staging" || sub === "app") {
-                    return "";
+                if (sub && !RESERVED_SUBDOMAINS.includes(sub)) {
+                    return sub.replace(/-(pm|progress)$/i, "");
                 }
-                return sub.replace(/-(pm|progress)$/i, "");
             }
             return "";
         }

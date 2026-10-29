@@ -7,6 +7,8 @@
 
 const ACCOUNTS_DB = [];
 
+const RESERVED_SUBDOMAINS = ["progress", "www", "app", "admin", "staging", "dev", "api", "mail", "cdn", "localhost"];
+
 function getHostSubdomain() {
     try {
         const params = new URLSearchParams(window.location.search);
@@ -15,7 +17,14 @@ function getHostSubdomain() {
         const host = (window.location.hostname || "").toLowerCase().split(":")[0];
         if (host.endsWith(".ltp-soft.com")) {
             const sub = host.slice(0, -".ltp-soft.com".length);
-            if (sub && !["progress", "www", "app", "admin"].includes(sub)) {
+            if (sub && !RESERVED_SUBDOMAINS.includes(sub)) {
+                return sub.replace(/-(pm|progress)$/i, "");
+            }
+        }
+        const parts = host.split(".");
+        if (parts.length >= 3) {
+            const sub = parts[0];
+            if (sub && !RESERVED_SUBDOMAINS.includes(sub)) {
                 return sub.replace(/-(pm|progress)$/i, "");
             }
         }

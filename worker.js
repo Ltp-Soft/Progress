@@ -580,10 +580,22 @@ async function resolveHostTenant(request, env) {
   const byCustom = await env.DB.prepare("SELECT * FROM tenants WHERE LOWER(custom_domain) = ?").bind(host).first();
   if (byCustom) return byCustom;
 
+  const RESERVED_SUBDOMAINS = ["progress", "www", "app", "admin", "staging", "dev", "api", "mail", "cdn"];
   const rootDomain = (env.ROOT_DOMAIN || "ltp-soft.com").toLowerCase();
   if (host.endsWith(`.${rootDomain}`)) {
     const sub = host.slice(0, -(rootDomain.length + 1));
-    if (sub && !["progress", "www", "app", "admin"].includes(sub)) {
+    if (sub && !RESERVED_SUBDOMAINS.includes(sub)) {
+      const cleanBaseSub = sub.replace(/-(pm|progress)$/i, "");
+      const bySub = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR subdomain = ?").bind(sub, cleanBaseSub).first();
+      if (bySub) return bySub;
+    }
+  }
+
+  // Also support general hostnames like mycompany-pm.pages.dev
+  const parts = host.split(".");
+  if (parts.length >= 3) {
+    const sub = parts[0];
+    if (sub && !RESERVED_SUBDOMAINS.includes(sub) && sub !== "localhost") {
       const cleanBaseSub = sub.replace(/-(pm|progress)$/i, "");
       const bySub = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR subdomain = ?").bind(sub, cleanBaseSub).first();
       if (bySub) return bySub;
@@ -2109,18 +2121,45 @@ export default {
         }
 
         // TENANT LOCK: on a company domain only that company's accounts can log in.
+        const reqSub = String(
+          subdomain ||
+          request.headers.get("X-Tenant") ||
+          request.headers.get("x-tenant") ||
+          url.searchParams.get("tenant") ||
+          url.searchParams.get("subdomain") ||
+          ""
+        ).trim().toLowerCase();
+
         let targetTenant = hostTenant || null;
-        if (!targetTenant && subdomain) {
-          const cleanSub = String(subdomain).trim().toLowerCase().replace(/-(pm|progress)$/i, "");
+        if (!targetTenant && reqSub) {
+          const cleanSub = reqSub.replace(/-(pm|progress)$/i, "");
           targetTenant = await env.DB.prepare("SELECT * FROM tenants WHERE subdomain = ? OR id = ?").bind(cleanSub, cleanSub).first();
         }
 
         const matchSql = "(LOWER(username) = LOWER(?) OR LOWER(id) = LOWER(?) OR (email != '' AND LOWER(email) = LOWER(?)) OR (phone != '' AND phone = ?))";
         let candidates = [];
         if (targetTenant) {
-          const { results } = await env.DB.prepare(`SELECT * FROM users WHERE tenant_id = ? AND ${matchSql}`)
-            .bind(targetTenant.id, cleanUser, cleanUser, cleanUser, cleanUser).all();
+          const { results } = await env.DB.prepare(`SELECT * FROM users WHERE (tenant_id = ? OR tenant_id = ?) AND ${matchSql}`)
+            .bind(targetTenant.id, targetTenant.subdomain, cleanUser, cleanUser, cleanUser, cleanUser).all();
           candidates = results || [];
+
+          // Resilient fallback: If user not found in targetTenant, check if valid user exists with this password and resolve their tenant
+          if (candidates.length === 0) {
+            const { results: globalCandidates } = await env.DB.prepare(`SELECT * FROM users WHERE ${matchSql}`)
+              .bind(cleanUser, cleanUser, cleanUser, cleanUser).all();
+            if (globalCandidates && globalCandidates.length > 0) {
+              for (const cand of globalCandidates) {
+                if (await verifyPassword(cleanPass, cand.password_hash, cand.pass)) {
+                  const candTenant = await env.DB.prepare("SELECT * FROM tenants WHERE id = ? OR subdomain = ?").bind(cand.tenant_id, cand.tenant_id).first();
+                  if (candTenant) {
+                    targetTenant = candTenant;
+                    candidates = [cand];
+                    break;
+                  }
+                }
+              }
+            }
+          }
         } else {
           // Shared root domain (no company subdomain): look the account up across companies.
           const { results } = await env.DB.prepare(`SELECT * FROM users WHERE ${matchSql}`)
@@ -2143,8 +2182,8 @@ export default {
           return jsonResp({ error: "Mật khẩu không đúng!" }, 401);
         }
 
-        if (!targetTenant || targetTenant.id !== userRow.tenant_id) {
-          targetTenant = await env.DB.prepare("SELECT * FROM tenants WHERE id = ?").bind(userRow.tenant_id).first();
+        if (!targetTenant || (targetTenant.id !== userRow.tenant_id && targetTenant.subdomain !== userRow.tenant_id)) {
+          targetTenant = await env.DB.prepare("SELECT * FROM tenants WHERE id = ? OR subdomain = ?").bind(userRow.tenant_id, userRow.tenant_id).first();
         }
         if (!targetTenant) {
           return jsonResp({ error: "Tài khoản không thuộc công ty nào đang hoạt động!" }, 403);
@@ -2154,22 +2193,20 @@ export default {
           return jsonResp({ error: "Tài khoản này đã bị Admin tạm khóa hoặc thu hồi. Vui lòng liên hệ Quản trị viên!" }, 403);
         }
 
-        if (Number(userRow.is_active) === 2 || userRow.role === "WAITING") {
-          return jsonResp({ error: `Tài khoản "${userRow.full_name || userRow.username}" đang trong phòng chờ duyệt. Vui lòng liên hệ Admin phê duyệt để vào Bảng Tiến Độ!` }, 403);
-        }
+        const isWaitingUser = Number(userRow.is_active) === 2 || userRow.role === "WAITING";
 
         const sessionPayload = {
           id: userRow.id,
           username: userRow.username || userRow.id,
           fullName: userRow.full_name || userRow.username || userRow.id,
           avatarUrl: userRow.avatar_url || "",
-          role: userRow.role,
+          role: isWaitingUser ? "WAITING" : userRow.role,
           dept: userRow.dept,
           deptTags: JSON.parse(userRow.dept_tags || "[]"),
           prefix: userRow.prefix || "C",
           taskPermissionMode: userRow.task_permission_mode || "REPORT_ONLY",
           managedProjectIds: JSON.parse(userRow.managed_project_ids || "[]"),
-          isWaiting: false,
+          isWaiting: isWaitingUser,
           tenantId: targetTenant.id,
           subdomain: targetTenant.subdomain,
           companyName: targetTenant.company_name,
@@ -2178,7 +2215,9 @@ export default {
 
         const token = await signJwt(env, sessionPayload);
         return jsonResp({
-          status: "success",
+          status: isWaitingUser ? "waiting" : "success",
+          isWaiting: isWaitingUser,
+          statusLabel: isWaitingUser ? "WAITING_ROOM" : "ACTIVE",
           token,
           user: sessionPayload,
           tenant: {
@@ -2686,8 +2725,10 @@ export default {
     // Strictly restricted to ADMIN & SUPER_ADMIN only (Never DEPT_ADMIN or STAFF)
     // ========================================================================
     const isCompanyAdmin = authUser.role === "ADMIN" || authUser.role === "SUPER_ADMIN";
-    if (!isCompanyAdmin) {
-      return jsonResp({ error: "🔒 Chỉ Quản trị viên (Admin) mới có quyền truy cập trang quản trị hệ thống!" }, 403);
+    if (url.pathname.startsWith("/api/admin/")) {
+      if (!isCompanyAdmin) {
+        return jsonResp({ error: "🔒 Chỉ Quản trị viên (Admin) mới có quyền truy cập trang quản trị hệ thống!" }, 403);
+      }
     }
 
     if (url.pathname === "/api/admin/overview" && request.method === "GET") {

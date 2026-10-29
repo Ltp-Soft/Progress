@@ -314,14 +314,6 @@ class GanttCore {
                     if (data.directoryUsers && Array.isArray(data.directoryUsers)) {
                         this.directoryUsers = data.directoryUsers;
                         window.directoryUsers = data.directoryUsers;
-                        const dirNames = data.directoryUsers.map(u => u.fullName || u.username).filter(Boolean);
-                        if (data.projects && Array.isArray(data.projects)) {
-                            data.projects.forEach(p => {
-                                if (p && Array.isArray(p.staffs)) {
-                                    p.staffs = Array.from(new Set([...p.staffs, ...dirNames])).filter(Boolean);
-                                }
-                            });
-                        }
                     }
                     if (data.tenant) {
                         this.updateWorkspaceBranding(data.tenant);
@@ -1121,8 +1113,13 @@ class GanttCore {
 
     setQuickFilter(mode = 'ALL') {
         this.staffQuickFilter = mode;
-        ["ALL", "MY_TASKS", "OVERDUE"].forEach(m => {
-            const el = document.getElementById("qfilter-btn-" + m);
+        const filterMap = {
+            'ALL': 'qfilter-all',
+            'MY_TASKS': 'qfilter-mine',
+            'OVERDUE': 'qfilter-overdue'
+        };
+        Object.keys(filterMap).forEach(m => {
+            const el = document.getElementById(filterMap[m]) || document.getElementById("qfilter-btn-" + m);
             if (el) {
                 if (m === mode) {
                     el.classList.add("active");
@@ -1134,39 +1131,159 @@ class GanttCore {
         this.renderGantt();
     }
 
+    isUserAssignedToTask(t, user) {
+        if (!t || !user || user.role === "GUEST") return false;
+        const userTokens = [
+            user.fullName,
+            user.displayName,
+            user.name,
+            user.username,
+            user.id
+        ].filter(Boolean).map(s => String(s).trim().toLowerCase());
+
+        const staffVal = String(t.staff || "").trim().toLowerCase();
+        if (staffVal && staffVal !== "chưa phân công" && staffVal !== "chưa giao" && staffVal !== "-- chọn danh sách --") {
+            const parts = staffVal.split(',').map(p => p.trim());
+            for (const p of parts) {
+                if (!p) continue;
+                for (const uTok of userTokens) {
+                    if (p === uTok || p.includes(uTok) || uTok.includes(p)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Also match if user created this task
+        if (t.createdBy && userTokens.includes(String(t.createdBy).trim().toLowerCase())) return true;
+        if (t.createdByUserId && userTokens.includes(String(t.createdByUserId).trim().toLowerCase())) return true;
+
+        return false;
+    }
+
+    getTaskContextLabel(t, prj) {
+        if (!t) return "";
+        let tag = t.projectTag;
+        if (tag && tag !== "Hạng mục chung" && tag !== "[object Object]") {
+            if (typeof tag === "object" && tag.name) return tag.name;
+            if (typeof tag === "string" && tag.trim()) return tag.trim();
+        }
+        const rawDept = t.dept || (typeof getDeptFromCodeIn === "function" ? getDeptFromCodeIn(t.codeIn) : "");
+        if (rawDept && window.DEPARTMENTS) {
+            const found = window.DEPARTMENTS.find(d => 
+                typeof window.areDeptsMatching === "function" 
+                    ? window.areDeptsMatching(d.id || d.code || d.name, rawDept) 
+                    : (d.id === rawDept || d.code === rawDept)
+            );
+            if (found && found.name) return found.name;
+        }
+        if (rawDept) return rawDept;
+        return prj ? prj.name : "";
+    }
+
     openManageStaffsModal() {
         const prj = this.getCurrentProject();
         if (!prj) return;
 
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
-        const canManage = user.role === "ADMIN" || user.role === "PROJECT_ADMIN" || user.role === "DEPT_ADMIN";
+        const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+        const isDeptAdmin = user.role === "DEPT_ADMIN";
+        const canManage = isAdmin || isDeptAdmin || user.role === "PROJECT_ADMIN";
         if (!canManage) {
-            alert("🔒 Chỉ Quản trị viên (Admin) hoặc Trưởng Phòng mới có quyền quản lý & xóa nhân sự!");
+            alert("🔒 Chỉ Quản trị viên (Admin) hoặc Trưởng Phòng mới có quyền quản lý & phân công nhân sự!");
             return;
         }
 
         const listContainer = document.getElementById("manage-staffs-list-container");
         if (!listContainer) return;
 
+        const dirUsers = window.directoryUsers || [];
+        const findDirUser = (st) => {
+            if (!st || st === "Chưa Phân Công") return null;
+            const s = String(st).trim().toLowerCase();
+            return dirUsers.find(u => {
+                const uFull = String(u.fullName || "").trim().toLowerCase();
+                const uName = String(u.username || "").trim().toLowerCase();
+                const uId = String(u.id || "").trim().toLowerCase();
+                return (uFull && uFull === s) || (uName && uName === s) || (uId && uId === s);
+            }) || null;
+        };
+
         if (!prj.staffs) prj.staffs = [];
         if (!prj.staffs.includes("Chưa Phân Công")) {
             prj.staffs.unshift("Chưa Phân Công");
         }
 
-        listContainer.innerHTML = prj.staffs.map(st => {
+        let visibleStaffs = [];
+        if (isAdmin) {
+            visibleStaffs = [...prj.staffs];
+        } else if (isDeptAdmin) {
+            const myDept = user.dept;
+            visibleStaffs = prj.staffs.filter(st => {
+                if (st === "Chưa Phân Công") return true;
+                const du = findDirUser(st);
+                if (!du) return true;
+                // Strict: Trưởng phòng không thấy Admin hoặc nhân sự phòng khác
+                if (du.role === "ADMIN" || du.role === "SUPER_ADMIN") return false;
+                return typeof window.areDeptsMatching === "function"
+                    ? window.areDeptsMatching(du.department || du.dept, myDept)
+                    : String(du.department || du.dept || '').toUpperCase() === String(myDept || '').toUpperCase();
+            });
+
+            // Ensure all members of this department from directory are present
+            dirUsers.forEach(u => {
+                if (u.role === "ADMIN" || u.role === "SUPER_ADMIN") return;
+                const isMatch = typeof window.areDeptsMatching === "function"
+                    ? window.areDeptsMatching(u.department || u.dept, myDept)
+                    : String(u.department || u.dept || '').toUpperCase() === String(myDept || '').toUpperCase();
+                if (isMatch) {
+                    const uName = u.fullName || u.username;
+                    if (uName && !visibleStaffs.some(s => s.trim().toLowerCase() === uName.trim().toLowerCase())) {
+                        visibleStaffs.push(uName);
+                        if (!prj.staffs.includes(uName)) prj.staffs.push(uName);
+                    }
+                }
+            });
+        }
+
+        listContainer.innerHTML = visibleStaffs.map(st => {
             const isUnassigned = st === "Chưa Phân Công";
             const taskCount = prj.tasks ? prj.tasks.filter(t => (t.staff || "").trim().toLowerCase() === st.trim().toLowerCase()).length : 0;
-            
+            const du = findDirUser(st);
+
+            let canDelete = false;
+            if (!isUnassigned) {
+                if (isAdmin) {
+                    canDelete = !(du && (du.role === "ADMIN" || du.role === "SUPER_ADMIN"));
+                } else if (isDeptAdmin) {
+                    const isSelf = du && (du.id === user.id || du.username === user.username || du.fullName === user.fullName);
+                    const isOtherDeptAdmin = du && du.role === "DEPT_ADMIN";
+                    const isTargetAdmin = du && (du.role === "ADMIN" || du.role === "SUPER_ADMIN");
+                    canDelete = !isSelf && !isOtherDeptAdmin && !isTargetAdmin;
+                }
+            }
+
+            let roleBadge = "";
+            if (du) {
+                if (du.role === "ADMIN" || du.role === "SUPER_ADMIN") {
+                    roleBadge = `<span style="font-size:9.5px; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:4px; padding:1px 4px; font-weight:700;">Admin</span>`;
+                } else if (du.role === "DEPT_ADMIN") {
+                    roleBadge = `<span style="font-size:9.5px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:4px; padding:1px 4px; font-weight:700;">Trưởng Phòng</span>`;
+                } else {
+                    roleBadge = `<span style="font-size:9.5px; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:4px; padding:1px 4px;">Nhân Viên</span>`;
+                }
+            }
+
             return `
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px; border-bottom:1px solid #e2e8f0; font-size:12px; background:${isUnassigned ? '#f1f5f9' : '#ffffff'};">
-                    <span style="font-weight:${isUnassigned ? '700' : '500'}; color:${isUnassigned ? '#64748b' : '#1e293b'};">
-                        👤 ${st} <small style="color:#94a3b8;">(${taskCount} jobs)</small>
+                    <span style="font-weight:${isUnassigned ? '700' : '500'}; color:${isUnassigned ? '#64748b' : '#1e293b'}; display:inline-flex; align-items:center; gap:6px;">
+                        👤 ${st} ${roleBadge} <small style="color:#94a3b8;">(${taskCount} jobs)</small>
                     </span>
-                    ${!isUnassigned ? `
-                        <button class="btn btn-danger" style="padding:2px 8px; font-size:10.5px; font-weight:700;" onclick="ganttCore.reassignAndDeleteStaff('${st}')" title="Chuyển toàn bộ task sang Chưa Phân Công và Xóa Nhân Viên">
+                    ${canDelete ? `
+                        <button class="btn btn-danger" style="padding:2px 8px; font-size:10.5px; font-weight:700;" onclick="ganttCore.reassignAndDeleteStaff('${st.replace(/'/g, "\\'")}')" title="Chuyển toàn bộ task sang Chưa Phân Công và Xóa Nhân Viên">
                             [Move / Xóa NV]
                         </button>
-                    ` : `<span style="font-size:10px; color:#94a3b8; font-style:italic;">Mặc định</span>`}
+                    ` : `<span style="font-size:10px; color:#94a3b8; font-style:italic;">${isUnassigned ? 'Mặc định' : (du?.role === 'DEPT_ADMIN' || du?.role === 'ADMIN' ? 'Không thể xóa' : '')}</span>`}
                 </div>`;
         }).join('');
 
@@ -1178,10 +1295,39 @@ class GanttCore {
         if (!prj || !prj.staffs) return;
 
         const user = window.authMgr ? window.authMgr.getCurrentUser() : { role: "GUEST" };
-        const canManage = user.role === "ADMIN" || user.role === "PROJECT_ADMIN" || user.role === "DEPT_ADMIN";
-        if (!canManage) {
+        const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+        const isDeptAdmin = user.role === "DEPT_ADMIN";
+        if (!isAdmin && !isDeptAdmin && user.role !== "PROJECT_ADMIN") {
             alert("🔒 Chỉ Quản trị viên (Admin) hoặc Trưởng Phòng mới có quyền xóa nhân sự khỏi dự án!");
             return;
+        }
+
+        const dirUsers = window.directoryUsers || [];
+        const du = dirUsers.find(u => {
+            const s = String(staffName).trim().toLowerCase();
+            return (u.fullName && u.fullName.trim().toLowerCase() === s) ||
+                   (u.username && u.username.trim().toLowerCase() === s) ||
+                   (u.id && u.id.trim().toLowerCase() === s);
+        });
+
+        if (du) {
+            if (du.role === "ADMIN" || du.role === "SUPER_ADMIN") {
+                alert("⛔ Không thể xóa tài khoản Quản trị viên (Admin) khỏi dự án!");
+                return;
+            }
+            if (isDeptAdmin) {
+                if (du.role === "DEPT_ADMIN") {
+                    alert("⛔ Trưởng phòng không thể xóa tài khoản Trưởng phòng khác hoặc chính mình!");
+                    return;
+                }
+                const isMatch = typeof window.areDeptsMatching === "function"
+                    ? window.areDeptsMatching(du.department || du.dept, user.dept)
+                    : String(du.department || du.dept || '').toUpperCase() === String(user.dept || '').toUpperCase();
+                if (!isMatch) {
+                    alert("⛔ Bạn chỉ có quyền quản lý và xóa nhân viên thuộc phòng ban của mình!");
+                    return;
+                }
+            }
         }
 
         if (!confirm(`Bạn có chắc muốn xóa nhân viên "${staffName}"? Tất cả công việc của nhân viên này sẽ được chuyển sang "Chưa Phân Công".`)) {
@@ -1764,7 +1910,20 @@ class GanttCore {
         }
 
         let groups = [];
-        if (isDeptJob) {
+        const qFilter = this.staffQuickFilter || "ALL";
+
+        if (qFilter === "MY_TASKS" && user && user.role !== "GUEST") {
+            const myName = user.fullName || user.displayName || user.name || user.username || "Tôi";
+            groups = [{
+                id: "MY_TASKS_GROUP",
+                name: `👤 VIỆC CỦA TÔI: ${myName} — DỰ ÁN: ${prj.name}`,
+                class: "dept-tag-style-0",
+                isMyTasksGroup: true
+            }];
+            if (staffHeadCol) {
+                staffHeadCol.innerText = "Bộ Phận / Hạng Mục";
+            }
+        } else if (isDeptJob) {
             if (this.ganttViewMode === 'STAFF') {
                 if (!prj.staffs) prj.staffs = [];
                 if (!prj.staffs.includes("Chưa Phân Công")) prj.staffs.unshift("Chưa Phân Công");
@@ -1869,18 +2028,13 @@ class GanttCore {
                 const showMirrors = (this.workspace && this.workspace.showMirrorTasks !== false);
                 if (t.isMirror && !showMirrors) return false;
 
-                // 3. Quick Filter (ALL | MY_TASKS | OVERDUE)
-                const qFilter = this.staffQuickFilter || "ALL";
-                if (qFilter === "MY_TASKS" && user) {
-                    const uName = String(user.name || user.id || "").trim().toLowerCase();
-                    const uId = String(user.id || "").trim().toLowerCase();
-                    const st = String(t.staff || "").trim().toLowerCase();
-                    const tDept = String(t.dept || getDeptFromCodeIn(t.codeIn) || "").toUpperCase();
-                    const uDept = String(user.dept || "").toUpperCase();
-                    const matchName = (uName && st.includes(uName)) || (uId && st.includes(uId));
-                    const matchDept = (uDept && uDept !== "ALL" && tDept === uDept);
-                    if (!matchName && !matchDept) return false;
-                } else if (qFilter === "OVERDUE") {
+                // Mode "Việc của tôi" (My Tasks quick filter)
+                if (group.isMyTasksGroup) {
+                    return this.isUserAssignedToTask(t, user);
+                }
+
+                // 3. Quick Filter (ALL | OVERDUE)
+                if (qFilter === "OVERDUE") {
                     if (t.isCompleted || !t.end || t.end >= todayStr) return false;
                 }
 
@@ -1941,7 +2095,12 @@ class GanttCore {
                 }
             }
 
-            const canManageTag = !isViewingD2D && isDeptJob && this.ganttViewMode === 'TAG' && (user.role === "ADMIN" || user.role === "DEPT_ADMIN" || this.isProjectOwner(prj));
+            if (group.isMyTasksGroup) {
+                syncBtnHtml = "";
+                deleteDeptTasksBtnHtml = "";
+            }
+
+            const canManageTag = !group.isMyTasksGroup && !isViewingD2D && isDeptJob && this.ganttViewMode === 'TAG' && (user.role === "ADMIN" || user.role === "DEPT_ADMIN" || this.isProjectOwner(prj));
 
             // Check if viewer can mirror copy this tag (via D2D or Admin)
             const canMirrorTag = isDeptJob && this.ganttViewMode === 'TAG' && (user.role === "ADMIN" || isViewingD2D);
@@ -1993,6 +2152,14 @@ class GanttCore {
             container.insertAdjacentHTML('beforeend', deptHeaderHtml);
 
             if (isExpanded) {
+                if (group.isMyTasksGroup && deptTasks.length === 0) {
+                    const emptyRowHtml = `
+                        <div class="gantt-unified-row" style="width:${totalRowW}px; min-width:${totalRowW}px; padding:18px; text-align:center; background:#f8fafc; font-size:12px; color:#64748b; font-style:italic; border-bottom:1px solid #e2e8f0;">
+                            ✨ Bạn hiện chưa có công việc nào được phân công trong dự án "${prj.name}".
+                        </div>`;
+                    container.insertAdjacentHTML('beforeend', emptyRowHtml);
+                }
+
                 deptTasks.forEach(t => {
                     try {
                         const maskedTask = window.authMgr.maskTaskForUser(t, user);
@@ -2068,13 +2235,26 @@ class GanttCore {
                             return tag || "Hạng mục chung";
                         };
 
-                        const staffCellText = (isDeptJob && this.ganttViewMode === 'STAFF') ? getTaskTag(t) : (maskedTask.staff || "Chưa giao");
+                        let staffCellText = (isDeptJob && this.ganttViewMode === 'STAFF') ? getTaskTag(t) : (maskedTask.staff || "Chưa giao");
+                        if (group.isMyTasksGroup) {
+                            staffCellText = this.getTaskContextLabel(t, prj);
+                        }
                         const staffAvatarUrl = this.getStaffAvatar(maskedTask.staff);
                         const mirrorBadge = t.isMirror ? `<span style="display:inline-flex; align-items:center; margin-right:3px; vertical-align:middle; color:#0284c7;" title="Task phản chiếu D2D (Mirror)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></span>` : "";
                         let deptBadgeHtml = "";
                         if (t.isMirror && t.sourceDept) {
                             deptBadgeHtml = `<span class="mirror-dept-badge" title="Nguồn: Phòng ban ${t.sourceDept}">${t.sourceDept}</span>`;
                         }
+
+                        const staffInfoBlockHtml = group.isMyTasksGroup ? `
+                            <div style="display:inline-flex; align-items:center; gap:4px; max-width:115px; width:115px; min-width:115px; border-left:1px solid #f1f5f9; padding-left:4px; overflow:hidden;" title="Bộ phận / Hạng mục: ${staffCellText}">
+                                <span style="font-size:11px;">🏷️</span>
+                                <small style="color:#0284c7; font-weight:700; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${staffCellText}</small>
+                            </div>` : `
+                            <div style="display:inline-flex; align-items:center; gap:4px; max-width:95px; width:95px; min-width:95px; border-left:1px solid #f1f5f9; padding-left:4px; overflow:hidden;" title="Người phụ trách: ${staffCellText}">
+                                <img src="${staffAvatarUrl}" alt="${staffCellText}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(0,0,0,0.12);" onerror="this.src='https://ui-avatars.com/api/?name=%3F&background=475569&color=fff&size=40';">
+                                <small style="color:#64748b; font-weight:600; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${staffCellText}</small>
+                            </div>`;
 
                         const rowHtml = `
                             <div class="gantt-unified-row" style="width:${totalRowW}px; min-width:${totalRowW}px;"
@@ -2084,10 +2264,7 @@ class GanttCore {
                                     ${mirrorBadge}
                                     ${deptBadgeHtml}
                                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; padding-right:4px;">${maskedTask.name}</span>
-                                    <div style="display:inline-flex; align-items:center; gap:4px; max-width:95px; width:95px; min-width:95px; border-left:1px solid #f1f5f9; padding-left:4px; overflow:hidden;" title="Người phụ trách: ${staffCellText}">
-                                        <img src="${staffAvatarUrl}" alt="${staffCellText}" style="width:16px; height:16px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(0,0,0,0.12);" onerror="this.src='https://ui-avatars.com/api/?name=%3F&background=475569&color=fff&size=40';">
-                                        <small style="color:#64748b; font-weight:600; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${staffCellText}</small>
-                                    </div>
+                                    ${staffInfoBlockHtml}
                                 </div>
                                 <div class="timeline-cell-grid" style="width:${totalTimelineW}px; min-width:${totalTimelineW}px;">
                                     ${gridCellsHtml}
@@ -2099,7 +2276,7 @@ class GanttCore {
                                         ${todayProgressBadgeHtml}
                                         <span style="overflow:hidden; text-overflow:ellipsis; display:inline-flex; align-items:center; gap:4px;">
                                             ${t.isMirror ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' : ''}
-                                            <img src="${staffAvatarUrl}" title="Phụ trách: ${staffCellText}" alt="${staffCellText}" style="width:15px; height:15px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 2px rgba(0,0,0,0.2);" onerror="this.style.display='none';">
+                                            ${group.isMyTasksGroup ? `<span style="font-size:10px; font-weight:700; color:#eff6ff; background:rgba(0,0,0,0.25); padding:1px 4px; border-radius:3px; flex-shrink:0;">🏷️ ${staffCellText}</span>` : `<img src="${staffAvatarUrl}" title="Phụ trách: ${staffCellText}" alt="${staffCellText}" style="width:15px; height:15px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(255,255,255,0.8); box-shadow:0 1px 2px rgba(0,0,0,0.2);" onerror="this.style.display='none';">`}
                                             <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${maskedTask.name}</span>
                                         </span>
                                         ${attachmentIconHtml}

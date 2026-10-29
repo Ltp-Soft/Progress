@@ -1197,14 +1197,57 @@
 
         // BUTTON VISIBILITY & GUEST MODE CONTROLS
         function updateRoleBadge(user) {
-            const badge = document.getElementById("role-badge-display");
-            if (badge) {
-                badge.innerText = `ROLE: ${user.role} (${user.dept})`;
-                badge.style.display = "none";
+            const isGuest = window.authMgr.isGuest();
+            const isAdmin = window.authMgr.isAdmin();
+            const isDeptAdmin = window.authMgr.isDeptAdmin();
+            const isStaff = window.authMgr.isStaff();
+
+            const roleContainer = document.getElementById("user-role-badge-container");
+            if (roleContainer) {
+                if (isGuest || user.role === "GUEST") {
+                    roleContainer.innerHTML = `
+                        <i data-lucide="user" size="13" style="color:#94a3b8;"></i>
+                        <span id="user-display-name" style="color:#cbd5e1; font-weight:600; font-size:11px;">Khách (Chỉ Xem)</span>
+                        <span class="role-tag" id="role-badge-display" style="background:#475569; color:#cbd5e1; font-size:9px; padding:1px 5px; border-radius:4px; font-weight:700;">GUEST</span>
+                    `;
+                } else {
+                    const displayName = user.fullName || user.displayName || user.name || user.username || user.id || "Nhân viên";
+                    const userDept = user.department || user.dept || "";
+                    let deptPillHtml = "";
+                    if (userDept && userDept !== "ALL" && userDept !== "NONE") {
+                        const deptsList = window.DEPARTMENTS || [];
+                        const deptObj = deptsList.find(d => 
+                            typeof window.areDeptsMatching === "function" 
+                                ? window.areDeptsMatching(d.id || d.code || d.name, userDept) 
+                                : (d.id === userDept || d.code === userDept)
+                        );
+                        const deptName = deptObj ? deptObj.name : userDept;
+                        const deptColor = deptObj?.color || "#2563eb";
+                        deptPillHtml = `<span class="user-dept-pill" style="background:${deptColor}; color:#ffffff; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:10px; display:inline-flex; align-items:center; gap:3px; box-shadow:0 1px 2px rgba(0,0,0,0.25);" title="Bộ phận: ${deptName}">🏢 ${deptName}</span>`;
+                    }
+
+                    let roleBadgeHtml = "";
+                    if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
+                        roleBadgeHtml = `<span class="user-role-pill" style="background:#dc2626; color:#ffffff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:10px; text-transform:uppercase; box-shadow:0 1px 3px rgba(220,38,38,0.4);">👑 Admin</span>`;
+                    } else if (user.role === "DEPT_ADMIN") {
+                        roleBadgeHtml = `<span class="user-role-pill" style="background:#0284c7; color:#ffffff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; box-shadow:0 1px 3px rgba(2,132,199,0.4);">⭐ Trưởng Phòng</span>`;
+                    } else if (user.role === "STAFF") {
+                        roleBadgeHtml = `<span class="user-role-pill" style="background:#10b981; color:#ffffff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; box-shadow:0 1px 3px rgba(16,185,129,0.4);">👤 Nhân Viên</span>`;
+                    } else if (user.role === "BOSS") {
+                        roleBadgeHtml = `<span class="user-role-pill" style="background:#8b5cf6; color:#ffffff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:10px; box-shadow:0 1px 3px rgba(139,92,246,0.4);">👔 BGĐ</span>`;
+                    }
+
+                    const avatarUrl = user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=2563eb&color=fff&size=40`;
+
+                    roleContainer.innerHTML = `
+                        <img src="${avatarUrl}" alt="${displayName}" style="width:20px; height:20px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.4); flex-shrink:0;" onerror="this.src='https://ui-avatars.com/api/?name=%3F&background=475569&color=fff&size=40';">
+                        <span id="user-display-name" style="font-size:12px; font-weight:700; color:#f8fafc; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${displayName}">${displayName}</span>
+                        ${deptPillHtml}
+                        ${roleBadgeHtml}
+                    `;
+                }
+                if (window.lucide) lucide.createIcons();
             }
-            
-            const userDisp = document.getElementById("user-display-name");
-            if (userDisp) userDisp.innerText = user.role === "GUEST" ? "GUEST" : (user.id || user.role);
 
             const canCreate = window.authMgr.canCreateProject();
             const isGuest = window.authMgr.isGuest();
@@ -2828,9 +2871,60 @@
             const user = window.authMgr.getCurrentUser();
 
             const staffSelect = document.getElementById("task-staff-select");
-            const directoryNames = (window.directoryUsers || []).map(u => u.fullName || u.username).filter(Boolean);
-            const combinedStaffs = Array.from(new Set([...(prj.staffs || []), ...directoryNames])).filter(Boolean);
-            staffSelect.innerHTML = `<option value="">-- Chọn danh sách --</option>` + combinedStaffs.map(s => `<option value="${s}">${s}</option>`).join('');
+            const dirUsers = window.directoryUsers || [];
+            const userNames = [user.name, user.fullName, user.username, user.id, user.displayName]
+                .filter(Boolean)
+                .map(s => String(s).trim().toLowerCase());
+
+            let availableStaffs = [];
+
+            if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
+                const dirNames = dirUsers.map(u => u.fullName || u.username).filter(Boolean);
+                availableStaffs = Array.from(new Set([...(prj.staffs || []), ...dirNames])).filter(Boolean);
+            } else {
+                // Trưởng phòng & Nhân viên: CHỈ hiển thị thành viên mang thẻ của phòng mình hoặc chính mình
+                const myDept = user.dept;
+                const deptMembers = dirUsers.filter(u => {
+                    if (u.role === "ADMIN" || u.role === "SUPER_ADMIN") return false;
+                    return typeof window.areDeptsMatching === "function"
+                        ? window.areDeptsMatching(u.department || u.dept, myDept)
+                        : String(u.department || u.dept || '').toUpperCase() === String(myDept || '').toUpperCase();
+                }).map(u => u.fullName || u.username).filter(Boolean);
+
+                const myName = user.fullName || user.displayName || user.name || user.username;
+                if (myName && !deptMembers.includes(myName)) {
+                    deptMembers.unshift(myName);
+                }
+
+                // Filter prj.staffs to strictly exclude other departments and Admins
+                const validPrjStaffs = (prj.staffs || []).filter(st => {
+                    if (!st || st === "Chưa Phân Công") return false;
+                    const du = dirUsers.find(u => {
+                        const s = st.trim().toLowerCase();
+                        return (u.fullName && u.fullName.trim().toLowerCase() === s) ||
+                               (u.username && u.username.trim().toLowerCase() === s) ||
+                               (u.id && u.id.trim().toLowerCase() === s);
+                    });
+                    if (du) {
+                        if (du.role === "ADMIN" || du.role === "SUPER_ADMIN") return false;
+                        return typeof window.areDeptsMatching === "function"
+                            ? window.areDeptsMatching(du.department || du.dept, myDept)
+                            : String(du.department || du.dept || '').toUpperCase() === String(myDept || '').toUpperCase();
+                    }
+                    return false;
+                });
+
+                availableStaffs = Array.from(new Set([...deptMembers, ...validPrjStaffs])).filter(Boolean);
+            }
+
+            let staffOptionsHtml = `<option value="">-- Chưa Phân Công --</option>`;
+            availableStaffs.forEach(s => {
+                if (!s || s === "Chưa Phân Công") return;
+                const isSelf = userNames.some(n => n && s.toLowerCase().includes(n));
+                const label = isSelf ? `👤 ${s} (Tôi)` : `👤 ${s}`;
+                staffOptionsHtml += `<option value="${s}">${label}</option>`;
+            });
+            staffSelect.innerHTML = staffOptionsHtml;
 
             const btnDelete = document.getElementById("btn-delete-task");
             const btnSave = document.getElementById("btn-save-task");
@@ -2871,7 +2965,15 @@
                 document.getElementById("task-name").value = t.name;
                 document.getElementById("task-code-in").value = t.codeIn || "";
                 document.getElementById("task-code-out").value = t.codeOut || "";
-                document.getElementById("task-staff-input").value = t.staff;
+                document.getElementById("task-staff-input").value = t.staff || "";
+                if (t.staff) {
+                    if (![...staffSelect.options].some(opt => opt.value === t.staff)) {
+                        staffSelect.insertAdjacentHTML('beforeend', `<option value="${t.staff}">👤 ${t.staff}</option>`);
+                    }
+                    staffSelect.value = t.staff;
+                } else {
+                    staffSelect.value = "";
+                }
                 document.getElementById("task-start").value = t.start;
                 const startTimeEl = document.getElementById("task-start-time");
                 if (startTimeEl) startTimeEl.value = t.startTime || "";
@@ -2966,7 +3068,11 @@
                 document.getElementById("task-name").value = "";
                 document.getElementById("task-code-in").value = prefix + Math.floor(1000 + Math.random() * 9000);
                 document.getElementById("task-code-out").value = "";
-                document.getElementById("task-staff-input").value = (user.role === "STAFF" ? (user.displayName || user.username) : (prj.staffs[0] || ""));
+                const defaultStaff = (user.role === "STAFF" || user.role === "DEPT_ADMIN")
+                    ? (user.fullName || user.displayName || user.username || user.name || "")
+                    : "";
+                document.getElementById("task-staff-input").value = defaultStaff;
+                staffSelect.value = defaultStaff || "";
                 document.getElementById("task-start").value = prj.startRange;
                 const startTimeEl = document.getElementById("task-start-time");
                 if (startTimeEl) startTimeEl.value = "";

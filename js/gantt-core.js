@@ -1522,6 +1522,27 @@ class GanttCore {
         return "status-pending";
     }
 
+    getStaffActiveTasksCount(staffName, project = null) {
+        if (!staffName || staffName === "Chưa Phân Công" || staffName === "Chưa giao") return 0;
+        const sName = String(staffName).trim().toLowerCase();
+        const prjs = project ? [project] : ((this.workspace && Array.isArray(this.workspace.projects)) ? this.workspace.projects : []);
+        let count = 0;
+        prjs.forEach(p => {
+            if (!p || p.status === "ARCHIVED" || !Array.isArray(p.tasks)) return;
+            p.tasks.forEach(t => {
+                // Chỉ tính task ĐANG LÀM: đã xong (isCompleted/progress=100) hoặc chưa làm (chưa bắt đầu/progress=0) thì KHÔNG TÍNH!
+                if (t.isCompleted || Number(t.progress) >= 100) return;
+                const isDoing = Boolean(t.isStarted) || (Number(t.progress) > 0 && Number(t.progress) < 100) || t.status === "WORKING";
+                if (!isDoing) return;
+                const assigned = String(t.staff || "").trim().toLowerCase();
+                if (assigned && (assigned === sName || assigned.includes(sName) || sName.includes(assigned))) {
+                    count++;
+                }
+            });
+        });
+        return count;
+    }
+
     getUnfinishedPredecessors(task, allTasks) {
         if (!task.codeOut) return [];
         const requiredCodes = task.codeOut.split(',').map(s => s.trim()).filter(Boolean);
@@ -1939,12 +1960,16 @@ class GanttCore {
                         }
                     });
                 }
-                groups = prj.staffs.map((st, idx) => ({
-                    id: st,
-                    name: `👤 ${st}`,
-                    class: "dept-tag-style-" + (idx % 8),
-                    isStaffGroup: true
-                }));
+                groups = prj.staffs.map((st, idx) => {
+                    const activeCount = this.getStaffActiveTasksCount(st, prj);
+                    const countBadge = (st && st !== "Chưa Phân Công" && activeCount > 0) ? ` (⚡ ${activeCount} việc đang làm)` : "";
+                    return {
+                        id: st,
+                        name: `👤 ${st}${countBadge}`,
+                        class: "dept-tag-style-" + (idx % 8),
+                        isStaffGroup: true
+                    };
+                });
             } else {
                 // TAG View Mode: Clean and deduplicate tags
                 const tagMap = new Map();

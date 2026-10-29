@@ -119,16 +119,16 @@
                 </div>
 
                 <!-- SAAS LANDING PAGE & ECOSYSTEM LINKS -->
-                <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #1e293b; font-size: 11px; color: #94a3b8; line-height: 1.5; text-align: center;">
-                    Chưa có không gian làm việc cho doanh nghiệp của bạn?
-                    <div style="margin-top: 8px; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
-                        <a href="landing.html" class="ltp-btn-dark">
-                            <i data-lucide="layout-grid" size="13"></i>
-                            <span>Dùng Thử 14 Ngày & Bảng Giá</span>
+                <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #1e293b; font-size: 11.5px; color: #cbd5e1; line-height: 1.5; text-align: center;">
+                    <span style="color:#94a3b8;">Chưa có không gian làm việc cho doanh nghiệp của bạn?</span>
+                    <div style="margin-top: 10px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                        <a href="landing.html" style="color: #38bdf8 !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px; font-size: 11.5px; font-weight: 700; transition: all 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.25);" onmouseover="this.style.background='rgba(56, 189, 248, 0.22)'" onmouseout="this.style.background='rgba(56, 189, 248, 0.12)'">
+                            <i data-lucide="layout-grid" size="14" style="color: #38bdf8;"></i>
+                            <span style="color: #38bdf8 !important;">Dùng Thử 14 Ngày & Bảng Giá</span>
                         </a>
-                        <a href="https://ltp-soft.com" target="_blank" rel="noopener noreferrer" class="ltp-btn-dark">
-                            <i data-lucide="external-link" size="13"></i>
-                            <span>ltp-soft.com</span>
+                        <a href="https://ltp-soft.com" target="_blank" rel="noopener noreferrer" style="color: #f1f5f9 !important; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(255, 255, 255, 0.06); border: 1px solid #334155; border-radius: 8px; font-size: 11.5px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.12)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.06)'">
+                            <i data-lucide="external-link" size="14" style="color: #94a3b8;"></i>
+                            <span style="color: #f1f5f9 !important;">ltp-soft.com</span>
                         </a>
                     </div>
                 </div>
@@ -312,7 +312,7 @@
 
         <!-- MAIN WORKSPACE -->
         <main class="workspace">
-            <section class="project-subheader">
+            <section class="project-subheader" style="position:relative; z-index:900;">
                 <div class="project-header-left">
                     <div class="project-title-row">
                         <button class="collapse-btn mobile-sidebar-toggle-btn" onclick="toggleMobileSidebar()" style="display:none; padding:3px 8px;" title="Mở / Đóng Danh Sách Dự Án">
@@ -369,11 +369,11 @@
                             </button>
                             
                             <!-- Settings Dropdown Down Arrow Button -->
-                            <div class="settings-dropdown-wrapper" style="position:relative;">
+                            <div class="settings-dropdown-wrapper" style="position:relative; z-index:950;">
                                 <button class="btn-tool" id="btn-settings-gear" onclick="toggleSettingsDropdown(event)" title="Menu Tiện Ích & Cài Đặt Dự Án" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; box-shadow:0 2px 4px rgba(0,0,0,0.15); transition:all 0.2s;">
                                     <i data-lucide="chevron-down" size="14" style="color:#0f172a;"></i>
                                 </button>
-                                <div class="settings-dropdown-menu" id="settings-dropdown-menu">
+                                <div class="settings-dropdown-menu" id="settings-dropdown-menu" style="position:absolute; top:100%; right:0; z-index:999999; box-shadow:0 12px 30px rgba(0,0,0,0.25);">
                                 <div class="settings-dropdown-item" style="background:#f8fafc; font-size:11px; color:#0f172a; font-weight:700; cursor:default; border-bottom:1px solid #cbd5e1;" id="settings-proj-info">
                                     <i data-lucide="hash" size="13" style="color:#64748b;"></i>
                                     <span id="settings-proj-id-pin-label">Mã Dự Án: PRJ_01</span>
@@ -761,6 +761,31 @@
                         <span style="font-size:10.5px; font-weight:600; color:#475569;">Nền Bảng Làm Việc</span>
                         <input type="color" id="picker-skin-workspace" value="#f1f5f9" onchange="applyCustomColorPickers()" style="width:100%; height:32px; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer; padding:2px; background:#fff;">
                     </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: PHONG CÁCH KHỐI TASK BIỂU ĐỒ GANTT (THEME STYLE) -->
+            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:12px; margin-bottom:14px;">
+                <label style="font-size:11.5px; font-weight:700; color:#166534; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    <span>3. Phong Cách Khối Task Biểu Đồ (Capsule 3D & 2D):</span>
+                    <span style="font-size:9.5px; background:#22c55e; color:#fff; padding:1px 5px; border-radius:4px; font-weight:800;">ĐẶC SẮC</span>
+                </label>
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+                    <button type="button" onclick="changeUiThemeMode('pill-capsule')" style="padding:6px 4px; border-radius:6px; border:1px solid #22c55e; background:#ffffff; cursor:pointer; font-size:11px; font-weight:700; color:#15803d; display:flex; align-items:center; justify-content:center; gap:4px;">
+                        💊 Capsule 3D
+                    </button>
+                    <button type="button" onclick="changeUiThemeMode('3d-liquid')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                        🌊 Liquid 3D
+                    </button>
+                    <button type="button" onclick="changeUiThemeMode('3d-glass')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                        🧊 Glass 3D
+                    </button>
+                    <button type="button" onclick="changeUiThemeMode('2d-flat')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                        📄 2D Flat
+                    </button>
+                    <button type="button" onclick="changeUiThemeMode('2d-classic')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                        🏛️ Classic
+                    </button>
                 </div>
             </div>
 
@@ -1484,19 +1509,21 @@
         }
 
         function handleLogout() {
-            window.authMgr.logout();
-            const loginScreen = document.getElementById("app-login-screen");
-            const splashScreen = document.getElementById("app-splash");
-            const uInput = document.getElementById("pre-login-username");
-            const pInput = document.getElementById("pre-login-password");
-            const errBox = document.getElementById("pre-login-error");
-
-            if (uInput) uInput.value = "";
-            if (pInput) pInput.value = "";
-            if (errBox) errBox.style.display = "none";
-
-            if (splashScreen) splashScreen.style.display = "none";
-            if (loginScreen) loginScreen.style.display = "flex";
+            try {
+                if (window.authMgr && window.authMgr.logout) {
+                    window.authMgr.logout();
+                }
+            } catch (e) {}
+            try {
+                localStorage.removeItem("ltp_jwt_token");
+                localStorage.removeItem("gantt_auth_token");
+                localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
+                sessionStorage.clear();
+            } catch (e) {}
+            if (window.location.hash) {
+                try { history.replaceState(null, "", window.location.pathname); } catch(e) {}
+            }
+            window.location.reload();
         }
 
         function switchUserSession(username) {
@@ -2957,7 +2984,9 @@
             availableStaffs.forEach(s => {
                 if (!s || s === "Chưa Phân Công") return;
                 const isSelf = userNames.some(n => n && s.toLowerCase().includes(n));
-                const label = isSelf ? `👤 ${s} (Tôi)` : `👤 ${s}`;
+                const activeCount = window.ganttCore ? window.ganttCore.getStaffActiveTasksCount(s, prj) : 0;
+                const activeBadge = activeCount > 0 ? ` [⚡ ${activeCount} task đang làm]` : ` [0 task]`;
+                const label = isSelf ? `👤 ${s} (Tôi)${activeBadge}` : `👤 ${s}${activeBadge}`;
                 staffOptionsHtml += `<option value="${s}">${label}</option>`;
             });
             staffSelect.innerHTML = staffOptionsHtml;

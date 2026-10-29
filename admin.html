@@ -13,6 +13,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #090d16;
             color: #f8fafc;
+            transition: background-color 0.2s, color 0.2s;
         }
         .card-surface {
             background: rgba(15, 23, 42, 0.88);
@@ -28,6 +29,61 @@
             background: rgba(16, 185, 129, 0.14);
             color: #34d399;
             border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        /* ☀️ THEME LIGHT (CLEAN WHITE) */
+        body.theme-light {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        body.theme-light header {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+        }
+        body.theme-light .card-surface {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+        }
+        body.theme-light .text-white {
+            color: #0f172a !important;
+        }
+        body.theme-light .text-slate-400, body.theme-light .text-slate-500 {
+            color: #64748b !important;
+        }
+        body.theme-light .text-slate-300 {
+            color: #334155 !important;
+        }
+        body.theme-light .bg-slate-950, body.theme-light .bg-slate-900 {
+            background-color: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        body.theme-light select, body.theme-light input {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        body.theme-light .border-slate-800, body.theme-light .border-slate-700 {
+            border-color: #e2e8f0 !important;
+        }
+        body.theme-light thead tr {
+            background-color: #f1f5f9 !important;
+            color: #475569 !important;
+        }
+
+        /* 🌊 THEME NAVY (DEEP BLUE TECH) */
+        body.theme-navy {
+            background-color: #070d1e !important;
+            color: #f8fafc !important;
+        }
+        body.theme-navy header {
+            background-color: #0f172a !important;
+            border-bottom-color: #1e3a8a !important;
+        }
+        body.theme-navy .card-surface {
+            background: #0f1c3f !important;
+            border: 1px solid #1e3a8a !important;
         }
     </style>
 </head>
@@ -109,6 +165,13 @@
             </div>
 
             <div class="flex items-center gap-2">
+                <!-- Theme Switcher (Dark / Light / Navy) -->
+                <select id="admin-theme-select" onchange="changeAdminTheme(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-slate-200 font-semibold cursor-pointer outline-none transition" title="Chọn màu giao diện Quản Trị">
+                    <option value="dark">🌙 Tối</option>
+                    <option value="light">☀️ Sáng</option>
+                    <option value="navy">🌊 Xanh</option>
+                </select>
+
                 <!-- Notification Bell for Waiting Room -->
                 <button id="btn-admin-bell" onclick="openWaitingRoomModal()" class="relative p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 text-xs font-semibold transition" title="Phòng chờ duyệt nhân sự mới (Quét QR)">
                     <svg class="w-4 h-4 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -290,15 +353,15 @@
                 </div>
 
                 <div class="overflow-x-auto pb-4">
-                    <table class="w-full min-w-[1100px] text-left border-collapse">
+                    <table class="w-full text-left border-collapse table-auto">
                         <thead>
-                            <tr class="border-b border-slate-800 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-900/50 whitespace-nowrap">
-                                <th class="py-3.5 px-4 min-w-[220px]">Nhân sự & Tài khoản</th>
-                                <th class="py-3.5 px-3 min-w-[160px]">Mật khẩu</th>
-                                <th class="py-3.5 px-3 min-w-[170px]">Bộ phận (Thẻ)</th>
-                                <th class="py-3.5 px-3 min-w-[150px]">Vai trò</th>
-                                <th class="py-3.5 px-3 min-w-[260px]">Quyền hạn trên Task (Chạm để đổi)</th>
-                                <th class="py-3.5 px-4 text-right min-w-[160px]">Trạng thái ghế</th>
+                            <tr class="border-b border-slate-800 text-[10.5px] font-extrabold uppercase text-slate-400 bg-slate-900/50 whitespace-nowrap">
+                                <th class="py-2.5 px-3">Nhân sự & Tài khoản</th>
+                                <th class="py-2.5 px-2">Mật khẩu</th>
+                                <th class="py-2.5 px-2">Bộ phận (Thẻ)</th>
+                                <th class="py-2.5 px-2">Vai trò</th>
+                                <th class="py-2.5 px-2">Quyền Task (Chạm để đổi)</th>
+                                <th class="py-2.5 px-3 text-right">Trạng thái ghế</th>
                             </tr>
                         </thead>
                         <tbody id="users-table-body" class="divide-y divide-slate-800/70 text-xs"></tbody>
@@ -1428,27 +1491,89 @@
             renderUsersTable();
         }
 
+        function areDeptsMatching(deptA, deptB) {
+            if (!deptA || !deptB) return false;
+            const sA = String(deptA).trim().toUpperCase();
+            const sB = String(deptB).trim().toUpperCase();
+            if (sA === sB) return true;
+            if (sA === "ALL" || sB === "ALL") return true;
+            const depts = adminState.departments || [];
+            const objA = depts.find(d => String(d.id || '').toUpperCase() === sA || String(d.code || '').toUpperCase() === sA || String(d.name || '').toUpperCase() === sA);
+            const objB = depts.find(d => String(d.id || '').toUpperCase() === sB || String(d.code || '').toUpperCase() === sB || String(d.name || '').toUpperCase() === sB);
+            if (objA && objB) {
+                return (objA.id && objA.id === objB.id) || (objA.code && objA.code.toUpperCase() === objB.code.toUpperCase()) || (objA.name && objA.name.toUpperCase() === objB.name.toUpperCase());
+            }
+            if (objA) {
+                return String(objA.id || '').toUpperCase() === sB || String(objA.code || '').toUpperCase() === sB || String(objA.name || '').toUpperCase() === sB;
+            }
+            if (objB) {
+                return String(objB.id || '').toUpperCase() === sA || String(objB.code || '').toUpperCase() === sA || String(objB.name || '').toUpperCase() === sA;
+            }
+            const cleanA = sA.replace(/\s*\([^)]*\)/g, '').trim();
+            const cleanB = sB.replace(/\s*\([^)]*\)/g, '').trim();
+            if (cleanA && cleanB && (cleanA === cleanB || cleanA.includes(cleanB) || cleanB.includes(cleanA))) return true;
+            return false;
+        }
+
+        function getAdminStaffActiveTasksCount(staff) {
+            if (!staff) return 0;
+            const sName = String(staff.fullName || "").trim().toLowerCase();
+            const sUsername = String(staff.username || "").trim().toLowerCase();
+            let count = 0;
+            const prjs = adminState.projects || [];
+            prjs.forEach(p => {
+                if (!p || p.status === "ARCHIVED" || !Array.isArray(p.tasks)) return;
+                p.tasks.forEach(t => {
+                    if (t.isCompleted || Number(t.progress) >= 100) return;
+                    const isDoing = Boolean(t.isStarted) || (Number(t.progress) > 0 && Number(t.progress) < 100) || t.status === "WORKING";
+                    if (!isDoing) return;
+                    const assigned = String(t.staff || "").trim().toLowerCase();
+                    if (assigned && (assigned === sName || assigned === sUsername || assigned.includes(sName) || sName.includes(assigned))) {
+                        count++;
+                    }
+                });
+            });
+            return count;
+        }
+
+        function changeAdminTheme(mode) {
+            document.body.classList.remove("theme-light", "theme-navy");
+            if (mode === "light") document.body.classList.add("theme-light");
+            if (mode === "navy") document.body.classList.add("theme-navy");
+            try { localStorage.setItem("admin_theme_mode", mode); } catch(e) {}
+            const sel = document.getElementById("admin-theme-select");
+            if (sel && sel.value !== mode) sel.value = mode;
+        }
+
+        function initAdminTheme() {
+            const saved = localStorage.getItem("admin_theme_mode") || "dark";
+            changeAdminTheme(saved);
+        }
+
         function renderUsersTable() {
             const q = (document.getElementById("staff-search-input")?.value || "").trim().toLowerCase();
             const tbody = document.getElementById("users-table-body");
+            if (!tbody) return;
+
             const depts = adminState.departments || [];
             const isEnterprise = adminState.tenant?.planCode === "ENTERPRISE";
 
-            // 1. Calculate Headcount per Department & Render Compact Dropdown
+            // 1. Calculate Headcount per Department using accurate matching
             const activePool = adminState.users.filter(u => u.status !== "WAITING_ROOM" && u.isActive !== 2 && u.role !== "WAITING");
             const deptHeadcounts = {};
-            activePool.forEach(u => {
-                const uDept = String(u.dept || u.department || "").trim();
-                deptHeadcounts[uDept] = (deptHeadcounts[uDept] || 0) + 1;
+            depts.forEach(d => {
+                const count = activePool.filter(u => areDeptsMatching(u.department || u.dept, d.code) || areDeptsMatching(u.department || u.dept, d.name)).length;
+                deptHeadcounts[d.code] = count;
+                deptHeadcounts[d.name] = count;
             });
 
             const totalActive = activePool.length;
             const btnLabel = document.getElementById("btn-dept-headcount-label");
             if (btnLabel) {
                 if (selectedDeptFilter) {
-                    const matchedDept = depts.find(d => d.code === selectedDeptFilter || d.name === selectedDeptFilter);
+                    const matchedDept = depts.find(d => areDeptsMatching(d.code, selectedDeptFilter) || areDeptsMatching(d.name, selectedDeptFilter));
                     const labelName = matchedDept?.name || selectedDeptFilter;
-                    const count = deptHeadcounts[selectedDeptFilter] || (matchedDept ? (deptHeadcounts[matchedDept.code] || deptHeadcounts[matchedDept.name] || 0) : 0);
+                    const count = deptHeadcounts[selectedDeptFilter] || (matchedDept ? (deptHeadcounts[matchedDept.code] || 0) : 0);
                     btnLabel.innerHTML = `👥 ${labelName} (${count} NV) ▾`;
                 } else {
                     btnLabel.innerHTML = `👥 Quân số phòng ban (Tổng: ${totalActive}) ▾`;
@@ -1466,10 +1591,10 @@
                     </div>
                 `;
                 depts.forEach(d => {
-                    const c = deptHeadcounts[d.code] || deptHeadcounts[d.name] || 0;
-                    const isSelected = selectedDeptFilter === d.code || selectedDeptFilter === d.name;
+                    const c = deptHeadcounts[d.code] || 0;
+                    const isSelected = selectedDeptFilter && (areDeptsMatching(selectedDeptFilter, d.code) || areDeptsMatching(selectedDeptFilter, d.name));
                     itemsHtml += `
-                        <div onclick="filterByDept('${d.code || d.name}')" class="p-2 rounded-xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${isSelected ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold' : 'hover:bg-slate-800 text-slate-300'}">
+                        <div onclick="filterByDept('${d.name}')" class="p-2 rounded-xl text-xs font-semibold transition flex items-center justify-between cursor-pointer ${isSelected ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold' : 'hover:bg-slate-800 text-slate-300'}">
                             <span class="flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${d.color || '#3b82f6'};"></span>
                                 <span>${d.name}</span>
@@ -1484,7 +1609,7 @@
             // 2. Filter Rows by Search Query & Selected Department
             const rows = activePool.filter(u => {
                 if (selectedDeptFilter) {
-                    const matchDept = (u.dept === selectedDeptFilter || u.department === selectedDeptFilter || (Array.isArray(u.deptTags) && u.deptTags.includes(selectedDeptFilter)));
+                    const matchDept = areDeptsMatching(u.department || u.dept, selectedDeptFilter);
                     if (!matchDept) return false;
                 }
                 if (!q) return true;
@@ -1504,72 +1629,79 @@
                 const isLocked = u.status === "LOCKED";
                 const isReportOnly = (u.taskPermissionMode || "REPORT_ONLY") === "REPORT_ONLY";
                 const avatar = u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName || u.username)}&background=0284c7&color=fff`;
+                const activeCount = getAdminStaffActiveTasksCount(u);
+                const activeBadge = activeCount > 0
+                    ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold text-[10px]" title="Đang thực hiện ${activeCount} việc">⚡ ${activeCount} task đang làm</span>`
+                    : `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-800/80 text-slate-400 text-[10px]">0 task</span>`;
 
                 const deptOptions = depts.map(d =>
-                    `<option value="${d.name}" ${d.name === u.department ? "selected" : ""}>${d.name}</option>`
+                    `<option value="${d.name}" ${areDeptsMatching(d.name, u.department) ? "selected" : ""}>${d.name}</option>`
                 ).join("");
 
                 return `
                     <tr class="hover:bg-slate-900/40 transition ${isLocked ? "opacity-50" : ""}">
-                        <td class="py-3.5 px-4 whitespace-nowrap">
-                            <div class="flex items-center gap-3">
-                                <img src="${avatar}" class="w-9 h-9 rounded-xl object-cover border border-slate-700 shrink-0" alt="">
-                                <div>
-                                    <div class="font-bold text-white flex items-center gap-1.5">
-                                        <span>${u.fullName}</span>
-                                        <button onclick="promptEditUserName('${u.id}', '${(u.fullName || '').replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-white p-0.5 rounded transition" title="Đổi tên nhân sự">
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        <td class="py-2.5 px-3">
+                            <div class="flex items-center gap-2.5">
+                                <img src="${avatar}" class="w-8 h-8 rounded-lg object-cover border border-slate-700 shrink-0" alt="">
+                                <div class="min-w-0">
+                                    <div class="font-bold text-white flex items-center gap-1.5 text-xs truncate">
+                                        <span class="truncate">${u.fullName}</span>
+                                        <button onclick="promptEditUserName('${u.id}', '${(u.fullName || '').replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-white p-0.5 rounded transition shrink-0" title="Đổi tên nhân sự">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                                         </button>
                                     </div>
-                                    <div class="text-[11px] font-mono text-sky-400">@${u.username} ${u.phone ? `• ${u.phone}` : ""}</div>
+                                    <div class="text-[10.5px] font-mono text-sky-400 flex items-center gap-1 flex-wrap">
+                                        <span>@${u.username}</span>
+                                        ${u.phone ? `<span>• ${u.phone}</span>` : ""}
+                                        ${activeBadge}
+                                    </div>
                                 </div>
                             </div>
                         </td>
-                        <td class="py-3.5 px-3 whitespace-nowrap">
-                            <div class="flex items-center gap-1.5">
-                                <span id="pw-mask-${u.id}" class="font-mono text-amber-300 text-xs">••••••</span>
+                        <td class="py-2.5 px-2 whitespace-nowrap">
+                            <div class="flex items-center gap-1">
+                                <span id="pw-mask-${u.id}" class="font-mono text-amber-300 text-[11px]">••••••</span>
                                 <button onclick="togglePasswordReveal('${u.id}', '${(u.plainPasswordHint || "123456").replace(/'/g, "")}')"
-                                        class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[11px]" title="Xem / Đổi mật khẩu">👁️</button>
+                                        class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px]" title="Xem mật khẩu">👁️</button>
                                 <button onclick="promptResetPassword('${u.id}', '${u.fullName.replace(/'/g, "")}')"
-                                        class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300" title="Đặt mật khẩu mới">Đổi</button>
+                                        class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 font-semibold" title="Đặt mật khẩu mới">Đổi</button>
                             </div>
                         </td>
-                        <td class="py-3.5 px-3 whitespace-nowrap">
+                        <td class="py-2.5 px-2">
                             <select onchange="quickUpdateUser('${u.id}', { department: this.value, deptTags: [this.value] })"
-                                    class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                                    class="px-2 py-1 rounded-md bg-slate-900 border border-slate-700/80 text-[11px] text-white font-medium max-w-[155px] truncate">
                                 ${deptOptions}
                             </select>
                         </td>
-                        <td class="py-3.5 px-3 whitespace-nowrap">
+                        <td class="py-2.5 px-2">
                             <select onchange="quickUpdateUser('${u.id}', { role: this.value })"
-                                    class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-semibold">
+                                    class="px-2 py-1 rounded-md bg-slate-900 border border-slate-700/80 text-[11px] text-white font-medium max-w-[125px]">
                                 <option value="STAFF" ${u.role === "STAFF" ? "selected" : ""}>Nhân viên</option>
-                                <option value="DEPT_ADMIN" ${u.role === "DEPT_ADMIN" ? "selected" : ""}>Trưởng bộ phận</option>
-                                ${isEnterprise ? `<option value="PROJECT_ADMIN" ${u.role === "PROJECT_ADMIN" ? "selected" : ""}>👑 Admin Con (Dự án)</option>` : ""}
+                                <option value="DEPT_ADMIN" ${u.role === "DEPT_ADMIN" ? "selected" : ""}>Trưởng phòng</option>
+                                ${isEnterprise ? `<option value="PROJECT_ADMIN" ${u.role === "PROJECT_ADMIN" ? "selected" : ""}>Admin Con</option>` : ""}
                                 <option value="ADMIN" ${u.role === "ADMIN" || u.role === "BOSS" ? "selected" : ""}>Admin Tổng</option>
                             </select>
                         </td>
-                        <td class="py-3.5 px-3 whitespace-nowrap">
+                        <td class="py-2.5 px-2 whitespace-nowrap">
                             ${["ADMIN", "BOSS"].includes(u.role)
-                                ? `<span class="text-[11px] font-bold text-amber-300">👑 Toàn quyền Quản trị</span>`
+                                ? `<span class="text-[11px] font-bold text-amber-300">👑 Toàn quyền</span>`
                                 : `<button onclick="quickUpdateUser('${u.id}', { taskPermissionMode: '${isReportOnly ? "AUTONOMOUS" : "REPORT_ONLY"}' })"
-                                           class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition whitespace-nowrap ${isReportOnly ? "perm-pill-report" : "perm-pill-auto"}">
-                                       ${isReportOnly
-                                           ? "🔒 Chỉ báo cáo tiến độ & up file (Khóa xóa/ngày)"
-                                           : "🔓 Tự chủ tạo, sửa ngày & xóa việc của mình"}
+                                           class="px-2.5 py-1 rounded-md text-[11px] font-bold transition whitespace-nowrap ${isReportOnly ? "perm-pill-report" : "perm-pill-auto"}"
+                                           title="${isReportOnly ? 'Bấm để đổi thành Tự chủ tạo/sửa task' : 'Bấm để đổi thành Chỉ báo cáo tiến độ'}">
+                                       ${isReportOnly ? "🔒 Báo cáo tiến độ" : "🔓 Tự chủ tạo/sửa"}
                                    </button>`
                             }
                         </td>
-                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                        <td class="py-2.5 px-3 text-right whitespace-nowrap">
                             ${["ADMIN", "BOSS"].includes(u.role)
                                 ? `<span class="text-[11px] text-emerald-400 font-bold">Mặc định</span>`
                                 : `<button onclick="quickUpdateUser('${u.id}', { status: '${isLocked ? "ACTIVE" : "LOCKED"}' })"
-                                           class="px-3 py-1.5 rounded-xl text-xs font-bold border transition whitespace-nowrap ${
+                                           class="px-2 py-1 rounded-md text-[11px] font-semibold border transition whitespace-nowrap ${
                                                isLocked
                                                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                                                    : "bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border-slate-700"
                                            }">
-                                       ${isLocked ? "🔓 Mở lại ghế" : "🔒 Khóa / Thu hồi ghế"}
+                                       ${isLocked ? "🔓 Mở ghế" : "🔒 Khóa ghế"}
                                    </button>`
                             }
                         </td>
@@ -2265,12 +2397,20 @@
         }
 
         function logoutAdmin() {
-            localStorage.removeItem("ltp_jwt_token");
-            localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
-            showAdminLoginGate();
+            try {
+                localStorage.removeItem("ltp_jwt_token");
+                localStorage.removeItem("gantt_auth_token");
+                localStorage.removeItem("CRYSTAL_ACTIVE_SESSION_V2");
+                sessionStorage.clear();
+            } catch (e) {}
+            if (window.location.hash) {
+                try { history.replaceState(null, "", window.location.pathname); } catch(e) {}
+            }
+            window.location.reload();
         }
 
         window.addEventListener("DOMContentLoaded", () => {
+            initAdminTheme();
             loadAdminOverview(false);
             // Realtime auto-poll for QR waiting room scans & seat updates without screen flicker
             setInterval(() => {

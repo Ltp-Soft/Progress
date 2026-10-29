@@ -1250,10 +1250,6 @@
             }
 
             const canCreate = window.authMgr.canCreateProject();
-            const isGuest = window.authMgr.isGuest();
-            const isAdmin = window.authMgr.isAdmin();
-            const isDeptAdmin = window.authMgr.isDeptAdmin();
-            const isStaff = window.authMgr.isStaff();
             
             const btnCreate = document.getElementById("btn-create-proj");
             if (btnCreate) btnCreate.style.display = canCreate ? "inline-flex" : "none";

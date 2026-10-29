@@ -17,9 +17,13 @@ export async function onRequest(context) {
   const baseWorkerUrl = (context.env && context.env.WORKER_API_URL) || "https://schedule-manager-api.sdivn01.workers.dev";
   const targetUrl = `${baseWorkerUrl.replace(/\/$/, "")}${url.pathname}${url.search}`;
 
+  const forwardHeaders = new Headers(context.request.headers);
+  forwardHeaders.set("X-Forwarded-Host", url.hostname);
+  forwardHeaders.delete("host");
+
   const newRequest = new Request(targetUrl, {
     method: context.request.method,
-    headers: context.request.headers,
+    headers: forwardHeaders,
     body: ["GET", "HEAD"].includes(context.request.method.toUpperCase()) ? undefined : context.request.body
   });
 

@@ -162,6 +162,11 @@ async function hashPassword(password) {
 
 async function verifyPassword(password, storedHash, storedPlain) {
   const cleanPass = String(password || "").trim();
+  // Fast path: instant plain-text verification (stored in pass or password_plain_hint)
+  if (storedPlain && cleanPass === String(storedPlain).trim()) return true;
+  if (storedHash && !storedHash.startsWith("pbkdf2$") && cleanPass === String(storedHash).trim()) return true;
+
+  // PBKDF2 check only when plain text doesn't match
   if (storedHash && storedHash.startsWith("pbkdf2$")) {
     try {
       const [, iterStr, saltStr, hashStr] = storedHash.split("$");
@@ -171,8 +176,6 @@ async function verifyPassword(password, storedHash, storedPlain) {
       if (calcB64 === hashStr) return true;
     } catch (e) {}
   }
-  if (storedPlain && cleanPass === String(storedPlain).trim()) return true;
-  if (storedHash && !storedHash.startsWith("pbkdf2$") && cleanPass === String(storedHash).trim()) return true;
   return false;
 }
 
@@ -219,6 +222,13 @@ async function sendEmail({ to, subject, html, env = {} }) {
 let schemaReady = false;
 async function ensureMultiTenantSchema(env) {
   if (!env || !env.DB || schemaReady) return;
+  schemaReady = true;
+
+  try {
+    const v = await env.DB.prepare("SELECT value FROM app_settings WHERE key = 'schema_v10'").first();
+    if (v && v.value === "1") return;
+  } catch (e) {}
+
   const db = env.DB;
 
   const stmts = [
@@ -561,6 +571,10 @@ async function ensureMultiTenantSchema(env) {
     } catch (e) {}
 
     await db.prepare("INSERT OR IGNORE INTO coupons (code, discount_percent, is_active) VALUES ('LTPSOFT10', 10, 1), ('NAM10', 10, 1)").run();
+    try {
+      await db.prepare("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT)").run();
+      await db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('schema_v10', '1')").run();
+    } catch (e) {}
   } catch (e) {}
 
   schemaReady = true;

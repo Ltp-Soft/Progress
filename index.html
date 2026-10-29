@@ -1424,9 +1424,25 @@
                 }
 
                 if (loggedUser && loggedUser.role && loggedUser.role !== "GUEST") {
+                    const loginScreen = document.getElementById("app-login-screen");
+                    if (loginScreen) {
+                        loginScreen.style.transition = "opacity 0.2s ease";
+                        loginScreen.style.opacity = "0";
+                        setTimeout(() => { loginScreen.style.display = "none"; }, 200);
+                    }
                     updateRoleBadge(loggedUser);
-                    // Instant smooth reload guarantees complete clean initialization of D1 data, session & departments
-                    window.location.reload();
+                    if (window.ganttCore) {
+                        window.ganttCore.loadWorkspace().then(() => {
+                            window.ganttCore.renderProjectsSidebar();
+                            window.ganttCore.renderGantt();
+                        }).catch(() => {
+                            window.ganttCore.renderProjectsSidebar();
+                            window.ganttCore.renderGantt();
+                        });
+                    }
+                    if (window.authMgr && window.authMgr.syncTenantWorkspaceMeta) {
+                        window.authMgr.syncTenantWorkspaceMeta();
+                    }
                     return;
                 } else {
                     if (errBox) {
@@ -3855,7 +3871,10 @@
             if (waitingScreen) waitingScreen.style.display = "none";
         }
 
-        window.onload = () => {
+        let appStartupDone = false;
+        function initAppStartup() {
+            if (appStartupDone) return;
+            appStartupDone = true;
             try {
                 checkMobileViewportMode();
                 initAccountDropdown();
@@ -3939,7 +3958,14 @@
 
             // UI THEME MODE SWITCHER CONTROLLER (GLOBAL SCOPE)
             initUiThemeMode();
-        };
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", initAppStartup);
+        } else {
+            initAppStartup();
+        }
+        window.addEventListener("load", initAppStartup);
 
         // GLOBAL UI THEME MODE FUNCTIONS (AVAILABLE IMMEDIATELY TO ONCHANGE & INITIALIZATION)
         window.changeUiThemeMode = function(mode) {

@@ -1168,18 +1168,11 @@ body { display: flex; flex-direction: column; height: 100vh; background: var(--b
     color: #94a3b8;
 }
 
-/* SETTINGS GEAR DROPDOWN MENU */
+/* SETTINGS GEAR DROPDOWN MENU WRAPPER */
 .settings-dropdown-wrapper {
     position: relative;
     display: inline-block;
 }
-.settings-dropdown-menu {
-    display: none;
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 6px;
-    background: #ffffff;
 /* USER SPECIFIED & MINIMALIST COMPONENT STYLES */
 /* 1. Header Bộ Phận - Darker & Distinct Colors */
 .task-group-header, .dept-title-cell, .dept-unified-row {
@@ -1247,51 +1240,10 @@ body { display: flex; flex-direction: column; height: 100vh; background: var(--b
   color: #1e293b !important;
 }
 
-/* 4. Dropdown Menu Cài Đặt */
-.settings-dropdown, .settings-dropdown-menu {
-  display: none;
-  position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 6px;
-  background: #1e293b !important;
-  color: #ffffff !important;
-  border-radius: 8px !important;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important;
-  z-index: 10000 !important;
-  min-width: 200px !important;
-  overflow: hidden;
-}
-.settings-dropdown-menu.show {
-    display: block !important;
-    animation: fadeInDropdown 0.15s ease-out;
-}
+/* 4. Dropdown Menu Cài Đặt (Inherited from Primary Section below) */
 @keyframes fadeInDropdown {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
-}
-.settings-dropdown-item {
-    padding: 9px 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 12px;
-    color: #f8fafc !important;
-    cursor: pointer;
-    border-bottom: 1px solid #334155 !important;
-    transition: background 0.15s;
-}
-.settings-dropdown-item:last-child {
-    border-bottom: none !important;
-}
-.settings-dropdown-item:hover {
-    background: #334155 !important;
-}
-.settings-dropdown-item.danger {
-    color: #f87171 !important;
-}
-.settings-dropdown-item.danger:hover {
-    background: #450a0a !important;
 }
 
 /* Square Blue Action Icon Buttons (Image 2 style) */
@@ -2532,24 +2484,16 @@ body.theme-pill-capsule .task-bar span.task-bar-mirror-badge {
    MODE 5: 3D GLOSS PILL CAPSULE (PREMIUM HIGH-REFRACTION 3D CAPSULE)
    -------------------------------------------------------------------------- */
 body.theme-pill-capsule .task-bar {
-    border-radius: 20px !important;
+    border-radius: 9999px !important;
     height: 28px !important;
     top: 8px !important;
-    padding: 0 14px !important;
-    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    padding: 0 16px !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
     backdrop-filter: blur(4px) !important;
-    background-image: linear-gradient(
-        180deg, 
-        rgba(255, 255, 255, 0.85) 0%, 
-        rgba(255, 255, 255, 0.35) 28%, 
-        rgba(255, 255, 255, 0.08) 52%, 
-        rgba(0, 0, 0, 0.12) 74%,
-        rgba(0, 0, 0, 0.40) 100%
-    ) !important;
     box-shadow: 
-        inset 0 2px 2px rgba(255, 255, 255, 0.95),
+        inset 0 2px 3px rgba(255, 255, 255, 0.95),
         inset 0 -2px 3px rgba(0, 0, 0, 0.35),
-        0 4px 10px rgba(15, 23, 42, 0.22),
+        0 4px 12px rgba(15, 23, 42, 0.25),
         0 1px 3px rgba(0, 0, 0, 0.12) !important;
     transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s !important;
 }
@@ -2557,16 +2501,18 @@ body.theme-pill-capsule .task-bar {
 body.theme-pill-capsule .task-bar:hover {
     transform: translateY(-1.5px) scale(1.008) !important;
     box-shadow: 
-        inset 0 2px 2.5px rgba(255, 255, 255, 0.98),
+        inset 0 2px 3px rgba(255, 255, 255, 0.98),
         inset 0 -2.5px 4px rgba(0, 0, 0, 0.45),
-        0 8px 18px rgba(15, 23, 42, 0.30) !important;
+        0 8px 20px rgba(15, 23, 42, 0.35) !important;
 }
 
 /* 1. Deep Royal Blue Pill (Completed) */
 body.theme-pill-capsule .status-completed {
     background-color: #2563eb !important;
+    background-image: linear-gradient(180deg, #93c5fd 0%, #3b82f6 30%, #2563eb 70%, #1d4ed8 100%) !important;
     color: #ffffff !important;
-    border-color: #3b82f6 !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45), inset 0 2px 3px rgba(255, 255, 255, 0.9), inset 0 -2px 3px rgba(0, 0, 0, 0.35) !important;
 }
 body.theme-pill-capsule .status-completed span {
     color: #ffffff !important;
@@ -2575,7 +2521,7 @@ body.theme-pill-capsule .status-completed span {
 }
 body.theme-pill-capsule .status-completed::before {
     content: "✓ ";
-    color: #6ee7b7;
+    color: #ffffff;
     font-weight: 900;
     margin-right: 4px;
     position: relative;
@@ -2585,8 +2531,10 @@ body.theme-pill-capsule .status-completed::before {
 /* 2. Vibrant Emerald Green Pill (Working) */
 body.theme-pill-capsule .status-working {
     background-color: #10b981 !important;
+    background-image: linear-gradient(180deg, #a7f3d0 0%, #34d399 30%, #10b981 70%, #059669 100%) !important;
     color: #ffffff !important;
-    border-color: #34d399 !important;
+    border-color: #6ee7b7 !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45), inset 0 2px 3px rgba(255, 255, 255, 0.9), inset 0 -2px 3px rgba(0, 0, 0, 0.35) !important;
 }
 body.theme-pill-capsule .status-working span {
     color: #ffffff !important;
@@ -2597,8 +2545,10 @@ body.theme-pill-capsule .status-working span {
 /* 3. Golden Amber Yellow Pill (Pending) */
 body.theme-pill-capsule .status-pending {
     background-color: #f59e0b !important;
+    background-image: linear-gradient(180deg, #fef08a 0%, #fbbf24 30%, #f59e0b 70%, #d97706 100%) !important;
     color: #ffffff !important;
-    border-color: #fbbf24 !important;
+    border-color: #fde047 !important;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45), inset 0 2px 3px rgba(255, 255, 255, 0.9), inset 0 -2px 3px rgba(0, 0, 0, 0.35) !important;
 }
 body.theme-pill-capsule .status-pending span {
     color: #ffffff !important;
@@ -2609,8 +2559,10 @@ body.theme-pill-capsule .status-pending span {
 /* 4. Vivid Crimson Red Pill (Overdue) */
 body.theme-pill-capsule .status-overdue {
     background-color: #ef4444 !important;
+    background-image: linear-gradient(180deg, #fecaca 0%, #f87171 30%, #ef4444 70%, #dc2626 100%) !important;
     color: #ffffff !important;
-    border-color: #f87171 !important;
+    border-color: #fca5a5 !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5), inset 0 2px 3px rgba(255, 255, 255, 0.9), inset 0 -2px 3px rgba(0, 0, 0, 0.35) !important;
 }
 body.theme-pill-capsule .status-overdue span {
     color: #ffffff !important;
@@ -2961,24 +2913,25 @@ body.theme-pill-capsule .gantt-task-head {
     color: #0f172a !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 10px !important;
-    box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08) !important;
+    box-shadow: 0 16px 40px -6px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.08) !important;
     z-index: 999999 !important;
-    width: 240px !important;
-    min-width: 240px !important;
-    max-width: 250px !important;
+    width: max-content !important;
+    min-width: 275px !important;
+    max-width: 360px !important;
     overflow: hidden !important;
-    padding: 4px 0 !important;
+    padding: 6px 0 !important;
 }
 #settings-dropdown-menu.settings-dropdown-menu.show {
     display: block !important;
     animation: fadeInDropdown 0.15s ease-out !important;
 }
-#settings-dropdown-menu .settings-dropdown-item {
-    padding: 8px 14px !important;
+#settings-dropdown-menu .settings-dropdown-item,
+.settings-dropdown-item {
+    padding: 9px 16px !important;
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    font-size: 11.5px !important;
+    gap: 10px !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
     color: #0f172a !important;
     background: #ffffff !important;
@@ -2989,18 +2942,40 @@ body.theme-pill-capsule .gantt-task-head {
     text-overflow: ellipsis !important;
     transition: background 0.15s, color 0.15s !important;
 }
-#settings-dropdown-menu .settings-dropdown-item:last-child {
+#settings-dropdown-menu .settings-dropdown-item span,
+.settings-dropdown-item span {
+    color: #0f172a !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+#settings-dropdown-menu .settings-dropdown-item:last-child,
+.settings-dropdown-item:last-child {
     border-bottom: none !important;
 }
-#settings-dropdown-menu .settings-dropdown-item:hover {
+#settings-dropdown-menu .settings-dropdown-item:hover,
+.settings-dropdown-item:hover {
     background: #f1f5f9 !important;
     color: #0284c7 !important;
 }
-#settings-dropdown-menu .settings-dropdown-item.danger {
+#settings-dropdown-menu .settings-dropdown-item:hover span,
+.settings-dropdown-item:hover span {
+    color: #0284c7 !important;
+}
+#settings-dropdown-menu .settings-dropdown-item.danger,
+.settings-dropdown-item.danger {
     color: #dc2626 !important;
 }
-#settings-dropdown-menu .settings-dropdown-item.danger:hover {
+#settings-dropdown-menu .settings-dropdown-item.danger span,
+.settings-dropdown-item.danger span {
+    color: #dc2626 !important;
+}
+#settings-dropdown-menu .settings-dropdown-item.danger:hover,
+.settings-dropdown-item.danger:hover {
     background: #fef2f2 !important;
+    color: #b91c1c !important;
+}
+#settings-dropdown-menu .settings-dropdown-item.danger:hover span,
+.settings-dropdown-item.danger:hover span {
     color: #b91c1c !important;
 }
 
@@ -3088,7 +3063,7 @@ span.mirror-dept-badge {
     background: var(--skin-header-bg, #0f172a) !important;
 }
 
-.sidebar {
+.sidebar, .sidebar-footer-fixed {
     background: var(--skin-sidebar-bg, #0f172a) !important;
 }
 
@@ -3096,7 +3071,7 @@ span.mirror-dept-badge {
     background: var(--skin-workspace-bg, #f1f5f9) !important;
 }
 
-.btn-primary {
+.btn-primary, .ltp-btn-solid {
     background: var(--skin-primary, #0284c7) !important;
     border-color: var(--skin-primary, #0284c7) !important;
 }

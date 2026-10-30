@@ -369,40 +369,40 @@
                                 <button class="btn-tool" id="btn-settings-gear" onclick="toggleSettingsDropdown(event)" title="Menu Tiện Ích & Cài Đặt Dự Án" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; box-shadow:0 2px 4px rgba(0,0,0,0.15); transition:all 0.2s;">
                                     <i data-lucide="chevron-down" size="14" style="color:#0f172a;"></i>
                                 </button>
-                                <div class="settings-dropdown-menu" id="settings-dropdown-menu" style="position:absolute; top:100%; right:0; z-index:999999; box-shadow:0 12px 30px rgba(0,0,0,0.25);">
-                                <div class="settings-dropdown-item" style="background:#f8fafc; font-size:11px; color:#0f172a; font-weight:700; cursor:default; border-bottom:1px solid #cbd5e1;" id="settings-proj-info">
-                                    <i data-lucide="hash" size="13" style="color:#64748b;"></i>
-                                    <span id="settings-proj-id-pin-label">Mã Dự Án: PRJ_01</span>
+                                <div class="settings-dropdown-menu" id="settings-dropdown-menu">
+                                    <div class="settings-dropdown-item" style="background:#f8fafc; font-size:11.5px; color:#0f172a; font-weight:700; cursor:default; border-bottom:1px solid #e2e8f0;" id="settings-proj-info">
+                                        <i data-lucide="hash" size="14" style="color:#0284c7;"></i>
+                                        <span id="settings-proj-id-pin-label" style="color:#0f172a; font-weight:700;">Mã Dự Án: PRJ_01</span>
+                                    </div>
+                                    <div class="settings-dropdown-item" id="menu-manage-dept" style="display:none;" onclick="openManageDepartmentsModal(); hideSettingsDropdown();">
+                                        <i data-lucide="building-2" size="14" style="color:#0284c7;"></i>
+                                        <span>Quản Lý Các Bộ Phận Tham Gia</span>
+                                    </div>
+                                    <div class="settings-dropdown-item" id="menu-manage-staffs" style="display:none;" onclick="ganttCore.openManageStaffsModal(); hideSettingsDropdown();">
+                                        <i data-lucide="users" size="14" style="color:#0284c7;"></i>
+                                        <span>Quản Lý Danh Sách Nhân Viên</span>
+                                    </div>
+                                    <div class="settings-dropdown-item" id="menu-download-excel-template" style="display:none;" onclick="downloadTwoSheetExcelTemplate(); hideSettingsDropdown();">
+                                        <img src="./asset/icons/excel-template.svg" alt="" style="width:14px; height:14px; flex-shrink:0;">
+                                        <span>Tải File Excel Mẫu (2 Sheet)</span>
+                                    </div>
+                                    <div class="settings-dropdown-item" id="menu-import-excel" style="display:none;" onclick="document.getElementById('import-file').click(); hideSettingsDropdown();">
+                                        <img src="./asset/icons/import-folder.svg" alt="" style="width:14px; height:14px; flex-shrink:0;">
+                                        <span>Import Hàng Loạt (Excel/JSON)</span>
+                                    </div>
+                                    <div class="settings-dropdown-item" onclick="printGanttPDF(); hideSettingsDropdown();">
+                                        <img src="./asset/icons/print-pdf.svg" alt="" style="width:14px; height:14px; flex-shrink:0;">
+                                        <span>In / Xuất PDF Gantt</span>
+                                    </div>
+                                    <div class="settings-dropdown-item" onclick="exportRAGData(); hideSettingsDropdown();">
+                                        <img src="./asset/icons/storage-clean.svg" alt="" style="width:14px; height:14px; flex-shrink:0;">
+                                        <span>Xuất Dữ Liệu Dự Án</span>
+                                    </div>
+                                    <div class="settings-dropdown-item danger" id="menu-close-project" style="display:none;" onclick="openCloseProjectModal(); hideSettingsDropdown();">
+                                        <img src="./asset/icons/vault-lock.svg" alt="" style="width:14px; height:14px; flex-shrink:0;">
+                                        <span>Đóng Dự Án (Chuyển Vault)</span>
+                                    </div>
                                 </div>
-                                <div class="settings-dropdown-item" id="menu-manage-dept" style="display:none;" onclick="openManageDepartmentsModal(); hideSettingsDropdown();">
-                                    <i data-lucide="building-2" size="13" style="color:#475569;"></i>
-                                    <span>Quản Lý Các Bộ Phận Tham Gia</span>
-                                </div>
-                                <div class="settings-dropdown-item" id="menu-manage-staffs" style="display:none;" onclick="ganttCore.openManageStaffsModal(); hideSettingsDropdown();">
-                                    <i data-lucide="users" size="13" style="color:#475569;"></i>
-                                    <span>Quản Lý Danh Sách Nhân Viên</span>
-                                </div>
-                                <div class="settings-dropdown-item" id="menu-download-excel-template" style="display:none;" onclick="downloadTwoSheetExcelTemplate(); hideSettingsDropdown();">
-                                    <img src="./asset/icons/excel-template.svg" alt="" style="width:13px; height:13px; opacity:0.8;">
-                                    <span>Tải File Excel Mẫu (2 Sheet)</span>
-                                </div>
-                                <div class="settings-dropdown-item" id="menu-import-excel" style="display:none;" onclick="document.getElementById('import-file').click(); hideSettingsDropdown();">
-                                    <img src="./asset/icons/import-folder.svg" alt="" style="width:13px; height:13px; opacity:0.8;">
-                                    <span>Import Hàng Loạt (Excel/JSON)</span>
-                                </div>
-                                <div class="settings-dropdown-item" onclick="printGanttPDF(); hideSettingsDropdown();">
-                                    <img src="./asset/icons/print-pdf.svg" alt="" style="width:13px; height:13px; opacity:0.8;">
-                                    <span>In / Xuất PDF Gantt</span>
-                                </div>
-                                <div class="settings-dropdown-item" onclick="exportRAGData(); hideSettingsDropdown();">
-                                    <img src="./asset/icons/storage-clean.svg" alt="" style="width:13px; height:13px; opacity:0.8;">
-                                    <span>Xuất Dữ Liệu Dự Án</span>
-                                </div>
-                                <div class="settings-dropdown-item danger" id="menu-close-project" style="display:none;" onclick="openCloseProjectModal(); hideSettingsDropdown();">
-                                    <img src="./asset/icons/vault-lock.svg" alt="" style="width:13px; height:13px; opacity:0.8;">
-                                    <span>Đóng Dự Án (Chuyển Vault)</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -707,35 +707,35 @@
             <div style="margin-bottom:14px;">
                 <label style="font-size:11.5px; font-weight:700; color:#334155; display:block; margin-bottom:8px;">1. Chọn Nhanh 8 Bộ Skin Phổ Biến:</label>
                 <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
-                    <button type="button" onclick="applyPresetColorSkin('ltp-ocean')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="ltp-ocean" onclick="applyPresetColorSkin('ltp-ocean')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#0f172a 50%,#0284c7 50%); display:inline-block;"></span>
                         LTP Ocean
                     </button>
-                    <button type="button" onclick="applyPresetColorSkin('royal-indigo')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="royal-indigo" onclick="applyPresetColorSkin('royal-indigo')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#1e1b4b 50%,#6366f1 50%); display:inline-block;"></span>
                         Royal Indigo
                     </button>
-                    <button type="button" onclick="applyPresetColorSkin('emerald-forest')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="emerald-forest" onclick="applyPresetColorSkin('emerald-forest')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#064e3b 50%,#10b981 50%); display:inline-block;"></span>
                         Emerald
                     </button>
-                    <button type="button" onclick="applyPresetColorSkin('sunset-amber')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="sunset-amber" onclick="applyPresetColorSkin('sunset-amber')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#451a03 50%,#f59e0b 50%); display:inline-block;"></span>
                         Amber Gold
                     </button>
-                    <button type="button" onclick="applyPresetColorSkin('crimson-luxury')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="crimson-luxury" onclick="applyPresetColorSkin('crimson-luxury')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#4c0519 50%,#e11d48 50%); display:inline-block;"></span>
                         Crimson
                     </button>
-                    <button type="button" onclick="applyPresetColorSkin('cyber-violet')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="cyber-violet" onclick="applyPresetColorSkin('cyber-violet')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#2e1065 50%,#a855f7 50%); display:inline-block;"></span>
                         Violet
                     </button>
-                    <button type="button" onclick="applyPresetColorSkin('titanium-slate')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="titanium-slate" onclick="applyPresetColorSkin('titanium-slate')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#18181b 50%,#52525b 50%); display:inline-block;"></span>
                         Titanium
                     </button>
-                    <button type="button" onclick="applyPresetColorSkin('teal-modern')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a;">
+                    <button type="button" class="skin-preset-btn" data-skin="teal-modern" onclick="applyPresetColorSkin('teal-modern')" style="padding:8px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0f172a; transition:all 0.15s;">
                         <span style="width:28px; height:14px; border-radius:3px; background:linear-gradient(135deg,#134e4a 50%,#14b8a6 50%); display:inline-block;"></span>
                         Teal Pro
                     </button>
@@ -767,19 +767,19 @@
                     <span style="font-size:9.5px; background:#22c55e; color:#fff; padding:1px 5px; border-radius:4px; font-weight:800;">ĐẶC SẮC</span>
                 </label>
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
-                    <button type="button" onclick="changeUiThemeMode('pill-capsule')" style="padding:6px 4px; border-radius:6px; border:1px solid #22c55e; background:#ffffff; cursor:pointer; font-size:11px; font-weight:700; color:#15803d; display:flex; align-items:center; justify-content:center; gap:4px;">
+                    <button type="button" class="theme-mode-btn" data-mode="pill-capsule" onclick="changeUiThemeMode('pill-capsule')" style="padding:8px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.15s;">
                         💊 Capsule 3D
                     </button>
-                    <button type="button" onclick="changeUiThemeMode('3d-liquid')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                    <button type="button" class="theme-mode-btn" data-mode="3d-liquid" onclick="changeUiThemeMode('3d-liquid')" style="padding:8px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.15s;">
                         🌊 Liquid 3D
                     </button>
-                    <button type="button" onclick="changeUiThemeMode('3d-glass')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                    <button type="button" class="theme-mode-btn" data-mode="3d-glass" onclick="changeUiThemeMode('3d-glass')" style="padding:8px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.15s;">
                         🧊 Glass 3D
                     </button>
-                    <button type="button" onclick="changeUiThemeMode('2d-flat')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                    <button type="button" class="theme-mode-btn" data-mode="2d-flat" onclick="changeUiThemeMode('2d-flat')" style="padding:8px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.15s;">
                         📄 2D Flat
                     </button>
-                    <button type="button" onclick="changeUiThemeMode('2d-classic')" style="padding:6px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px;">
+                    <button type="button" class="theme-mode-btn" data-mode="2d-classic" onclick="changeUiThemeMode('2d-classic')" style="padding:8px 4px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; cursor:pointer; font-size:11px; font-weight:600; color:#0f172a; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.15s;">
                         🏛️ Classic
                     </button>
                 </div>
@@ -3833,7 +3833,21 @@
             window.applySkinColorsToDOM(cfg);
             try {
                 localStorage.setItem("ltp_custom_skin_v1", JSON.stringify(cfg));
+                localStorage.setItem("ltp_custom_skin_key", skinKey);
             } catch (e) {}
+            document.querySelectorAll(".skin-preset-btn").forEach(btn => {
+                if (btn.getAttribute("data-skin") === skinKey) {
+                    btn.style.borderColor = "#0284c7";
+                    btn.style.boxShadow = "0 0 0 2px rgba(2, 132, 199, 0.35)";
+                    btn.style.fontWeight = "800";
+                    btn.style.transform = "scale(1.02)";
+                } else {
+                    btn.style.borderColor = "#cbd5e1";
+                    btn.style.boxShadow = "none";
+                    btn.style.fontWeight = "600";
+                    btn.style.transform = "scale(1)";
+                }
+            });
         };
 
         window.applyCustomColorPickers = function() {
@@ -3848,15 +3862,30 @@
             window.applySkinColorsToDOM(cfg);
             try {
                 localStorage.setItem("ltp_custom_skin_v1", JSON.stringify(cfg));
+                localStorage.removeItem("ltp_custom_skin_key");
             } catch (e) {}
+            document.querySelectorAll(".skin-preset-btn").forEach(btn => {
+                btn.style.borderColor = "#cbd5e1";
+                btn.style.boxShadow = "none";
+                btn.style.fontWeight = "600";
+                btn.style.transform = "scale(1)";
+            });
         };
 
         window.initCustomColorSkin = function() {
             try {
                 const raw = localStorage.getItem("ltp_custom_skin_v1");
+                const skinKey = localStorage.getItem("ltp_custom_skin_key") || "ltp-ocean";
                 if (raw) {
                     window.applySkinColorsToDOM(JSON.parse(raw));
                 }
+                document.querySelectorAll(".skin-preset-btn").forEach(btn => {
+                    if (btn.getAttribute("data-skin") === skinKey) {
+                        btn.style.borderColor = "#0284c7";
+                        btn.style.boxShadow = "0 0 0 2px rgba(2, 132, 199, 0.35)";
+                        btn.style.fontWeight = "800";
+                    }
+                });
             } catch (e) {}
         };
 
@@ -4047,7 +4076,8 @@
         // GLOBAL UI THEME MODE FUNCTIONS (AVAILABLE IMMEDIATELY TO ONCHANGE & INITIALIZATION)
         window.changeUiThemeMode = function(mode) {
             if (!mode) mode = "pill-capsule";
-            document.body.classList.remove("theme-3d-glass", "theme-2d-flat", "theme-3d-liquid", "theme-2d-classic", "theme-3d-cyber", "theme-pill-capsule");
+            const themeClasses = ["theme-3d-glass", "theme-2d-flat", "theme-3d-liquid", "theme-2d-classic", "theme-3d-cyber", "theme-pill-capsule"];
+            themeClasses.forEach(cls => document.body.classList.remove(cls));
             document.body.classList.add("theme-" + mode);
             try {
                 localStorage.setItem("ui_theme_mode", mode);
@@ -4056,6 +4086,22 @@
             if (selectEl && selectEl.value !== mode) {
                 selectEl.value = mode;
             }
+            // Update active state of buttons in Skin Studio modal
+            document.querySelectorAll(".theme-mode-btn").forEach(btn => {
+                if (btn.getAttribute("data-mode") === mode) {
+                    btn.style.borderColor = "#16a34a";
+                    btn.style.background = "#f0fdf4";
+                    btn.style.color = "#15803d";
+                    btn.style.fontWeight = "800";
+                    btn.style.boxShadow = "0 0 0 2px rgba(22, 163, 74, 0.25)";
+                } else {
+                    btn.style.borderColor = "#cbd5e1";
+                    btn.style.background = "#ffffff";
+                    btn.style.color = "#0f172a";
+                    btn.style.fontWeight = "600";
+                    btn.style.boxShadow = "none";
+                }
+            });
             if (window.ganttCore && typeof window.ganttCore.renderGantt === "function") {
                 try { window.ganttCore.renderGantt(); } catch(e) {}
             }
